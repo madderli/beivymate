@@ -127,75 +127,69 @@
     </mxGraphModel>
   </diagram>
   <diagram id="nLtCCDF1nsghbnDxin9h" name="代码实现关键点">
-    <mxGraphModel dx="343" dy="1000" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
+    <mxGraphModel dx="684" dy="1000" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
-        <mxCell id="TrPd0FfBLeHHTilYsaW_-9" value="Runtime和Workflow职责关系图" style="swimlane;whiteSpace=wrap;html=1;fillColor=#f8cecc;gradientColor=#ea6b66;strokeColor=#b85450;" vertex="1" parent="1">
-          <mxGeometry x="80" y="40" width="360" height="880" as="geometry" />
+        <mxCell id="TrPd0FfBLeHHTilYsaW_-9" value="Runtime和Workflow职责关系图" style="swimlane;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="80" y="40" width="240" height="660" as="geometry" />
         </mxCell>
         <mxCell id="TrPd0FfBLeHHTilYsaW_-10" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="TrPd0FfBLeHHTilYsaW_-9" source="TrPd0FfBLeHHTilYsaW_-1" target="TrPd0FfBLeHHTilYsaW_-2">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="TrPd0FfBLeHHTilYsaW_-1" value="workflow.md" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Comic Sans MS;fontSize=13;" vertex="1" parent="TrPd0FfBLeHHTilYsaW_-9">
-          <mxGeometry x="80" y="40" width="200" height="40" as="geometry" />
+          <mxGeometry x="40" y="40" width="160" height="40" as="geometry" />
         </mxCell>
         <mxCell id="TrPd0FfBLeHHTilYsaW_-11" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="TrPd0FfBLeHHTilYsaW_-9" source="TrPd0FfBLeHHTilYsaW_-2" target="TrPd0FfBLeHHTilYsaW_-3">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="TrPd0FfBLeHHTilYsaW_-2" value="WorkflowDefinition" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Comic Sans MS;fontSize=13;" vertex="1" parent="TrPd0FfBLeHHTilYsaW_-9">
-          <mxGeometry x="80" y="120" width="200" height="40" as="geometry" />
+          <mxGeometry x="40" y="120" width="160" height="40" as="geometry" />
         </mxCell>
         <mxCell id="TrPd0FfBLeHHTilYsaW_-12" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="TrPd0FfBLeHHTilYsaW_-9" source="TrPd0FfBLeHHTilYsaW_-3" target="TrPd0FfBLeHHTilYsaW_-4">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="TrPd0FfBLeHHTilYsaW_-3" value="SkillRegistry" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Comic Sans MS;fontSize=13;" vertex="1" parent="TrPd0FfBLeHHTilYsaW_-9">
-          <mxGeometry x="80" y="200" width="200" height="40" as="geometry" />
+          <mxGeometry x="40" y="200" width="160" height="40" as="geometry" />
         </mxCell>
         <mxCell id="TrPd0FfBLeHHTilYsaW_-13" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="TrPd0FfBLeHHTilYsaW_-9" source="TrPd0FfBLeHHTilYsaW_-4" target="TrPd0FfBLeHHTilYsaW_-5">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="TrPd0FfBLeHHTilYsaW_-4" value="Skill[]" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Comic Sans MS;fontSize=13;" vertex="1" parent="TrPd0FfBLeHHTilYsaW_-9">
-          <mxGeometry x="80" y="280" width="200" height="40" as="geometry" />
+        <mxCell id="TrPd0FfBLeHHTilYsaW_-4" value="list[Skill]" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Comic Sans MS;fontSize=13;" vertex="1" parent="TrPd0FfBLeHHTilYsaW_-9">
+          <mxGeometry x="40" y="280" width="160" height="40" as="geometry" />
         </mxCell>
         <mxCell id="TrPd0FfBLeHHTilYsaW_-14" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="TrPd0FfBLeHHTilYsaW_-9" source="TrPd0FfBLeHHTilYsaW_-5" target="TrPd0FfBLeHHTilYsaW_-6">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="TrPd0FfBLeHHTilYsaW_-5" value="Workflow" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Comic Sans MS;fontSize=13;" vertex="1" parent="TrPd0FfBLeHHTilYsaW_-9">
-          <mxGeometry x="80" y="360" width="200" height="40" as="geometry" />
+          <mxGeometry x="40" y="360" width="160" height="40" as="geometry" />
         </mxCell>
         <mxCell id="TrPd0FfBLeHHTilYsaW_-15" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="TrPd0FfBLeHHTilYsaW_-9" source="TrPd0FfBLeHHTilYsaW_-6" target="TrPd0FfBLeHHTilYsaW_-7">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="TrPd0FfBLeHHTilYsaW_-6" value="Runtime" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Comic Sans MS;fontSize=13;" vertex="1" parent="TrPd0FfBLeHHTilYsaW_-9">
-          <mxGeometry x="80" y="440" width="200" height="40" as="geometry" />
+          <mxGeometry x="40" y="440" width="160" height="40" as="geometry" />
         </mxCell>
         <mxCell id="TrPd0FfBLeHHTilYsaW_-16" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="TrPd0FfBLeHHTilYsaW_-9" source="TrPd0FfBLeHHTilYsaW_-7" target="TrPd0FfBLeHHTilYsaW_-8">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="TrPd0FfBLeHHTilYsaW_-7" value="Skill" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Comic Sans MS;fontSize=13;" vertex="1" parent="TrPd0FfBLeHHTilYsaW_-9">
-          <mxGeometry x="80" y="520" width="200" height="40" as="geometry" />
+        <mxCell id="TrPd0FfBLeHHTilYsaW_-7" value="AgentContext" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Comic Sans MS;fontSize=13;" vertex="1" parent="TrPd0FfBLeHHTilYsaW_-9">
+          <mxGeometry x="40" y="520" width="160" height="40" as="geometry" />
         </mxCell>
-        <mxCell id="TrPd0FfBLeHHTilYsaW_-8" value="AgentContext" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Comic Sans MS;fontSize=13;" vertex="1" parent="TrPd0FfBLeHHTilYsaW_-9">
-          <mxGeometry x="80" y="600" width="200" height="40" as="geometry" />
+        <mxCell id="TrPd0FfBLeHHTilYsaW_-8" value="Skill" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Comic Sans MS;fontSize=13;" vertex="1" parent="TrPd0FfBLeHHTilYsaW_-9">
+          <mxGeometry x="40" y="600" width="160" height="40" as="geometry" />
         </mxCell>
-        <mxCell id="TrPd0FfBLeHHTilYsaW_-18" value="workflowparse" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="TrPd0FfBLeHHTilYsaW_-9">
-          <mxGeometry x="190" y="90" width="90" height="20" as="geometry" />
+        <mxCell id="TrPd0FfBLeHHTilYsaW_-18" value="parse" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="TrPd0FfBLeHHTilYsaW_-9">
+          <mxGeometry x="130" y="90" width="70" height="20" as="geometry" />
         </mxCell>
         <mxCell id="TrPd0FfBLeHHTilYsaW_-19" value="Skill_ids" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="TrPd0FfBLeHHTilYsaW_-9">
-          <mxGeometry x="200" y="170" width="70" height="20" as="geometry" />
+          <mxGeometry x="130" y="170" width="70" height="20" as="geometry" />
         </mxCell>
         <mxCell id="TrPd0FfBLeHHTilYsaW_-20" value="resolve" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="TrPd0FfBLeHHTilYsaW_-9">
-          <mxGeometry x="200" y="250" width="70" height="20" as="geometry" />
+          <mxGeometry x="130" y="250" width="70" height="20" as="geometry" />
         </mxCell>
         <mxCell id="TrPd0FfBLeHHTilYsaW_-21" value="execute" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="TrPd0FfBLeHHTilYsaW_-9">
-          <mxGeometry x="200" y="410" width="70" height="20" as="geometry" />
-        </mxCell>
-        <mxCell id="TrPd0FfBLeHHTilYsaW_-23" value="最终使用方式" style="swimlane;whiteSpace=wrap;html=1;fillColor=#fff2cc;gradientColor=#ffd966;strokeColor=#d6b656;" vertex="1" parent="TrPd0FfBLeHHTilYsaW_-9">
-          <mxGeometry x="40" y="660" width="280" height="200" as="geometry" />
-        </mxCell>
-        <mxCell id="TrPd0FfBLeHHTilYsaW_-25" value="&lt;div&gt;registry = SkillRegistry()&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;registry.register(&quot;skill_a&quot;, skill_a)&lt;/div&gt;&lt;div&gt;registry.register(&quot;skill_b&quot;, skill_b)&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;runtime = Runtime(registry)&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;workflow = runtime.load_workflow(&quot;flow.md&quot;)&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;context = runtime.run(workflow)&lt;/div&gt;" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="TrPd0FfBLeHHTilYsaW_-23">
-          <mxGeometry x="19" y="30" width="242" height="160" as="geometry" />
+          <mxGeometry x="130" y="410" width="70" height="20" as="geometry" />
         </mxCell>
       </root>
     </mxGraphModel>

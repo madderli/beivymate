@@ -55,3 +55,68 @@ def test_duplicate_skill_registration_raises_error() -> None:
             "test_skill",
             TestSkill(),
         )
+
+def test_resolve_skills_by_ids() -> None:
+    registry = SkillRegistry()
+
+    first_skill = TestSkill()
+    second_skill = TestSkill()
+
+    registry.register("first", first_skill)
+    registry.register("second", second_skill)
+
+    skills = registry.resolve(
+        [
+            "first",
+            "second",
+        ]
+    )
+
+    assert skills == [
+        first_skill,
+        second_skill,
+    ]
+
+def test_resolve_preserves_skill_order() -> None:
+    registry = SkillRegistry()
+
+    first_skill = TestSkill()
+    second_skill = TestSkill()
+    third_skill = TestSkill()
+
+    registry.register("first", first_skill)
+    registry.register("second", second_skill)
+    registry.register("third", third_skill)
+
+    skills = registry.resolve(
+        [
+            "third",
+            "first",
+            "second",
+        ]
+    )
+
+    assert skills == [
+        third_skill,
+        first_skill,
+        second_skill,
+    ]
+
+def test_resolve_unknown_skill_raises_error() -> None:
+    registry = SkillRegistry()
+
+    registry.register(
+        "known_skill",
+        TestSkill(),
+    )
+
+    with pytest.raises(
+        KeyError,
+        match="Skill not found: unknown_skill",
+    ):
+        registry.resolve(
+            [
+                "known_skill",
+                "unknown_skill",
+            ]
+        )

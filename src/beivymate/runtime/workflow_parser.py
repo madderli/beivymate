@@ -17,10 +17,10 @@ class WorkflowParser:
         workflow_id = path.stem
 
         return WorkflowDefinition(
-            id=workflow_id,
-            name=name,
-            description=description,
-            skill_ids=skill_ids,
+            id = workflow_id,
+            name = name,
+            description = description,
+            skill_ids = skill_ids,
         )
 
     @staticmethod
