@@ -1,7 +1,7 @@
 from typing import Protocol
 
 from beivymate.runtime.llm.models import (
-    ChatMessage,
+    LLMRequest,
     LLMResponse,
 )
 
@@ -10,6 +10,6 @@ class LLMProvider(Protocol):
     
     def chat(
         self,
-        messages: list[ChatMessage],
+        request: LLMRequest, 
     ) -> LLMResponse:
         ...

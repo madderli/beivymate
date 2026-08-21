@@ -5,7 +5,19 @@ class ChatMessage(BaseModel):
     role: str = Field(min_length = 1)
     content: str
 
-# The normalized response returned by an LLM provider.
+# A provider-independent LLM request.
+class LLMRequest(BaseModel):
+    model: str = Field(min_length = 1)
+    messages: list[ChatMessage] = Field(min_length = 1)
+    temperature: float = 0.0
+
+# A provider-independent LLM response.
 class LLMResponse(BaseModel):
+    model: str = Field(min_length = 1)
     content: str
-    model: str
+
+class LLMConnectionConfig(BaseModel):
+    base_url: str = Field(min_length=1)
+    api_key: str | None = None
+    proxy: str | None = None
+    timeout: float = Field(default=60.0, gt=0)
