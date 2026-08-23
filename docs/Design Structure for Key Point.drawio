@@ -201,7 +201,7 @@
     </mxGraphModel>
   </diagram>
   <diagram id="6A_Y1yoJwoUYo4aREQ4i" name="LLM &amp; 资源配置设计">
-    <mxGraphModel dx="599" dy="875" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
+    <mxGraphModel dx="684" dy="1000" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -272,8 +272,8 @@
       </root>
     </mxGraphModel>
   </diagram>
-  <diagram id="6YReTryDPcLeEOPtND8B" name="Skill和LLM之间的关系">
-    <mxGraphModel dx="532" dy="778" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
+  <diagram id="6YReTryDPcLeEOPtND8B" name="LLM设计">
+    <mxGraphModel dx="798" dy="1167" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -350,28 +350,19 @@
         <mxCell id="BpO2emiPp-SPxDbWCIBk-39" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="BpO2emiPp-SPxDbWCIBk-25" target="BpO2emiPp-SPxDbWCIBk-29">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="BpO2emiPp-SPxDbWCIBk-25" value="&lt;span style=&quot;font-family: &amp;quot;Comic Sans MS&amp;quot;; font-size: 13px;&quot;&gt;Provider Resolver&lt;/span&gt;" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+        <mxCell id="BpO2emiPp-SPxDbWCIBk-25" value="&lt;span style=&quot;font-family: &amp;quot;Comic Sans MS&amp;quot;; font-size: 13px;&quot;&gt;LLM Provider Protocl&lt;/span&gt;" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
           <mxGeometry x="420" y="360" width="160" height="40" as="geometry" />
         </mxCell>
         <mxCell id="BpO2emiPp-SPxDbWCIBk-26" value="&lt;span style=&quot;font-family: &amp;quot;Comic Sans MS&amp;quot;; font-size: 13px;&quot;&gt;Model Configuration&lt;/span&gt;" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
           <mxGeometry x="620" y="360" width="160" height="40" as="geometry" />
         </mxCell>
-        <mxCell id="BpO2emiPp-SPxDbWCIBk-43" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="BpO2emiPp-SPxDbWCIBk-27" target="BpO2emiPp-SPxDbWCIBk-30">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="BpO2emiPp-SPxDbWCIBk-27" value="&lt;span style=&quot;font-family: &amp;quot;Comic Sans MS&amp;quot;; font-size: 13px;&quot;&gt;Ollama Resolver&lt;/span&gt;" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+        <mxCell id="BpO2emiPp-SPxDbWCIBk-27" value="&lt;span style=&quot;font-family: &amp;quot;Comic Sans MS&amp;quot;; font-size: 13px;&quot;&gt;Ollama Provider&lt;/span&gt;" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
           <mxGeometry x="340" y="440" width="80" height="40" as="geometry" />
         </mxCell>
-        <mxCell id="BpO2emiPp-SPxDbWCIBk-41" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="BpO2emiPp-SPxDbWCIBk-28" target="BpO2emiPp-SPxDbWCIBk-31">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="BpO2emiPp-SPxDbWCIBk-28" value="&lt;span style=&quot;font-family: &amp;quot;Comic Sans MS&amp;quot;; font-size: 13px;&quot;&gt;OpenAI Resolver&lt;/span&gt;" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+        <mxCell id="BpO2emiPp-SPxDbWCIBk-28" value="&lt;span style=&quot;font-family: &amp;quot;Comic Sans MS&amp;quot;; font-size: 13px;&quot;&gt;OpenAI Provider&lt;/span&gt;" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
           <mxGeometry x="460" y="440" width="80" height="40" as="geometry" />
         </mxCell>
-        <mxCell id="BpO2emiPp-SPxDbWCIBk-42" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="BpO2emiPp-SPxDbWCIBk-29" target="BpO2emiPp-SPxDbWCIBk-32">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="BpO2emiPp-SPxDbWCIBk-29" value="&lt;span style=&quot;font-family: &amp;quot;Comic Sans MS&amp;quot;; font-size: 13px;&quot;&gt;Anthropic Resolver&lt;/span&gt;" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+        <mxCell id="BpO2emiPp-SPxDbWCIBk-29" value="&lt;span style=&quot;font-family: &amp;quot;Comic Sans MS&amp;quot;; font-size: 13px;&quot;&gt;Anthropic Provider&lt;/span&gt;" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
           <mxGeometry x="580" y="440" width="80" height="40" as="geometry" />
         </mxCell>
         <mxCell id="BpO2emiPp-SPxDbWCIBk-44" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="BpO2emiPp-SPxDbWCIBk-30" target="BLnZBBrP-C4UVX5Zc65d-2">
@@ -384,33 +375,72 @@
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="BpO2emiPp-SPxDbWCIBk-30" value="&lt;span style=&quot;font-family: &amp;quot;Comic Sans MS&amp;quot;; font-size: 13px;&quot;&gt;Ollama Platform&lt;/span&gt;" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
-          <mxGeometry x="340" y="520" width="80" height="40" as="geometry" />
+          <mxGeometry x="340" y="599" width="80" height="40" as="geometry" />
         </mxCell>
         <mxCell id="BpO2emiPp-SPxDbWCIBk-31" value="&lt;span style=&quot;font-family: &amp;quot;Comic Sans MS&amp;quot;; font-size: 13px;&quot;&gt;OpenAI Platform&lt;/span&gt;" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
-          <mxGeometry x="460" y="520" width="80" height="40" as="geometry" />
+          <mxGeometry x="460" y="599" width="80" height="40" as="geometry" />
         </mxCell>
         <mxCell id="BpO2emiPp-SPxDbWCIBk-32" value="&lt;span style=&quot;font-family: &amp;quot;Comic Sans MS&amp;quot;; font-size: 13px;&quot;&gt;Anthropic Platform&lt;/span&gt;" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
-          <mxGeometry x="580" y="520" width="80" height="40" as="geometry" />
+          <mxGeometry x="580" y="599" width="80" height="40" as="geometry" />
         </mxCell>
         <mxCell id="BpO2emiPp-SPxDbWCIBk-33" value="&lt;font face=&quot;Comic Sans MS&quot;&gt;&lt;span style=&quot;font-size: 13px;&quot;&gt;Qwen3:8B&lt;/span&gt;&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
-          <mxGeometry x="260" y="600" width="80" height="40" as="geometry" />
+          <mxGeometry x="260" y="679" width="80" height="40" as="geometry" />
         </mxCell>
         <mxCell id="9-oLpZpqAt2Iia4TmWr9-2" value="Vertical Container" style="swimlane;whiteSpace=wrap;html=1;" vertex="1" parent="1">
-          <mxGeometry x="840" y="360" width="240" height="400" as="geometry" />
+          <mxGeometry x="840" y="340" width="240" height="460" as="geometry" />
         </mxCell>
-        <UserObject label="runtime/&#xa;└── llm/&#xa;    │&#xa;    ├── gateway.py&#xa;    │&#xa;    ├── strategy.py&#xa;    │&#xa;    ├── provider.py&#xa;    │&#xa;    ├── models.py&#xa;    │&#xa;    └── providers/&#xa;        ├── __init__.py&#xa;        └── ollama.py" link="runtime/&#xa;└── llm/&#xa;    │&#xa;    ├── gateway.py&#xa;    │&#xa;    ├── strategy.py&#xa;    │&#xa;    ├── provider.py&#xa;    │&#xa;    ├── models.py&#xa;    │&#xa;    └── providers/&#xa;        ├── __init__.py&#xa;        └── ollama.py" id="9-oLpZpqAt2Iia4TmWr9-1">
+        <mxCell id="BLnZBBrP-C4UVX5Zc65d-1" value="&lt;div style=&quot;line-height: 130%;&quot;&gt;&lt;font style=&quot;font-size: 9px; line-height: 130%;&quot;&gt;1. gateway.py：统一的LLM调用入口，统一调用Provider。&lt;/font&gt;&lt;div&gt;&lt;font style=&quot;font-size: 9px; line-height: 130%;&quot;&gt;2. strategy.py：定义模型使用策略&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;span&gt;&lt;font style=&quot;font-size: 9px; line-height: 130%;&quot;&gt;3. models.py：定义LLMRequest、LLMResponse、ChatMessage等数据结构&lt;/font&gt;&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;span&gt;&lt;font style=&quot;font-size: 9px; line-height: 130%;&quot;&gt;4. provider.py：定义 LLMProvider Protocol 抽象接口&lt;/font&gt;&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;span&gt;&lt;font style=&quot;font-size: 9px; line-height: 130%;&quot;&gt;5. provider/ollama.py：Ollama平台适配器，Ollama API 协议适配。&lt;/font&gt;&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;span&gt;&lt;font style=&quot;font-size: 9px; line-height: 130%;&quot;&gt;6. transport.py：处理 HTTP通信（proxy，timeout， headers）&lt;/font&gt;&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="9-oLpZpqAt2Iia4TmWr9-2">
+          <mxGeometry x="10" y="280" width="220" height="170" as="geometry" />
+        </mxCell>
+        <UserObject label="src/beivymate/runtime/llm/&#xa;│&#xa;├── __init__.py&#xa;│&#xa;├── gateway.py&#xa;│&#xa;├── models.py&#xa;│&#xa;├── provider.py&#xa;│&#xa;├── transport.py&#xa;│&#xa;└── providers/&#xa;    │&#xa;    ├── __init__.py&#xa;    └── ollama.py" link="src/beivymate/runtime/llm/&#xa;│&#xa;├── __init__.py&#xa;│&#xa;├── gateway.py&#xa;│&#xa;├── models.py&#xa;│&#xa;├── provider.py&#xa;│&#xa;├── transport.py&#xa;│&#xa;└── providers/&#xa;    │&#xa;    ├── __init__.py&#xa;    └── ollama.py" id="BLnZBBrP-C4UVX5Zc65d-6">
           <mxCell style="text;whiteSpace=wrap;" vertex="1" parent="9-oLpZpqAt2Iia4TmWr9-2">
-            <mxGeometry x="40" y="40" width="160" height="230" as="geometry" />
+            <mxGeometry x="35" y="30" width="170" height="240" as="geometry" />
           </mxCell>
         </UserObject>
-        <mxCell id="BLnZBBrP-C4UVX5Zc65d-1" value="&lt;div style=&quot;line-height: 150%;&quot;&gt;&lt;font style=&quot;font-size: 11px; line-height: 150%;&quot;&gt;1. gateway.py：统一的LLM调用入口&lt;/font&gt;&lt;div&gt;&lt;font style=&quot;font-size: 11px; line-height: 150%;&quot;&gt;2. strategy.py：定义模型使用策略&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;font-size: 11px; line-height: 150%;&quot;&gt;3. models.py：ModelDefinition、Request、Response等数据结构&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;font-size: 11px; line-height: 150%;&quot;&gt;4. provider.py：Provider抽象接口&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;font-size: 11px; line-height: 150%;&quot;&gt;5. provider/ollama.py：Ollama平台适配器&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="9-oLpZpqAt2Iia4TmWr9-2">
-          <mxGeometry x="10" y="260" width="220" height="120" as="geometry" />
-        </mxCell>
         <mxCell id="BLnZBBrP-C4UVX5Zc65d-2" value="&lt;font face=&quot;Comic Sans MS&quot;&gt;&lt;span style=&quot;font-size: 13px;&quot;&gt;Llama&lt;/span&gt;&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
-          <mxGeometry x="340" y="600" width="80" height="40" as="geometry" />
+          <mxGeometry x="340" y="679" width="80" height="40" as="geometry" />
         </mxCell>
         <mxCell id="BLnZBBrP-C4UVX5Zc65d-3" value="&lt;font face=&quot;Comic Sans MS&quot;&gt;&lt;span style=&quot;font-size: 13px;&quot;&gt;DeepSeel&lt;/span&gt;&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
-          <mxGeometry x="420" y="600" width="80" height="40" as="geometry" />
+          <mxGeometry x="420" y="679" width="80" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="BLnZBBrP-C4UVX5Zc65d-7" value="&lt;span style=&quot;font-family: &amp;quot;Comic Sans MS&amp;quot;; font-size: 13px;&quot;&gt;HTTP Transport&lt;/span&gt;" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;strokeColor=default;" vertex="1" parent="1">
+          <mxGeometry x="320" y="520" width="360" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="BLnZBBrP-C4UVX5Zc65d-14" value="" style="endArrow=classic;html=1;rounded=0;entryX=0.167;entryY=-0.007;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="BpO2emiPp-SPxDbWCIBk-27" target="BLnZBBrP-C4UVX5Zc65d-7">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="380" y="570" as="sourcePoint" />
+            <mxPoint x="430" y="520" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="BLnZBBrP-C4UVX5Zc65d-15" value="" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.167;entryY=-0.007;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="499.57" y="480" as="sourcePoint" />
+            <mxPoint x="499.57" y="520" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="BLnZBBrP-C4UVX5Zc65d-16" value="" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.167;entryY=-0.007;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="620" y="480" as="sourcePoint" />
+            <mxPoint x="620" y="520" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="BLnZBBrP-C4UVX5Zc65d-23" value="" style="endArrow=classic;html=1;rounded=0;entryX=0.167;entryY=-0.007;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="379.71000000000004" y="559" as="sourcePoint" />
+            <mxPoint x="379.71000000000004" y="599" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="BLnZBBrP-C4UVX5Zc65d-24" value="" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.167;entryY=-0.007;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="499.28" y="559" as="sourcePoint" />
+            <mxPoint x="499.28" y="599" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="BLnZBBrP-C4UVX5Zc65d-25" value="" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.167;entryY=-0.007;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="619.71" y="559" as="sourcePoint" />
+            <mxPoint x="619.71" y="599" as="targetPoint" />
+          </mxGeometry>
         </mxCell>
       </root>
     </mxGraphModel>
