@@ -31,3 +31,10 @@ htmlcov/
 build/
 dist/
 *.egg-info/
+
+# Text：过滤所有以 .$ 开头的临时文件
+.*$*
+.$*
+
+# Text：过滤 Office 软件的临时文件
+~$*
