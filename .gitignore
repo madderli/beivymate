@@ -38,3 +38,6 @@ dist/
 
 # Text：过滤 Office 软件的临时文件
 ~$*
+
+# Docs
+docs/.$Design Structure for Key Point.drawio.bkp
