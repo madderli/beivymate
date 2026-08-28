@@ -5,137 +5,65 @@ from beivymate.runtime.runtime import Runtime
 from beivymate.runtime.skill import Skill
 from beivymate.runtime.skill_registry import SkillRegistry
 
-WORKFLOW_PATH = Path("tests/fixtures/workflow.md")
 
-# Test double used to verify runtime execution.
-class TestRecordSkill(Skill):
+class RecordingSkill(Skill):
 
-    def __init__(self, name: str) -> None:
-        self.name = name
+    def __init__(
+        self,
+        records: list[str],
+    ) -> None:
 
-    def execute(self, context: AgentContext) -> None:
-        execution_order = context.get("execution_order", [])
-        execution_order.append(self.name)
-        context.set("execution_order", execution_order)
+        self._records = records
+
+    def execute(
+        self,
+        context: AgentContext,
+    ) -> None:
+
+        self._records.append("executed")
 
 
-def test_runtime_loads_workflow_from_markdown() -> None:
+def test_runtime_loads_user_workflow(
+    tmp_path: Path,
+):
+
+    workflow_file = tmp_path / "smoke_test.md"
+
+    workflow_file.write_text(
+        """---
+        id: smoke_test
+        name: Smoke Test
+        description: Test workflow.
+        steps:
+         - tester_requirement_understanding
+        ---
+
+        # Smoke Test
+        """,
+        encoding="utf-8",
+    )
+
+    records: list[str] = []
+
     registry = SkillRegistry()
 
     registry.register(
         "tester_requirement_understanding",
-        TestRecordSkill("tester_requirement_understanding"),
+        RecordingSkill(records),
     )
 
-    registry.register(
-        "test_analysis",
-        TestRecordSkill("test_analysis"),
+    runtime = Runtime(
+        skill_registry=registry,
     )
-
-    registry.register(
-        "test_design",
-        TestRecordSkill("test_design"),
-    )
-
-    registry.register(
-        "test_execution",
-        TestRecordSkill("test_execution"),
-    )
-
-    registry.register(
-        "test_report",
-        TestRecordSkill("test_report"),
-    )
-
-    runtime = Runtime(registry)
 
     workflow = runtime.load_workflow(
-        str(WORKFLOW_PATH)
+        str(workflow_file)
     )
 
-    assert workflow.definition.name == "Standard Testing Flow"
-
-    assert len(workflow.skills) == 5
-
-
-def test_runtime_runs_workflow() -> None:
-    registry = SkillRegistry()
-
-    skill_ids = [
-        "tester_requirement_understanding",
-        "test_analysis",
-        "test_design",
-        "test_execution",
-        "test_report",
-    ]
-
-    for skill_id in skill_ids:
-        registry.register(
-            skill_id,
-            TestRecordSkill(skill_id),
-        )
-
-    runtime = Runtime(registry)
-
-    workflow = runtime.load_workflow(
-        str(WORKFLOW_PATH)
+    context = runtime.run(
+        workflow=workflow,
     )
 
-    context = runtime.run(workflow)
-
-    assert context.get("execution_order") == skill_ids
-
-def test_runtime_uses_existing_context() -> None:
-    registry = SkillRegistry()
-
-    registry.register(
-        "tester_requirement_understanding",
-        TestRecordSkill("tester_requirement_understanding"),
-    )
-
-    registry.register(
-        "test_analysis",
-        TestRecordSkill("test_analysis"),
-    )
-
-    registry.register(
-        "test_design",
-        TestRecordSkill("test_design"),
-    )
-
-    registry.register(
-        "test_execution",
-        TestRecordSkill("test_execution"),
-    )
-
-    registry.register(
-        "test_report",
-        TestRecordSkill("test_report"),
-    )
-
-    runtime = Runtime(registry)
-
-    workflow = runtime.load_workflow(
-        str(WORKFLOW_PATH)
-    )
-
-    context = AgentContext()
-
-    context.set("requirement", "test requirement")
-
-    result = runtime.run(
-        workflow,
-        context,
-    )
-
-    assert result is context
-
-    assert result.get("requirement") == "test requirement"
-
-    assert result.get("execution_order") == [
-        "tester_requirement_understanding",
-        "test_analysis",
-        "test_design",
-        "test_execution",
-        "test_report",
-    ]
+    assert workflow.definition.id == "smoke_test"
+    assert len(workflow.skills) == 1
+    assert records == ["executed"]

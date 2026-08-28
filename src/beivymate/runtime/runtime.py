@@ -1,22 +1,31 @@
+from pathlib import Path
+
+from beivymate.configuration.loader import load_workflow_definition
 from beivymate.runtime.context import AgentContext
 from beivymate.runtime.skill_registry import SkillRegistry
 from beivymate.runtime.workflow import Workflow
-from beivymate.runtime.workflow_parser import WorkflowParser
 
-# Execute workflows within an agent runtime.
+# Execute the workflow within agent runtime.
 class Runtime:
 
-    def __init__(self, skill_registry: SkillRegistry) -> None:
+    def __init__(
+        self,
+        skill_registry: SkillRegistry,
+    ) -> None:
         self._skill_registry = skill_registry
 
-    # Load a workflow from a Markdown file and return a Workflow object.
-    def load_workflow(self, path: str) -> Workflow:
-        from pathlib import Path
+    # Load a workflow from user configuration.
+    def load_workflow(
+        self,
+        path: str,
+    ) -> Workflow:
 
-        definition = WorkflowParser.parse(Path(path))
+        definition = load_workflow_definition(
+            Path(path)
+        )
 
         skills = self._skill_registry.resolve(
-            definition.skill_ids
+            definition.steps
         )
 
         return Workflow(
@@ -24,12 +33,12 @@ class Runtime:
             skills = skills,
         )
 
-    # Execute a workflow and return its context after execution.
+    # Execute a workflow.
     def run(
         self,
         workflow: Workflow,
         context: AgentContext | None = None,
-        ) -> AgentContext:
+    ) -> AgentContext:
 
         if context is None:
             context = AgentContext()

@@ -11,20 +11,20 @@ from beivymate.runtime.llm.providers.ollama import (
 def test_ollama_provider_chat():
 
     config = LLMConnectionConfig(
-        base_url="http://localhost:11434",
-        proxy=None,
+        base_url = "http://localhost:11434",
+        proxy = None,
     )
 
     provider = OllamaProvider(
-        config=config,
+        config = config,
     )
 
     request = LLMRequest(
-        model="qwen3:8b",
-        messages=[
+        model = "qwen3:8b",
+        messages = [
             ChatMessage(
-                role="user",
-                content="请只回答：测试成功",
+                role = "user",
+                content = "请只回答：测试成功",
             )
         ],
     )

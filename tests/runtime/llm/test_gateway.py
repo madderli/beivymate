@@ -11,22 +11,22 @@ from beivymate.runtime.llm.providers.ollama import OllamaProvider
 class FakeProvider:
     def chat(self, request: LLMRequest) -> LLMResponse:
         return LLMResponse(
-            model=request.model,
-            content="fake response",
+            model = request.model,
+            content = "fake response",
         )
 
 
 def test_gateway_chat():
     gateway = LLMGateway(
-        provider=FakeProvider()
+        provider = FakeProvider()
     )
 
     request = LLMRequest(
-        model="test-model",
-        messages=[
+        model = "test-model",
+        messages = [
             ChatMessage(
-                role="user",
-                content="hello",
+                role = "user",
+                content = "hello",
             )
         ],
     )

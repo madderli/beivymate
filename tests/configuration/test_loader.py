@@ -16,7 +16,7 @@ def test_load_model_definition_from_markdown():
         / "resources"
         / "configuration"
         / "llm"
-        / "models"
+        / "model"
         / "qwen3-8b.md"
     )
 

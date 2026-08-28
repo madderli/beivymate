@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 
-# DDefinition of an LLM model available to BeivyMate.
+# Definition of an LLM model available to BeivyMate.
 class ModelDefinition(BaseModel):
     id: str = Field(min_length = 1)
     name: str = Field(min_length = 1)
@@ -13,3 +13,10 @@ class ModelDefinition(BaseModel):
 class LLMSelection(BaseModel):
     agent: str = Field(min_length = 1)
     model: str = Field(min_length = 1)
+
+# Defines a user-configured workflow.
+class WorkflowDefinition(BaseModel):
+    id: str = Field(min_length = 1)
+    name: str = Field(min_length = 1)
+    description: str = ""
+    steps: list[str] = Field(min_length = 1)
