@@ -7,20 +7,20 @@ from pydantic import BaseModel
 from beivymate.configuration.models import (
     LLMSelection,
     ModelDefinition,
+    WorkflowDefinition,
 )
 
 T = TypeVar("T", bound = BaseModel)
 
 # Load YAML front matter from a Markdown file.
 def _load_front_matter(path: Path) -> dict[str, Any]:
-
     if not path.exists():
         raise FileNotFoundError(f"Configuration file not found: {path}")
 
     if not path.is_file():
         raise ValueError(f"Configuration path is not a file: {path}")
 
-    content = path.read_text(encoding="utf-8")
+    content = path.read_text(encoding = "utf-8")
 
     lines = content.splitlines()
 
@@ -55,17 +55,24 @@ def _load_front_matter(path: Path) -> dict[str, Any]:
 
     return data
 
+
 # Load a Pydantic model from Markdown front matter.
 def _load_model(path: Path, model_type: type[T]) -> T:
-
     data = _load_front_matter(path)
 
     return model_type.model_validate(data)
+
 
 # Load a ModelDefinition from a Markdown configuration file.
 def load_model_definition(path: Path) -> ModelDefinition:
     return _load_model(path, ModelDefinition)
 
+
 # Load an LLMSelection from a Markdown configuration file.
 def load_llm_selection(path: Path) -> LLMSelection:
     return _load_model(path, LLMSelection)
+
+
+# Load a WorkflowDefinition from a Markdown configuration file.
+def load_workflow_definition(path: Path) -> WorkflowDefinition:
+    return _load_model(path, WorkflowDefinition)

@@ -1,9 +1,22 @@
+from pathlib import Path
+
+
+PROJECT_ROOT = Path(__file__).resolve().parents[3]
+
+WORKFLOW_DIRECTORY = (
+    PROJECT_ROOT
+    / "resources"
+    / "configuration"
+    / "workflow"
+)
+
+
 def main() -> None:
-    """Main entry point for the application."""
-    print("Starting the application...")
-    print("BeIvyMate is a AI Worker Agent.")
-    #app = create_app()
-    #app.run(host='0.0.0.0', port=5000)
+    """Application entry point."""
+
+    print("Starting BeIvyMate...")
+    print("BeIvyMate is an AI Worker Agent.")
+
 
 if __name__ == "__main__":
     main()
