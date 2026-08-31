@@ -1,69 +1,62 @@
+from beivymate.configuration.loader import (
+    load_template_definition,
+)
+from beivymate.configuration.models import (
+    TemplateDefinition,
+)
+from beivymate.model.entity.requirement import Requirement
 from beivymate.runtime.context import AgentContext
 from beivymate.runtime.llm.gateway import LLMGateway
-from beivymate.runtime.llm.models import ChatMessage, LLMRequest
-from beivymate.runtime.skill import Skill
+from beivymate.runtime.llm.models import (
+    ChatMessage,
+    LLMRequest,
+)
 
 
-# Tester-specific requirement understanding capability.
-# This skill analyzes a requirement from the perspective of asoftware tester and stores the result in AgentContext.
-class TesterRequirementUnderstandingSkill(Skill):
+class TesterRequirementUnderstandingSkill:
 
     def __init__(
         self,
         gateway: LLMGateway,
         model: str,
+        template: TemplateDefinition,
     ) -> None:
+
         self._gateway = gateway
         self._model = model
+        self._template = template
 
-    def execute(self, context: AgentContext) -> None:
-        requirement = context.get("requirement")
+    def execute(
+        self,
+        context: AgentContext,
+    ) -> None:
+
+        requirement = context.get(
+            "requirement"
+        )
 
         if requirement is None:
             raise ValueError(
                 "Requirement is missing from AgentContext."
             )
 
-        requirement_data = requirement.model_dump(
-            exclude_none = True
+        requirement_data = (
+            requirement.model_dump(
+                exclude_none = True
+            )
         )
 
-        prompt = f"""
-            You are a professional software tester.
-
-            Understand the following software requirement from the perspective
-            of software testing.
-
-            Requirement:
-                {requirement_data}
-
-            Please provide a structured requirement understanding including:
-
-            1. Functional objective
-            2. Actors / roles
-            3. Main business flow
-            4. Business rules
-            5. Preconditions
-            6. Input and output
-            7. State changes
-            8. Exception scenarios
-            9. Boundary conditions
-            10. Dependencies
-            11. Potential risks
-            12. Ambiguous or missing requirements
-
-            Focus on understanding the requirement.
-
-            Do not design test cases yet.
-            Do not execute tests.
-        """
+        prompt = self._build_prompt(
+            requirement,
+            requirement_data,
+        )
 
         request = LLMRequest(
-            model = self._model,
-            messages = [
+            model=self._model,
+            messages=[
                 ChatMessage(
-                    role = "system",
-                    content = (
+                    role="system",
+                    content=(
                         "You are a professional software tester "
                         "specialized in requirement analysis."
                     ),
@@ -76,9 +69,49 @@ class TesterRequirementUnderstandingSkill(Skill):
             temperature = 0.0,
         )
 
-        response = self._gateway.chat(request)
+        response = self._gateway.chat(
+            request
+        )
 
         context.set(
             "tester_requirement_understanding",
             response.content,
         )
+
+    def _build_prompt(
+        self,
+        requirement: Requirement,
+        requirement_data: dict,
+    ) -> str:
+
+        return f"""
+            Please analyze the following software requirement
+            from the perspective of a professional software tester.
+
+            Requirement:
+                {requirement_data}
+
+            Use the following requirement-understanding template
+            as the analysis and output specification.
+
+            Template:
+                {self._template.content}
+
+            Important instructions:
+
+            1. Analyze the requirement from a testing perspective.
+            2. Follow the structure and requirements defined by the template.
+            3. Do not invent business requirements that are not provided.
+            4. Clearly identify ambiguous, missing, or unclear requirements.
+            5. Do not design detailed test cases unless explicitly requested by the template.
+            6. Do not execute tests.
+
+            Requirement ID:
+                {requirement.id}
+
+            Template ID:
+                {self._template.id}
+
+            Template Version:
+                {self._template.version}
+        """.strip()
