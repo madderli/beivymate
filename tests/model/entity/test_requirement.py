@@ -1,4 +1,4 @@
-from beivymate.model.entity.requirement import ProductRequirement, Requirement
+from beivymate.model.entity.requirement import Requirement
 
 def test_requirement():
     requirement_data = {
@@ -10,4 +10,4 @@ def test_requirement():
     
     assert requirement.id == "REQ-001"
     assert requirement.title == "Test Product Requirement Model"
-    assert requirement.content == "This is the content for product requirement."
+    assert requirement.content == "This is a test for product requirement."

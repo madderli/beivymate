@@ -41,3 +41,10 @@ class KnowledgeDocument(BaseModel):
 
     # Actual knowledge content.
     content: str = ""
+
+class KnowledgeQuery(BaseModel):
+    role: str = Field(min_length = 1)
+    locale: str = Field(min_length = 1)
+    scope: str = Field(default = "global", min_length = 1)
+    category: str | None = None
+    nature: KnowledgeNature | None = None
