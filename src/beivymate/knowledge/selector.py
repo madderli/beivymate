@@ -1,21 +1,9 @@
 from pydantic import BaseModel, Field
 
-from beivymate.knowledge.models import KnowledgeDocument
-
-
-class KnowledgeQuery(BaseModel):
-    role: str = Field(min_length = 1)
-    locale: str = Field(min_length = 1)
-
-    # Example:
-    # global
-    # product:his
-    # customer:hospital_a
-    scope: str = Field(default = "global", min_length = 1)
-
-    category: str | None = None
-
-    nature: str | None = None
+from beivymate.knowledge.models import (
+    KnowledgeDocument,
+    KnowledgeQuery,
+)
 
 
 class KnowledgeSelector:

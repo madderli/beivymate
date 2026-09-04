@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from beivymate.configuration.loader import load_workflow_definition
-from beivymate.knowledge.models import KnowledgeQuery
+from beivymate.knowledge.models import KnowledgeDocument, KnowledgeQuery
 from beivymate.knowledge.service import KnowledgeService
 from beivymate.runtime.context import AgentContext
 from beivymate.runtime.skill_registry import SkillRegistry
@@ -44,25 +44,43 @@ class Runtime:
         workflow: Workflow,
         context: AgentContext | None = None,
     ) -> AgentContext:
-
+        
         if context is None:
             context = AgentContext()
 
-        if self._knowledge_service is not None:
-            role = context.get_role()
-            locale = context.get_locale()
+        for skill in workflow.skills:
+            requirements = skill.knowledge_requirements()
 
-            if role is not None and locale is not None:
-                query = KnowledgeQuery(
-                    role = role,
-                    locale = locale,
-                    scope = context.get_scope(),
-                )
+            context.set_knowledge_requirements(requirements)
 
-                knowledge = self._knowledge_service.select(query)
-  
-                context.set_knowledge(knowledge)
+            knowledge_by_id: dict[str, KnowledgeDocument] = {}
 
-        workflow.execute(context)
+            if (
+                requirements is not None
+                and self._knowledge_service is not None
+            ):
+                role = context.get_role()
+                locale = context.get_locale()
+
+                if role is not None and locale is not None:
+                    for requirement in requirements:    
+                        query = KnowledgeQuery(
+                            role = role,
+                            locale = locale,
+                            scope = context.get_scope(),
+                            category = requirement.category,
+                            nature = requirement.nature,
+                        )
+
+                        selected = self._knowledge_service.select(query)
+
+                        for document in selected:
+                            knowledge_by_id[document.id] = document
+
+            context.set_knowledge(
+                list(knowledge_by_id.values())
+            )
+
+            skill.execute(context)
 
         return context

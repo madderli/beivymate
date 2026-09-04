@@ -48,3 +48,7 @@ class KnowledgeQuery(BaseModel):
     scope: str = Field(default = "global", min_length = 1)
     category: str | None = None
     nature: KnowledgeNature | None = None
+
+class KnowledgeRequirement(BaseModel):
+    category: str | None = None
+    nature: KnowledgeNature | None = None

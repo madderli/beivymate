@@ -1,91 +1,193 @@
 from pathlib import Path
 
-from beivymate.knowledge.discovery import KnowledgeDiscovery
+from reportlab.pdfgen import canvas
 
-def write_knowledge(
+from beivymate.knowledge.discovery import (
+    KnowledgeDiscovery,
+)
+
+
+def write_markdown_knowledge(
     path: Path,
-    *,
-    knowledge_id: str,
-    category: str,
-    role: str,
-    nature: str,
-):
-    path.parent.mkdir(parents=True, exist_ok=True)
+) -> None:
+
+    path.parent.mkdir(
+        parents = True,
+        exist_ok = True,
+    )
 
     path.write_text(
-        f"""---
-        id: {knowledge_id}
-        name: {knowledge_id}
-        category: {category}
+        """---
+        id: test_design
+        name: Test Design
+        category: testing
         roles:
-          - {role}
-        cope: global
-        nature: {nature}
-        locale: zh-CN
+        - tester
+        scope: global
+        nature: foundational
+        locale: en-US
         version: "1.0"
-        source_type: markdown
         ---
 
-        # {knowledge_id}
-
-        Knowledge content.
+        Test design knowledge.
         """,
         encoding = "utf-8",
     )
 
 
-def test_discover_all_markdown_knowledge(tmp_path: Path):
-    root = tmp_path / "knowledge"
+def write_pdf(
+    path: Path,
+) -> None:
 
-    write_knowledge(
-        root / "testing" / "test_design.md",
-        knowledge_id = "test_design",
-        category = "testing",
-        role = "tester",
-        nature = "foundational",
+    pdf = canvas.Canvas(
+        str(path)
     )
 
-    write_knowledge(
-        root / "it" / "it_basic.md",
-        knowledge_id = "it_basic",
-        category = "it",
-        role = "shared",
-        nature = "foundational",
+    pdf.drawString(
+        72,
+        720,
+        "PDF testing knowledge.",
     )
 
-    write_knowledge(
-        root / "customer" / "hospital_a.md",
-        knowledge_id = "hospital_a",
-        category = "customer",
-        role = "tester",
-        nature = "operational",
+    pdf.save()
+
+
+def write_pdf_metadata(
+    path: Path,
+) -> None:
+
+    path.write_text(
+        """---
+        id: pdf_testing
+        name: PDF Testing Knowledge
+        category: testing
+        roles:
+        - tester
+        scope: global
+        nature: foundational
+        locale: en-US
+        version: "1.0"
+        ---
+        """,
+        encoding = "utf-8",
     )
 
-    documents = KnowledgeDiscovery().discover(root)
 
-    assert len(documents) == 3
+def test_discover_markdown_and_pdf_knowledge(
+    tmp_path: Path,
+):
 
-    ids = {document.id for document in documents}
+    root = (
+        tmp_path
+        / "knowledge"
+    )
+
+    root.mkdir()
+
+    write_markdown_knowledge(
+        root
+        / "test_design.md"
+    )
+
+    pdf_path = (
+        root
+        / "pdf_testing.pdf"
+    )
+
+    write_pdf(
+        pdf_path
+    )
+
+    write_pdf_metadata(
+        root
+        / "pdf_testing.meta.md"
+    )
+
+    documents = (
+        KnowledgeDiscovery()
+        .discover(root)
+    )
+
+    assert len(documents) == 2
+
+    ids = {
+        document.id
+        for document in documents
+    }
 
     assert ids == {
         "test_design",
-        "it_basic",
-        "hospital_a",
+        "pdf_testing",
     }
 
 
-def test_discover_empty_directory(tmp_path: Path):
-    root = tmp_path / "knowledge"
+def test_discovery_does_not_load_pdf_metadata_as_knowledge(
+    tmp_path: Path,
+):
+
+    root = (
+        tmp_path
+        / "knowledge"
+    )
+
     root.mkdir()
 
-    documents = KnowledgeDiscovery().discover(root)
+    pdf_path = (
+        root
+        / "pdf_testing.pdf"
+    )
 
-    assert documents == []
+    write_pdf(
+        pdf_path
+    )
+
+    write_pdf_metadata(
+        root
+        / "pdf_testing.meta.md"
+    )
+
+    documents = (
+        KnowledgeDiscovery()
+        .discover(root)
+    )
+
+    assert len(documents) == 1
+
+    assert (
+        documents[0].id
+        == "pdf_testing"
+    )
 
 
-def test_discover_missing_directory(tmp_path: Path):
-    root = tmp_path / "knowledge"
+def test_discover_empty_directory(
+    tmp_path: Path,
+):
 
-    documents = KnowledgeDiscovery().discover(root)
+    root = (
+        tmp_path
+        / "knowledge"
+    )
 
-    assert documents == []
+    root.mkdir()
+
+    assert (
+        KnowledgeDiscovery()
+        .discover(root)
+        == []
+    )
+
+
+def test_discover_missing_directory(
+    tmp_path: Path,
+):
+
+    root = (
+        tmp_path
+        / "knowledge"
+    )
+
+    assert (
+        KnowledgeDiscovery()
+        .discover(root)
+        == []
+    )

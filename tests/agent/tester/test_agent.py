@@ -36,6 +36,7 @@ def test_tester_agent_accepts_requirement():
     agent = TesterAgent(
         runtime = runtime,
         workflow = workflow,
+        locale = "zh-CN",
     )
 
     result = agent.run(requirement)

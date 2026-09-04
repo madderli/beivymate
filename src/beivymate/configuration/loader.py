@@ -9,9 +9,10 @@ from beivymate.configuration.models import (
     TemplateDefinition,
     WorkflowDefinition,
 )
+from beivymate.markdown.metadata import read_markdown
 
 
-T = TypeVar("T", bound=BaseModel)
+T = TypeVar("T", bound = BaseModel)
 
 
 # Read a BeivyMate Markdown file and return

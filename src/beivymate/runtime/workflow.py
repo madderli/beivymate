@@ -1,8 +1,6 @@
 from beivymate.configuration.models import WorkflowDefinition
-from beivymate.runtime.context import AgentContext
 from beivymate.runtime.skill import Skill
 
-# Executable workflow
 class Workflow:
 
     def __init__(
@@ -27,11 +25,3 @@ class Workflow:
     @property
     def skills(self) -> list[Skill]:
         return self._skills
-
-    def execute(
-        self,
-        context: AgentContext,
-    ) -> None:
-
-        for skill in self._skills:
-            skill.execute(context)

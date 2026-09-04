@@ -1,3 +1,5 @@
+import pytest
+
 from beivymate.runtime.llm.models import (
     ChatMessage,
     LLMConnectionConfig,
@@ -6,7 +8,6 @@ from beivymate.runtime.llm.models import (
 from beivymate.runtime.llm.providers.ollama import (
     OllamaProvider,
 )
-
 
 def test_ollama_provider_chat():
 

@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from beivymate.knowledge.loader import MarkdownKnowledgeLoader
+from beivymate.knowledge.loaders.markdown import MarkdownKnowledgeLoader
 
 
 def test_load_markdown_knowledge(tmp_path: Path):
@@ -30,8 +30,10 @@ def test_load_markdown_knowledge(tmp_path: Path):
         encoding = "utf-8",
     )
 
-    document = MarkdownKnowledgeLoader().load(path)
+    documents = MarkdownKnowledgeLoader().load(path)
+    assert len(documents) == 1
 
+    document = documents[0]
     assert document.id == "test_design_basic"
     assert document.name == "测试设计基础"
     assert document.category == "testing"
@@ -69,7 +71,9 @@ def test_loader_supports_shared_knowledge(tmp_path: Path):
         encoding = "utf-8",
     )
 
-    document = MarkdownKnowledgeLoader().load(path)
+    documents = MarkdownKnowledgeLoader().load(path)
+    
+    document = documents[0]
 
     assert document.roles == ["shared"]
 

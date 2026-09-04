@@ -9,6 +9,7 @@ from beivymate.configuration.loader import load_template_definition
 from beivymate.configuration.template_resolver import (
     TemplateResolver,
 )
+from beivymate.knowledge.service import KnowledgeService
 from beivymate.runtime.llm.gateway import LLMGateway
 from beivymate.runtime.runtime import Runtime
 from beivymate.runtime.skill_registry import SkillRegistry
@@ -20,6 +21,12 @@ TEMPLATE_ROOT = (
     PROJECT_ROOT
     / "resources"
     / "template"
+)
+
+KNOWLEDGE_ROOT = (
+    PROJECT_ROOT
+    / "resources"
+    / "knowledge"
 )
 
 
@@ -34,13 +41,15 @@ def create_tester_agent(
     if template_path is None:
 
         resolver = TemplateResolver(
-            template_root=TEMPLATE_ROOT,
+            template_root = TEMPLATE_ROOT,
         )
 
         template_path = str(
             resolver.resolve_default(
                 role = "tester",
-                template_name = "tester_requirement_understanding",
+                template_name = (
+                    "tester_requirement_understanding"
+                ),
                 locale = locale,
             )
         )
@@ -64,8 +73,13 @@ def create_tester_agent(
         requirement_understanding_skill,
     )
 
+    knowledge_service = KnowledgeService(
+        root = KNOWLEDGE_ROOT,
+    )
+
     runtime = Runtime(
         skill_registry = skill_registry,
+        knowledge_service = knowledge_service,
     )
 
     workflow = runtime.load_workflow(
@@ -75,6 +89,7 @@ def create_tester_agent(
     return TesterAgent(
         runtime = runtime,
         workflow = workflow,
+        locale = locale,
     )
 
 

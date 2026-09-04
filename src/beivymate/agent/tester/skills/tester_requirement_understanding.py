@@ -1,8 +1,9 @@
-from beivymate.configuration.loader import (
-    load_template_definition,
-)
 from beivymate.configuration.models import (
     TemplateDefinition,
+)
+from beivymate.knowledge.models import(
+    KnowledgeDocument, 
+    KnowledgeRequirement,
 )
 from beivymate.model.entity.requirement import Requirement
 from beivymate.runtime.context import AgentContext
@@ -11,9 +12,9 @@ from beivymate.runtime.llm.models import (
     ChatMessage,
     LLMRequest,
 )
+from beivymate.runtime.skill import Skill
 
-
-class TesterRequirementUnderstandingSkill:
+class TesterRequirementUnderstandingSkill(Skill):
 
     def __init__(
         self,
@@ -46,17 +47,20 @@ class TesterRequirementUnderstandingSkill:
             )
         )
 
+        knowledge = context.get_knowledge()
+
         prompt = self._build_prompt(
             requirement,
             requirement_data,
+            knowledge,
         )
 
         request = LLMRequest(
-            model=self._model,
-            messages=[
+            model = self._model,
+            messages = [
                 ChatMessage(
-                    role="system",
-                    content=(
+                    role = "system",
+                    content = (
                         "You are a professional software tester "
                         "specialized in requirement analysis."
                     ),
@@ -82,7 +86,12 @@ class TesterRequirementUnderstandingSkill:
         self,
         requirement: Requirement,
         requirement_data: dict,
+        knowledge: list[KnowledgeDocument],
     ) -> str:
+
+        knowledge_content = self._build_knowledge_content(
+            knowledge
+        )
 
         return f"""
             Please analyze the following software requirement
@@ -90,6 +99,9 @@ class TesterRequirementUnderstandingSkill:
 
             Requirement:
                 {requirement_data}
+            
+            Relevant Knowledge:
+                {knowledge_content}
 
             Use the following requirement-understanding template
             as the analysis and output specification.
@@ -100,11 +112,12 @@ class TesterRequirementUnderstandingSkill:
             Important instructions:
 
             1. Analyze the requirement from a testing perspective.
-            2. Follow the structure and requirements defined by the template.
-            3. Do not invent business requirements that are not provided.
-            4. Clearly identify ambiguous, missing, or unclear requirements.
-            5. Do not design detailed test cases unless explicitly requested by the template.
-            6. Do not execute tests.
+            2. Use the relevant knowledge as supporting context.
+            3. Follow the structure and requirements defined by the template.
+            4. Do not invent business requirements that are not provided.
+            5. Clearly identify ambiguous, missing, or unclear requirements.
+            6. Do not design detailed test cases unless explicitly requested by the template.
+            7. Do not execute tests.
 
             Requirement ID:
                 {requirement.id}
@@ -115,3 +128,49 @@ class TesterRequirementUnderstandingSkill:
             Template Version:
                 {self._template.version}
         """.strip()
+
+
+    def knowledge_requirements(
+        self,
+    ) -> list[KnowledgeRequirement]:
+        return [
+            KnowledgeRequirement(
+                category = "testing",
+                nature = "foundational",
+            ),
+            KnowledgeRequirement(
+                category = "domain",
+                nature = "foundational",
+            ),
+            KnowledgeRequirement(
+                category = "product",
+                nature = "operational",
+            ),
+            KnowledgeRequirement(
+                category = "customer",
+                nature = "operational",
+            ),
+        ]
+
+    def _build_knowledge_content(
+        self,
+        knowledge: list[KnowledgeDocument],
+    ) -> str:
+
+        if not knowledge:
+            return "No relevant knowledge provided."
+
+        sections: list[str] = []
+
+        for document in knowledge:
+            sections.append(
+                f"""
+                Knowledge ID: {document.id}
+                Category: {document.category}
+                Nature: {document.nature}
+                Content:
+                {document.content}
+                """.strip()
+            )
+
+        return "\n\n".join(sections)

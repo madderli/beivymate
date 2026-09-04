@@ -3,12 +3,15 @@ from pathlib import Path
 from beivymate.configuration.loader import (
     load_template_definition,
 )
+from beivymate.configuration.models import TemplateDefinition
+from beivymate.knowledge.models import KnowledgeDocument
 from beivymate.model.entity.requirement import Requirement
 from beivymate.runtime.context import AgentContext
 
 from beivymate.agent.tester.skills.tester_requirement_understanding import (
     TesterRequirementUnderstandingSkill,
 )
+from beivymate.runtime.llm.models import LLMResponse
 
 
 class FakeResponse:
@@ -34,9 +37,67 @@ class FakeLLMGateway:
 
         self.last_request = request
 
-        return FakeResponse(
-            "测试需求理解结果"
+        return LLMResponse(
+            model = request.model,
+            content = "测试需求理解结果"
         )
+
+
+def create_template() -> TemplateDefinition:
+    return TemplateDefinition(
+        id = "tester_requirement_understanding",
+        name = "Tester Requirement Understanding",
+        description = "Requirement understanding template.",
+        role = "tester",
+        version = "1.0",
+        content = "Analyze requirement scope and risks.",
+    )
+
+
+def test_tester_requirement_understanding_declares_knowledge_requirements():
+    gateway = FakeLLMGateway()
+
+    skill = TesterRequirementUnderstandingSkill(
+        gateway = gateway,
+        model = "test-model",
+        template = create_template(),
+    )
+
+    requirements = skill.knowledge_requirements()
+
+    assert len(requirements) == 4
+
+    assert (
+        requirements[0].category,
+        requirements[0].nature,
+    ) == (
+        "testing",
+        "foundational",
+    )
+
+    assert (
+        requirements[1].category,
+        requirements[1].nature,
+    ) == (
+        "domain",
+        "foundational",
+    )
+
+    assert (
+        requirements[2].category,
+        requirements[2].nature,
+    ) == (
+        "product",
+        "operational",
+    )
+
+    assert (
+        requirements[3].category,
+        requirements[3].nature,
+    ) == (
+        "customer",
+        "operational",
+    )
 
 
 def test_skill_uses_template():
@@ -237,3 +298,188 @@ def test_skill_supports_custom_template(
     )
 
     assert "2.0" in prompt
+
+
+def test_tester_requirement_understanding_includes_knowledge_in_prompt():
+    gateway = FakeLLMGateway()
+
+    skill = TesterRequirementUnderstandingSkill(
+        gateway = gateway,
+        model = "test-model",
+        template = create_template(),
+    )
+
+    context = AgentContext()
+
+    context.set(
+        "requirement",
+        Requirement(
+            id = "REQ-001",
+            title = "WeChat Payment",
+            content = (
+                "HIS supports outpatient patient "
+                "WeChat payment."
+            ),
+        ),
+    )
+
+    context.set_knowledge(
+        [
+            KnowledgeDocument(
+                id = "testing_basic",
+                name = "Testing Basic",
+                description = "Testing knowledge.",
+                category = "testing",
+                roles = ["tester"],
+                scope = "global",
+                nature = "foundational",
+                locale = "zh-CN",
+                version = "1.0",
+                source_type = "markdown",
+                source = "testing_basic.md",
+                content = (
+                    "Payment testing should consider "
+                    "success, failure, cancellation, "
+                    "and duplicate payment."
+                ),
+            ),
+            KnowledgeDocument(
+                id = "his_payment",
+                name = "HIS Payment",
+                description = "HIS payment knowledge.",
+                category = "product",
+                roles = ["tester"],
+                scope = "global",
+                nature = "operational",
+                locale = "zh-CN",
+                version = "1.0",
+                source_type = "markdown",
+                source = "his_payment.md",
+                content = (
+                    "Outpatient payment updates "
+                    "the patient settlement status."
+                ),
+            ),
+        ]
+    )
+
+    skill.execute(context)
+
+    assert gateway.last_request is not None
+
+    user_message = gateway.last_request.messages[1].content
+
+    assert "Relevant Knowledge:" in user_message
+
+    assert "testing_basic" in user_message
+    assert "Payment testing should consider" in user_message
+
+    assert "his_payment" in user_message
+    assert "Outpatient payment updates" in user_message
+
+
+def test_tester_requirement_understanding_includes_knowledge_in_prompt():
+    gateway = FakeLLMGateway()
+
+    skill = TesterRequirementUnderstandingSkill(
+        gateway = gateway,
+        model = "test-model",
+        template = create_template(),
+    )
+
+    context = AgentContext()
+
+    context.set(
+        "requirement",
+        Requirement(
+            id ="REQ-001",
+            title = "WeChat Payment",
+            content = (
+                "HIS supports outpatient patient "
+                "WeChat payment."
+            ),
+        ),
+    )
+
+    context.set_knowledge(
+        [
+            KnowledgeDocument(
+                id = "testing_basic",
+                name = "Testing Basic",
+                description = "Testing knowledge.",
+                category = "testing",
+                roles = ["tester"],
+                scope = "global",
+                nature = "foundational",
+                locale = "zh-CN",
+                version = "1.0",
+                source_type = "markdown",
+                source = "testing_basic.md",
+                content = (
+                    "Payment testing should consider "
+                    "success, failure, cancellation, "
+                    "and duplicate payment."
+                ),
+            ),
+            KnowledgeDocument(
+                id = "his_payment",
+                name = "HIS Payment",
+                description = "HIS payment knowledge.",
+                category = "product",
+                roles = ["tester"],
+                scope = "global",
+                nature = "operational",
+                locale = "zh-CN",
+                version = "1.0",
+                source_type = "markdown",
+                source = "his_payment.md",
+                content = (
+                    "Outpatient payment updates "
+                    "the patient settlement status."
+                ),
+            ),
+        ]
+    )
+
+    skill.execute(context)
+
+    assert gateway.last_request is not None
+
+    user_message = gateway.last_request.messages[1].content
+
+    assert "Relevant Knowledge:" in user_message
+
+    assert "testing_basic" in user_message
+    assert "Payment testing should consider" in user_message
+
+    assert "his_payment" in user_message
+    assert "Outpatient payment updates" in user_message
+
+
+def test_tester_requirement_understanding_runs_without_knowledge():
+    gateway = FakeLLMGateway()
+
+    skill = TesterRequirementUnderstandingSkill(
+        gateway = gateway,
+        model = "test-model",
+        template = create_template(),
+    )
+
+    context = AgentContext()
+
+    context.set(
+        "requirement",
+        Requirement(
+            id = "REQ-001",
+            title = "Test Requirement",
+            content = "Test requirement content.",
+        ),
+    )
+
+    skill.execute(context)
+
+    assert gateway.last_request is not None
+
+    user_message = gateway.last_request.messages[1].content
+
+    assert "No relevant knowledge provided." in user_message

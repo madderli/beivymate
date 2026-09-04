@@ -44,7 +44,7 @@ def create_test_workflow(
         """---
         id: smoke_test
         name: Smoke Test
-        escription: Test workflow.
+        description: Test workflow.
         steps:
           - tester_requirement_understanding
         ---
