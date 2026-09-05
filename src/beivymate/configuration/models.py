@@ -8,6 +8,10 @@ class ModelDefinition(BaseModel):
     provider: str = Field(min_length = 1)
     model: str = Field(min_length = 1)
     base_url: str | None = None
+    timeout: float = Field(
+        default = 60.0,
+        gt = 0,
+    )
     enabled: bool = True
 
 

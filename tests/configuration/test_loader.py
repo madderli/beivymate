@@ -3,9 +3,7 @@ from pathlib import Path
 import pytest
 
 from beivymate.configuration.loader import (
-    load_llm_selection,
     load_model_definition,
-    load_workflow_definition,
 )
 
 
@@ -48,7 +46,7 @@ def test_load_model_definition_file_not_found(
 
     with pytest.raises(
         FileNotFoundError,
-        match = "Configuration file not found",
+        match = "Markdown file not found",
     ):
         load_model_definition(path)
 
@@ -66,6 +64,6 @@ def test_markdown_requires_metadata_delimiter(
 
     with pytest.raises(
         ValueError,
-        match = "must start with metadata delimiter",
+        match = "Markdown file must start with metadata delimiter",
     ):
         load_model_definition(path)
