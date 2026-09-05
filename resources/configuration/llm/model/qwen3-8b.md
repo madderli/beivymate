@@ -4,6 +4,7 @@ name: Qwen3 8B
 provider: ollama
 model: qwen3:8b
 base_url: http://localhost:11434
+timeout: 180
 enabled: true
 ---
 
