@@ -22,7 +22,7 @@ class TemplateResolver:
             / role
             / template_name
             / locale
-            / "DefaultTesterRequirementUnderstandingTemplate.md"
+            / ("Default" + "".join(part.capitalize() for part in template_name.split("_")) + "Template.md")
         )
 
         if not path.exists():

@@ -39,7 +39,7 @@ def test_load_default_tester_requirement_understanding_template():
 
     assert template.role == "tester"
 
-    assert template.version == "1.0"
+    assert template.version == "2.0"
 
     assert template.description
 

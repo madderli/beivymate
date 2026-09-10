@@ -8,6 +8,7 @@ from beivymate.configuration.models import (
     ModelDefinition,
     TemplateDefinition,
     WorkflowDefinition,
+    WorkflowStepDefinition,
 )
 from beivymate.markdown.metadata import (
     read_markdown,
@@ -58,10 +59,29 @@ def load_workflow_definition(
     path: Path,
 ) -> WorkflowDefinition:
 
-    return _load_model(
+    definition = _load_model(
         path,
         WorkflowDefinition,
     )
+    if definition.step_definitions:
+        return definition
+    if not any(entry.endswith(".md") for entry in definition.steps):
+        return definition
+    resolved = []
+    for index, entry in enumerate(definition.steps):
+        if entry.endswith(".md"):
+            step_path = Path(entry)
+            if not step_path.is_absolute():
+                step_path = path.parent / step_path
+            try:
+                resolved.append(_load_model(step_path, WorkflowStepDefinition))
+            except (ValueError, OSError) as exc:
+                raise ValueError(f"步骤配置 {step_path} 无效：{exc}") from exc
+        else:
+            resolved.append(WorkflowStepDefinition(id=f"step_{index + 1}", skill=entry))
+    return WorkflowDefinition.model_validate({
+        **definition.model_dump(), "step_definitions": resolved,
+    })
 
 
 def load_template_definition(

@@ -2,6 +2,7 @@ from ..models import (
     LLMConnectionConfig,
     LLMRequest,
     LLMResponse,
+    LLMUsage,
 )
 from ..transport import HTTPTransport
 
@@ -37,6 +38,11 @@ class OllamaProvider:
             },
         }
 
+        if request.response_schema is not None:
+            payload["format"] = request.response_schema
+        if request.max_output_tokens is not None:
+            payload["options"]["num_predict"] = request.max_output_tokens
+
         result = self.transport.post_json(
             url=url,
             payload=payload,
@@ -45,4 +51,6 @@ class OllamaProvider:
         return LLMResponse(
             model=result["model"],
             content=result["message"]["content"],
+            usage=LLMUsage(input_tokens=result.get("prompt_eval_count"),
+                           output_tokens=result.get("eval_count")),
         )

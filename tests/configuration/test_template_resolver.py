@@ -1,5 +1,13 @@
 from pathlib import Path
 
+
+def test_resolver_supports_other_skill_template(tmp_path):
+    from beivymate.configuration.template_resolver import TemplateResolver
+    template = tmp_path / "tester/test_analysis/zh-CN/DefaultTestAnalysisTemplate.md"
+    template.parent.mkdir(parents=True)
+    template.write_text("Test fixture only", encoding="utf-8")
+    assert TemplateResolver(tmp_path).resolve_default("tester", "test_analysis") == template
+
 import pytest
 
 from beivymate.configuration.template_resolver import (
