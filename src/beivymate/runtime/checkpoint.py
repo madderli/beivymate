@@ -13,12 +13,13 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from beivymate.configuration.models import WorkflowDefinition
 from beivymate.knowledge.models import KnowledgeDocument, KnowledgeRequirement
 from beivymate.model.artifact.requirement_understanding import UnderstandingArtifact
+from beivymate.model.artifact.test_analysis import AnalysisArtifact
 from beivymate.model.entity.requirement import Requirement
 from beivymate.runtime.memory import ContextItem, ContextSelection, ContextBudget, ExecutionMemory
 from beivymate.integration.contracts import AssetReference, TestCaseAsset, ExecutionRequest, ExecutionResult
 
 TYPES = {cls.__name__: cls for cls in (
-    Requirement, UnderstandingArtifact, KnowledgeDocument, KnowledgeRequirement,
+    Requirement, UnderstandingArtifact, AnalysisArtifact, KnowledgeDocument, KnowledgeRequirement,
     ContextItem, ContextSelection, ContextBudget, ExecutionMemory,
     AssetReference, TestCaseAsset, ExecutionRequest, ExecutionResult,
 )}
@@ -95,9 +96,9 @@ class Checkpoint(BaseModel):
             raise ValueError("Checkpoint has no current step")
         return self
 
-    def accepted_artifact(self, step_id: str):
+    def accepted_artifact(self, step_id: str, kind: str = "requirement_understanding"):
         from beivymate.runtime.context import AgentContext
-        artifact = AgentContext.restore(self.context).get(f"steps.{step_id}.requirement_understanding")
+        artifact = AgentContext.restore(self.context).get(f"steps.{step_id}.{kind}")
         if artifact is None:
             raise ValueError("Artifact not found")
         if not any(d.step_id == step_id and d.phase == "review" and d.decision == "approved"

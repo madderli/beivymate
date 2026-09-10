@@ -1,11 +1,12 @@
 from pathlib import Path
 
 from beivymate.agent.tester.agent import TesterAgent
+from beivymate.agent.tester.skills.test_analysis import TestAnalysisSkill
 from beivymate.agent.tester.skills.tester_requirement_understanding import (
     TesterRequirementUnderstandingSkill,
 )
 from beivymate.application.agent_factory import AgentFactory
-from beivymate.configuration.loader import load_template_definition
+from beivymate.configuration.loader import load_template_definition, load_workflow_definition
 from beivymate.configuration.template_resolver import (
     TemplateResolver,
 )
@@ -36,6 +37,7 @@ def create_tester_agent(
     model: str,
     template_path: str | None = None,
     locale: str = "zh-CN",
+    analysis_template_path: str | None = None,
 ) -> TesterAgent:
 
     if template_path is None:
@@ -72,6 +74,12 @@ def create_tester_agent(
         "tester_requirement_understanding",
         requirement_understanding_skill,
     )
+
+    definition = load_workflow_definition(Path(workflow_path))
+    if any(step.skill == "test_analysis" for step in definition.resolved_steps()):
+        analysis_path = Path(analysis_template_path) if analysis_template_path else TemplateResolver(TEMPLATE_ROOT).resolve_default(
+            "tester", "test_analysis", locale)
+        skill_registry.register("test_analysis", TestAnalysisSkill(gateway, model, load_template_definition(analysis_path)))
 
     knowledge_service = KnowledgeService(
         root = KNOWLEDGE_ROOT,

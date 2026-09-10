@@ -196,6 +196,10 @@ class Runtime:
             state.context = context.snapshot()
             state.write(checkpoint_path)
             try:
+                context.set("accepted_artifact_hashes", {
+                    item.artifact_id: item.subject_hash for item in state.decisions
+                    if item.phase == "review" and item.decision == "approved" and item.artifact_id is not None
+                })
                 definition = state.workflow.model_copy(update={"steps": [step.skill], "step_definitions": [step]})
                 self._execute(Workflow(definition, [skill]), context)
                 subject = skill.review_subject(context)
