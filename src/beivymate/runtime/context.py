@@ -10,6 +10,17 @@ class AgentContext:
     def __init__(self) -> None:
         self._data: dict[str, Any] = {}
 
+    def snapshot(self) -> dict:
+        from beivymate.runtime.checkpoint import encode
+        return encode(self._data)
+
+    @classmethod
+    def restore(cls, snapshot: dict) -> "AgentContext":
+        from beivymate.runtime.checkpoint import decode
+        context = cls()
+        context._data = decode(snapshot)
+        return context
+
     # Store a value in the context with a given key.
     def set(self, key: str, value: Any) -> None:
         self._data[key] = value

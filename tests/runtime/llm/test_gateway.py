@@ -1,3 +1,4 @@
+import pytest
 from beivymate.runtime.llm.gateway import LLMGateway
 from beivymate.runtime.llm.models import (
     ChatMessage,
@@ -37,6 +38,7 @@ def test_gateway_chat():
     assert response.content == "fake response"
 
 
+@pytest.mark.llm
 def test_gateway_with_ollama():
     config = LLMConnectionConfig(
         base_url = "http://localhost:11434",

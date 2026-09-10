@@ -1,0 +1,1 @@
+{"reviews":[{"case_id":"EXAMPLE-ONLY","artifact_id":"example-artifact","rubric_version":"1","reviewer":"example-reviewer","structured_valid":true,"checkpoints":{"payment_success_changes_state":"covered","failure_preserves_state":"missing","project_specific_rule":"pending"},"unsupported_findings":0}]}

@@ -8,4 +8,5 @@ steps:
 
 # Smoke Test
 
-This workflow defines the default smoke test process.
+This runnable baseline currently performs requirement understanding only.
+Test analysis will be added after the pre-M6 foundation is complete.
