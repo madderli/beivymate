@@ -38,6 +38,10 @@ def create_tester_agent(
     template_path: str | None = None,
     locale: str = "zh-CN",
     analysis_template_path: str | None = None,
+    design_store=None,
+    design_template_path: str | None = None,
+    case_excel_template_path: str | None = None,
+    case_column_mapping: dict | None = None,
 ) -> TesterAgent:
 
     if template_path is None:
@@ -85,6 +89,16 @@ def create_tester_agent(
         root = KNOWLEDGE_ROOT,
     )
 
+    if any(step.skill == "test_design" for step in definition.resolved_steps()):
+        from beivymate.agent.tester.skills.test_design import TestDesignSkill
+        if design_store is None:
+            raise ValueError("M7 workflow requires a product catalog and CaseStore")
+        design_path = Path(design_template_path) if design_template_path else TemplateResolver(TEMPLATE_ROOT).resolve_default(
+            "tester", "test_design", locale)
+        excel_path = Path(case_excel_template_path) if case_excel_template_path else TEMPLATE_ROOT / "tester/test_design/DefaultTestCaseTemplate.xlsx"
+        skill_registry.register("test_design", TestDesignSkill(gateway, model, load_template_definition(design_path),
+                                design_store, excel_path, case_column_mapping))
+
     runtime = Runtime(
         skill_registry = skill_registry,
         knowledge_service = knowledge_service,
@@ -107,6 +121,11 @@ def create_agent_factory(
     model: str,
     template_path: str | None = None,
     locale: str = "zh-CN",
+    analysis_template_path: str | None = None,
+    design_store=None,
+    design_template_path: str | None = None,
+    case_excel_template_path: str | None = None,
+    case_column_mapping: dict | None = None,
 ) -> AgentFactory:
 
     tester_agent = create_tester_agent(
@@ -115,6 +134,11 @@ def create_agent_factory(
         gateway = gateway,
         model = model,
         locale = locale,
+        analysis_template_path=analysis_template_path,
+        design_store=design_store,
+        design_template_path=design_template_path,
+        case_excel_template_path=case_excel_template_path,
+        case_column_mapping=case_column_mapping,
     )
 
     return AgentFactory(

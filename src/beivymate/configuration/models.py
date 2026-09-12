@@ -22,6 +22,8 @@ class WorkflowStepDefinition(BaseModel):
 class ModelDefinition(BaseModel):
     id: str = Field(min_length = 1)
     name: str = Field(min_length = 1)
+    api_key_env: str | None = None
+    max_retries: int = Field(default=2, ge=0, le=3)
     provider: str = Field(min_length = 1)
     model: str = Field(min_length = 1)
     base_url: str | None = None

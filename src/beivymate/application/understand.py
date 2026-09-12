@@ -89,7 +89,8 @@ def main():
     config = load_model_definition(args.model_config)
     if not config.enabled or not config.base_url:
         parser.error("模型未启用或缺少地址")
-    gateway = create_gateway(config.provider, config.base_url, config.timeout)
+    gateway = create_gateway(config.provider, config.base_url, config.timeout,
+                             api_key_env=config.api_key_env, max_retries=config.max_retries)
     if args.decision:
         state = Checkpoint.load(args.output / "checkpoint.json")
         context = AgentContext.restore(state.context)

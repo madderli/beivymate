@@ -5,6 +5,10 @@ from beivymate.runtime.context import AgentContext
 
 class Skill(ABC):
 
+    def on_accepted(self, context: AgentContext) -> None:
+        """Idempotent projection of a persisted acceptance into local assets."""
+        pass
+
     def can_auto_authorize(self) -> bool:
         """Unknown capabilities require human authorization by default."""
         return False

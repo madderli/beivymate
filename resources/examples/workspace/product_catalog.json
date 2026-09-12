@@ -1,0 +1,7 @@
+{
+  "products": {"payment": "Func01"},
+  "functions": [
+    {"id": "outpatient_billing", "product_id": "payment", "name": "门诊收费"},
+    {"id": "wechat_payment", "product_id": "payment", "name": "微信支付", "parent_id": "outpatient_billing"}
+  ]
+}

@@ -1,4 +1,6 @@
 from pathlib import Path
+import argparse
+import os
 
 from beivymate.application.composition import (
     create_tester_agent,
@@ -32,7 +34,7 @@ MODEL_PATH = (
     CONFIGURATION_ROOT
     / "llm"
     / "model"
-    / "qwen3-8b.md"
+    / "groq-gpt-oss-120b.md"
 )
 
 WORKFLOW_PATH = (
@@ -46,7 +48,15 @@ def create_gateway(
     provider: str,
     base_url: str,
     timeout: float,
+    api_key_env: str | None = None,
+    max_retries: int = 2,
 ) -> LLMGateway:
+
+    if provider == "openai_compatible":
+        from beivymate.runtime.llm.providers.openai_compatible import OpenAICompatibleProvider
+        key = os.environ.get(api_key_env or "BEIVYMATE_API_KEY")
+        return LLMGateway(OpenAICompatibleProvider(LLMConnectionConfig(
+            base_url=base_url, api_key=key, timeout=timeout), max_retries=max_retries))
 
     if provider == "ollama":
 
@@ -69,13 +79,16 @@ def create_gateway(
     )
 
 
-def main() -> None:
+def main(argv=None) -> None:
 
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--model-config", type=Path, default=MODEL_PATH)
+    args = parser.parse_args(argv)
     print("Starting BeIvyMate...")
     print("Running tester requirement understanding validation.")
 
     model_definition = load_model_definition(
-        MODEL_PATH
+        args.model_config
     )
 
     if not model_definition.enabled:
@@ -92,6 +105,8 @@ def main() -> None:
         provider = model_definition.provider,
         base_url = model_definition.base_url,
         timeout = model_definition.timeout,
+        api_key_env=model_definition.api_key_env,
+        max_retries=model_definition.max_retries,
     )
 
     agent = create_tester_agent(
