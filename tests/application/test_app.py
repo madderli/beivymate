@@ -39,7 +39,7 @@ def test_main(
         lambda *args, **kwargs: gateway,
     )
 
-    app.main()
+    app.main([])
 
     captured = capsys.readouterr()
 

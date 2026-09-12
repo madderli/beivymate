@@ -26,6 +26,6 @@ class LLMResponse(BaseModel):
 
 class LLMConnectionConfig(BaseModel):
     base_url: str = Field(min_length=1)
-    api_key: str | None = None
+    api_key: str | None = Field(default=None, repr=False, exclude=True)
     proxy: str | None = None
     timeout: float = Field(default=60.0, gt=0)

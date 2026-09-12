@@ -7,7 +7,7 @@ import pytest
 
 def pytest_addoption(parser):
     parser.addoption("--run-llm", action="store_true", default=False,
-                     help="Run integration tests that contact a local LLM service")
+                     help="Run integration tests that contact a configured local or cloud LLM service")
 
 
 def pytest_collection_modifyitems(config, items):

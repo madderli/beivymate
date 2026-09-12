@@ -178,6 +178,10 @@ class Runtime:
             return state
 
         while state.index < len(steps):
+            # Reconcile accepted assets after restart as well as normal continuation.
+            for i in range(state.index):
+                context.set("step_id", steps[i].id)
+                skills[i].on_accepted(context)
             step, skill = steps[state.index], skills[state.index]
             context.set("step_id", step.id)
             phase_decisions = [item for item in state.decisions if item.step_id == step.id]
@@ -228,6 +232,9 @@ class Runtime:
                     pass  # Preserve the last serializable state if a Skill corrupted Context.
                 state.write(checkpoint_path)
                 raise
+        for step, skill in zip(steps, skills):
+            context.set("step_id", step.id)
+            skill.on_accepted(context)
         state.status = "completed"
         state.write(checkpoint_path)
         return state

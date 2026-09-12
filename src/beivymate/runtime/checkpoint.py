@@ -14,12 +14,14 @@ from beivymate.configuration.models import WorkflowDefinition
 from beivymate.knowledge.models import KnowledgeDocument, KnowledgeRequirement
 from beivymate.model.artifact.requirement_understanding import UnderstandingArtifact
 from beivymate.model.artifact.test_analysis import AnalysisArtifact
+from beivymate.model.artifact.test_design import DesignArtifact, CaseRevision, ProductCatalog
 from beivymate.model.entity.requirement import Requirement
 from beivymate.runtime.memory import ContextItem, ContextSelection, ContextBudget, ExecutionMemory
 from beivymate.integration.contracts import AssetReference, TestCaseAsset, ExecutionRequest, ExecutionResult
 
 TYPES = {cls.__name__: cls for cls in (
     Requirement, UnderstandingArtifact, AnalysisArtifact, KnowledgeDocument, KnowledgeRequirement,
+    DesignArtifact, CaseRevision, ProductCatalog,
     ContextItem, ContextSelection, ContextBudget, ExecutionMemory,
     AssetReference, TestCaseAsset, ExecutionRequest, ExecutionResult,
 )}
