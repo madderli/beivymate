@@ -104,7 +104,14 @@ class CasePublication(Contract):
     published_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
+class RequirementReference(Contract):
+    requirement_id: Text
+    version: Text | None = None
+    sha256: str = Field(pattern=r'^[0-9a-f]{64}$')
+
+
 class CaseRevision(CaseContent):
+    requirement_refs: list[RequirementReference] = Field(default_factory=list)
     id: Text = Field(default_factory=lambda: str(uuid4()))
     number: Text
     revision: int = Field(default=1, ge=1)
@@ -148,6 +155,8 @@ class DesignArtifact(Contract):
     case_revisions: list[CaseRevision]
     # Stable condition references use accepted artifact identity/revision and item position.
     coverage: dict[str, list[str]]
+    project_id: Text | None = None
+    case_requirement_refs: dict[str, list[RequirementReference]] = Field(default_factory=dict)
     inherited_unknowns: list[str]
     review_warnings: list[str] = Field(default_factory=list)
     model: Text

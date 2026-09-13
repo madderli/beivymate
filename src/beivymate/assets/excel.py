@@ -7,9 +7,9 @@ DEFAULT_MAPPING = {
     '用例编号':'number', '用例名称':'title', '用例描述':'description', '前置条件':'preconditions',
     '优先级':'priority', '步骤序号':'step_number', '步骤描述':'step_description', '期望结果':'expected_result',
     '特殊数据':'special_data', '备注':'notes', '是否已自动化':'automated', '编写人':'author',
-    '更新人':'modified_by', '维护人':'maintainer', '发布状态':'publication_status', '用例状态':'lifecycle',
+    '更新人':'modified_by', '维护人':'maintainer', '发布状态':'publication_status', '用例状态':'lifecycle', '关联需求':'requirement_refs', '所属项目':'project_id',
 }
-REQUIRED = set(DEFAULT_MAPPING.values()) - {'notes','publication_status','lifecycle'}
+REQUIRED = set(DEFAULT_MAPPING.values()) - {'notes','publication_status','lifecycle','requirement_refs','project_id'}
 
 
 class ExcelExporter:
@@ -32,7 +32,7 @@ class ExcelExporter:
         finally:
             wb.close()
 
-    def export(self, cases, output: Path):
+    def export(self, cases, output: Path, *, case_requirement_refs=None):
         wb = load_workbook(self.template)
         try:
             ws = wb.worksheets[0]
@@ -45,6 +45,8 @@ class ExcelExporter:
                     values = {**case.model_dump(), 'automated':'是' if case.automated else '否',
                               'publication_status':'已发布' if case.publication_status == 'published' else '未发布',
                               'lifecycle':{'active':'有效','retired':'废除','discarded':'撤销'}[case.lifecycle],
+                              'requirement_refs':'; '.join(f'{r.requirement_id}@{r.version or r.sha256}' for r in
+                                  (case_requirement_refs.get(case.id, case.requirement_refs) if case_requirement_refs is not None else case.requirement_refs)),
                               'step_number':index, 'step_description':step.description,
                               'expected_result':step.expected_result, 'special_data':step.special_data}
                     ws.append([values.get(self.mapping.get(header), '') for header in headers])

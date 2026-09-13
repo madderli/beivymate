@@ -67,6 +67,9 @@ def test_three_stage_pipeline(tmp_path,bad,overlap):
     assert state.index==2 and state.status=='waiting_review' and provider.calls==3
     artifact=AgentContext.restore(state.context).get('test_design_artifact')
     assert isinstance(artifact,DesignArtifact)
+    assert artifact.case_revisions[0].requirement_refs[0].requirement_id == 'R'
+    assert len(artifact.case_revisions[0].requirement_refs[0].sha256) == 64
+    assert artifact.case_requirement_refs[artifact.case_revisions[0].id][0].requirement_id == 'R'
     if overlap:
         assert artifact.proposals.uncovered == []
         assert '部分规则仍待确认' in artifact.case_revisions[0].blocking_questions
@@ -81,6 +84,11 @@ def test_three_stage_pipeline(tmp_path,bad,overlap):
     assert state.status=='completed' and provider.calls==3
     assert state.accepted_artifact('design','test_design').id==artifact.id
     assert store.latest(artifact.case_revisions[0].id).review_status=='accepted'
+    from beivymate.execution.service import ExecutionService
+    execution=ExecutionService(tmp_path/'execution','T')
+    plan=execution.from_design(artifact,store,environment='functional',versions={'p':'1'},executor='human')
+    assert plan.items[0].case.requirement_refs[0].requirement_id=='R'
+    assert execution.start_round(plan).round_number==1
 
 
 @pytest.mark.parametrize('action,target',[('reuse','1'),('revise','2')])
@@ -91,7 +99,7 @@ def test_existing_case_pipeline(tmp_path,action,target):
     store=CaseStore(tmp_path/'assets.db',catalog)
     initial=CaseProposal(title='支付',description='验证状态',preconditions='订单存在',priority='P1',
         steps=[{'description':'支付','expected_result':'已支付'}],product_id='p',function_id='pay',
-        applicable_versions=['1'],condition_refs=['old-condition'],change_reason='初始')
+        applicable_versions=['1'],condition_refs=['old-condition'],project_id='hospital-a',change_reason='初始')
     old=store.apply_batch([initial],design_id='old',actor='author',maintainer='owner')[0]
     store.accept_design(SimpleNamespace(case_revisions=[old]))
     class ExistingProvider(Provider):
@@ -112,7 +120,7 @@ def test_existing_case_pipeline(tmp_path,action,target):
             LLMGateway(provider),'fake',design_store=store)
     context=AgentContext()
     for key,value in {'actor':'author','maintainer':'owner','target_versions':{'p':target},
-                      'design_output_directory':str(tmp_path),'candidate_case_ids':[old.id]}.items():
+                      'project_id':'hospital-a','design_output_directory':str(tmp_path),'candidate_case_ids':[old.id]}.items():
         context.set(key,value)
     path=tmp_path/'checkpoint.json'
     state=agent().start(Requirement(id='R',title='支付',content='支付成功更新状态'),path,context=context)
@@ -120,12 +128,19 @@ def test_existing_case_pipeline(tmp_path,action,target):
         state=agent().resume(path,decision='approved',actor='reviewer',expected_subject_hash=state.subject_hash)
     artifact=AgentContext.restore(state.context).get('test_design_artifact')
     assert '本轮需确认' in artifact.markdown
+    assert artifact.project_id == 'hospital-a'
+    assert artifact.case_revisions[0].project_id == 'hospital-a'
+    assert artifact.case_requirement_refs[old.id][0].requirement_id == 'R'
+    if action == 'reuse':
+        assert artifact.case_revisions[0].requirement_refs == []
+    else:
+        assert artifact.case_revisions[0].requirement_refs[0].requirement_id == 'R'
     assert artifact.case_revisions[0].number==old.number
     assert artifact.case_revisions[0].revision==(1 if action=='reuse' else 2)
     assert artifact.case_revisions[0].applicable_versions==[target]
     assert list(artifact.coverage.values())==[[old.number]]
     state=agent().resume(path,decision='approved',actor='reviewer',expected_subject_hash=state.subject_hash)
     assert state.status=='completed'
-    assert store.active_for_version('p','1')[0].revision==1
+    assert store.active_for_version('p','1','hospital-a')[0].revision==1
     if action=='revise':
-        assert store.active_for_version('p','2')[0].revision==2
+        assert store.active_for_version('p','2','hospital-a')[0].revision==2
