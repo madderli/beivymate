@@ -61,7 +61,7 @@ class CaseStore:
                     raise ValueError('Design case differs from stored revision')
                 db.execute('INSERT OR IGNORE INTO accepted VALUES (?,?)',(case.id,case.revision))
 
-    def apply_batch(self, proposals, *, design_id, actor, maintainer):
+    def apply_batch(self, proposals, *, design_id, actor, maintainer, requirement_refs=()):
         result = []
         with self.connect() as db:
             db.execute('BEGIN IMMEDIATE')
@@ -80,7 +80,7 @@ class CaseStore:
                         count += 1
                         number = f'TC-{code}-{count:05d}'
                     db.execute('UPDATE products SET counter=? WHERE id=?',(count,proposal.product_id))
-                    case = CaseRevision(**content, number=number, author=actor, modified_by=actor, maintainer=maintainer, design_id=design_id)
+                    case = CaseRevision(**content, requirement_refs=list(requirement_refs), number=number, author=actor, modified_by=actor, maintainer=maintainer, design_id=design_id)
                     db.execute('INSERT INTO identities VALUES (?,?,?)',(case.id,case.number,case.product_id))
                 else:
                     row = db.execute('SELECT body FROM revisions WHERE id=? ORDER BY revision DESC LIMIT 1',(proposal.existing_id,)).fetchone()
@@ -106,7 +106,11 @@ class CaseStore:
                             raise ValueError('Reuse changes case content; use revise: ' + ', '.join(sorted(changed)))
                         result.append(old)
                         continue
-                    case = CaseRevision(**content, id=old.id, number=old.number, revision=old.revision+1,
+                    refs = list(old.requirement_refs)
+                    for ref in requirement_refs:
+                        if ref not in refs:
+                            refs.append(ref)
+                    case = CaseRevision(**content, requirement_refs=refs, id=old.id, number=old.number, revision=old.revision+1,
                         author=old.author, modified_by=actor, maintainer=old.maintainer, design_id=design_id,
                         lifecycle=('retired' if proposal.action == 'retire' else 'discarded' if proposal.action == 'discard' else old.lifecycle),
                         external_refs=old.external_refs)

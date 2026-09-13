@@ -3,7 +3,7 @@ from pathlib import Path
 from uuid import uuid4
 
 from beivymate.assets.excel import ExcelExporter
-from beivymate.model.artifact.test_design import DesignData, DesignArtifact
+from beivymate.model.artifact.test_design import DesignData, DesignArtifact, RequirementReference
 from beivymate.model.artifact.test_analysis import AnalysisArtifact
 from beivymate.model.artifact.requirement_understanding import SourceSnapshot
 from beivymate.runtime.checkpoint import digest
@@ -54,6 +54,11 @@ class TestDesignSkill(Skill):
         data = analysis.require_data()
         if context.get('accepted_artifact_hashes', {}).get(analysis.id) != digest(analysis):
             raise ValueError('Analysis is unaccepted or has changed')
+        source = next((s for s in analysis.sources if s.ref == 'requirement:' + analysis.requirement_id), None)
+        if source is None:
+            raise ValueError('Analysis requires its requirement source snapshot')
+        requirement_ref = RequirementReference(requirement_id=analysis.requirement_id,
+            version=source.version, sha256=source.sha256)
         actor, maintainer = context.get('actor'), context.get('maintainer')
         if not isinstance(actor, str) or not actor.strip() or not isinstance(maintainer, str) or not maintainer.strip():
             raise ValueError('Actor and maintainer are required')
@@ -148,7 +153,7 @@ class TestDesignSkill(Skill):
         if len(uncovered) != len(proposals.uncovered) or uncovered & covered or uncovered | covered != set(conditions):
             raise ValueError('Coverage must account for every condition exactly as covered or uncovered')
         design_id = str(uuid4())
-        cases = self.store.apply_batch(proposals.cases, design_id=design_id, actor=actor, maintainer=maintainer)
+        cases = self.store.apply_batch(proposals.cases, design_id=design_id, actor=actor, maintainer=maintainer, requirement_refs=[requirement_ref])
         coverage = {ref:[case.number for proposal,case in zip(proposals.cases,cases)
                          if ref in proposal.condition_refs and proposal.action not in {'retire', 'discard'}] for ref in conditions}
         artifact = DesignArtifact(id=design_id, step_id=context.get('step_id','test_design'), task_id=context.get('task_id'),
@@ -156,13 +161,14 @@ class TestDesignSkill(Skill):
             sources=[SourceSnapshot.capture('analysis:'+analysis.id, analysis.model_dump_json(),str(analysis.revision)),
                      SourceSnapshot.capture('template:'+self.template.id,self.template.content,self.template.version),
                      SourceSnapshot.capture('catalog',self.store.catalog.model_dump_json())],
+            project_id=context.get('project_id'), case_requirement_refs={c.id:[requirement_ref] for c in cases},
             raw_response=response.content, proposals=proposals, case_revisions=cases, coverage=coverage, review_warnings=warnings,
             inherited_unknowns=[q.question for q in data.unknowns], model=self.model, locale=context.get_locale())
         context.set('test_design_artifact',artifact)
         context.set(f'steps.{artifact.step_id}.test_design',artifact)
         artifact.save_new(output/(design_id+'.json'))
         context.set('test_design_exports', {'artifact':str(output/(design_id+'.json')), 'excel_status':'pending'})
-        exporter.export(cases,output/(design_id+'.xlsx'))
+        exporter.export(cases,output/(design_id+'.xlsx'), case_requirement_refs=artifact.case_requirement_refs)
         (output/(design_id+'.md')).write_text(artifact.markdown,encoding='utf-8')
         context.set('test_design_exports', {'artifact':str(output/(design_id+'.json')),
                     'excel':str(output/(design_id+'.xlsx')), 'summary':str(output/(design_id+'.md')), 'excel_status':'exported'})

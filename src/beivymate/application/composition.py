@@ -42,6 +42,7 @@ def create_tester_agent(
     design_template_path: str | None = None,
     case_excel_template_path: str | None = None,
     case_column_mapping: dict | None = None,
+    execution_service=None,
 ) -> TesterAgent:
 
     if template_path is None:
@@ -99,6 +100,12 @@ def create_tester_agent(
         skill_registry.register("test_design", TestDesignSkill(gateway, model, load_template_definition(design_path),
                                 design_store, excel_path, case_column_mapping))
 
+    if any(step.skill == 'test_execution' for step in definition.resolved_steps()):
+        from beivymate.agent.tester.skills.test_execution import TestExecutionSkill
+        if execution_service is None:
+            raise ValueError('M8 workflow requires ExecutionService')
+        skill_registry.register('test_execution', TestExecutionSkill(execution_service))
+
     runtime = Runtime(
         skill_registry = skill_registry,
         knowledge_service = knowledge_service,
@@ -126,6 +133,7 @@ def create_agent_factory(
     design_template_path: str | None = None,
     case_excel_template_path: str | None = None,
     case_column_mapping: dict | None = None,
+    execution_service=None,
 ) -> AgentFactory:
 
     tester_agent = create_tester_agent(
@@ -139,6 +147,7 @@ def create_agent_factory(
         design_template_path=design_template_path,
         case_excel_template_path=case_excel_template_path,
         case_column_mapping=case_column_mapping,
+        execution_service=execution_service,
     )
 
     return AgentFactory(
