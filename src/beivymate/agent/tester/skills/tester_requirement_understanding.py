@@ -254,6 +254,10 @@ class TesterRequirementUnderstandingSkill(Skill):
 
             Machine-readable output contract (takes precedence over template formatting):
             Return a single JSON object matching this schema, without a separate report.
+            Every section with status not_applicable, not_provided or not_analyzed MUST contain
+            items=[] and a non-empty reason string. Never return null or omit reason for an empty section.
+            Missing information means not_provided, not not_applicable.
+            A provided section MUST contain at least one finding.
             Use the template for analytical guidance. Use the requested language for text values.
             Distinguish explicit facts from inferences. Explain unavailable or inapplicable sections.
             Source references must be one of:
