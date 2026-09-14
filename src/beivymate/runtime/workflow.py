@@ -7,6 +7,7 @@ class Workflow:
         self,
         definition: WorkflowDefinition,
         skills: list[Skill],
+        base_directory=None,
     ) -> None:
 
         if len(definition.steps) != len(skills):
@@ -15,6 +16,7 @@ class Workflow:
                 "the number of skills."
             )
 
+        self.base_directory = base_directory
         self._definition = definition
         self._skills = skills
 

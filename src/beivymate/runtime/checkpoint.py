@@ -9,6 +9,7 @@ from typing import Any, Literal
 from uuid import uuid4
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
+from beivymate.model.artifact.test_report import ReportArtifact
 from beivymate.model.artifact.test_execution import ExecutionArtifact, ExecutionPlan
 
 from beivymate.configuration.models import WorkflowDefinition
@@ -21,7 +22,7 @@ from beivymate.runtime.memory import ContextItem, ContextSelection, ContextBudge
 from beivymate.integration.contracts import AssetReference, TestCaseAsset, ExecutionRequest, ExecutionResult
 
 TYPES = {cls.__name__: cls for cls in (
-    ExecutionArtifact, ExecutionPlan,
+    ReportArtifact, ExecutionArtifact, ExecutionPlan,
     Requirement, UnderstandingArtifact, AnalysisArtifact, KnowledgeDocument, KnowledgeRequirement,
     DesignArtifact, CaseRevision, ProductCatalog,
     ContextItem, ContextSelection, ContextBudget, ExecutionMemory,

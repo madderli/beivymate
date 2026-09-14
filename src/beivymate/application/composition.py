@@ -45,42 +45,14 @@ def create_tester_agent(
     execution_service=None,
 ) -> TesterAgent:
 
-    if template_path is None:
-
-        resolver = TemplateResolver(
-            template_root = TEMPLATE_ROOT,
-        )
-
-        template_path = str(
-            resolver.resolve_default(
-                role = "tester",
-                template_name = (
-                    "tester_requirement_understanding"
-                ),
-                locale = locale,
-            )
-        )
-
-    template = load_template_definition(
-        Path(template_path)
-    )
-
-    requirement_understanding_skill = (
-        TesterRequirementUnderstandingSkill(
-            gateway = gateway,
-            model = model,
-            template = template,
-        )
-    )
-
-    skill_registry = SkillRegistry()
-
-    skill_registry.register(
-        "tester_requirement_understanding",
-        requirement_understanding_skill,
-    )
-
     definition = load_workflow_definition(Path(workflow_path))
+    skill_registry = SkillRegistry()
+    if any(step.skill == 'tester_requirement_understanding' for step in definition.resolved_steps()):
+        path = Path(template_path) if template_path else TemplateResolver(TEMPLATE_ROOT).resolve_default(
+            'tester', 'tester_requirement_understanding', locale)
+        skill_registry.register('tester_requirement_understanding', TesterRequirementUnderstandingSkill(
+            gateway=gateway, model=model, template=load_template_definition(path)))
+
     if any(step.skill == "test_analysis" for step in definition.resolved_steps()):
         analysis_path = Path(analysis_template_path) if analysis_template_path else TemplateResolver(TEMPLATE_ROOT).resolve_default(
             "tester", "test_analysis", locale)
@@ -105,6 +77,12 @@ def create_tester_agent(
         if execution_service is None:
             raise ValueError('M8 workflow requires ExecutionService')
         skill_registry.register('test_execution', TestExecutionSkill(execution_service))
+
+    if any(step.skill == 'test_report' for step in definition.resolved_steps()):
+        from beivymate.reporting.report import ReportService
+        from beivymate.agent.tester.skills.test_report import TestReportSkill
+        skill_registry.register('test_report', TestReportSkill(ReportService(gateway, model,
+            TEMPLATE_ROOT / 'tester/test_report/zh-CN/DefaultBriefTestReportTemplate.docx')))
 
     runtime = Runtime(
         skill_registry = skill_registry,
