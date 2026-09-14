@@ -48,10 +48,11 @@ class TesterAgent:
             context = context,
         )
 
-    def start(self, requirement: Requirement, checkpoint_path: Path, *, task_id: str | None = None,
+    def start(self, requirement: Requirement | None, checkpoint_path: Path, *, task_id: str | None = None,
               context: AgentContext | None = None):
         context = AgentContext.restore(context.snapshot()) if context is not None else AgentContext()
-        context.set("requirement", requirement)
+        if requirement is not None:
+            context.set("requirement", requirement)
         context.set_role("tester")
         context.set_locale(self._locale)
         context.set_scope("global")

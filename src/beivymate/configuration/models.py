@@ -46,6 +46,7 @@ class WorkflowDefinition(BaseModel):
     name: str = Field(min_length = 1)
     description: str = ""
     steps: list[str] = Field(min_length = 1)
+    imports: list[str] = Field(default_factory=list)
     step_definitions: list[WorkflowStepDefinition] = Field(default_factory=list)
 
     @model_validator(mode="after")

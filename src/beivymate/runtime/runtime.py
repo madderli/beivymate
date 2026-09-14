@@ -38,6 +38,7 @@ class Runtime:
         return Workflow(
             definition = definition,
             skills = skills,
+            base_directory=Path(path).resolve().parent,
         )
 
     # Execute a workflow.
@@ -110,6 +111,10 @@ class Runtime:
     def start(self, workflow: Workflow, context: AgentContext, checkpoint_path: Path,
               *, review_mode: str | None = None, force_manual: bool = False) -> Checkpoint:
         """Start a durable run. Caller supplies a new path in its run directory."""
+        from beivymate.runtime.workflow_inputs import import_inputs
+        context = AgentContext.restore(context.snapshot())
+        imported = import_inputs(workflow.definition.imports, workflow.base_directory, context)
+        context.set('workflow_imports', imported)
         definition = workflow.definition.model_copy(deep=True)
         if review_mode is not None and review_mode not in {"manual", "auto"}:
             raise ValueError("review_mode must be manual or auto")
@@ -200,10 +205,16 @@ class Runtime:
             state.context = context.snapshot()
             state.write(checkpoint_path)
             try:
-                context.set("accepted_artifact_hashes", {
+                imported_hashes = {}
+                for entry in context.get("workflow_imports", []):
+                    artifact = context.get(entry["key"])
+                    if artifact is None or digest(artifact) != entry["hash"]:
+                        raise ValueError("Imported workflow artifact changed")
+                    imported_hashes[artifact.id] = entry["hash"]
+                context.set("accepted_artifact_hashes", {**imported_hashes, **{
                     item.artifact_id: item.subject_hash for item in state.decisions
                     if item.phase == "review" and item.decision == "approved" and item.artifact_id is not None
-                })
+                }})
                 definition = state.workflow.model_copy(update={"steps": [step.skill], "step_definitions": [step]})
                 self._execute(Workflow(definition, [skill]), context)
                 subject = skill.review_subject(context)
