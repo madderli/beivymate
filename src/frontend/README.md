@@ -38,3 +38,5 @@ PLAYWRIGHT_CHANNEL=chrome npm test --prefix src/frontend
 Windows PowerShell：设置 `$env:PLAYWRIGHT_CHANNEL = 'chrome'` 后运行 `npm test --prefix src/frontend`。
 
 测试数据和接口替身只在 `tests/ui`。浏览器测试证明前端接口行为，不等同于真实后端联调。Python 业务代码没有因 M01 修改。后续每个功能需补充真实 HTTP→Application→Runtime 集成测试，再做用户场景验收。
+
+Playwright 配置位于 `tests/ui/playwright.config.ts`，仅用于 BeIvyMate 自身 UI 测试，不属于客户自动化 Skill。测试结果输出至 `tests/ui/test-results/`（不提交）；测试服务工作目录显式指向 `src/frontend`。

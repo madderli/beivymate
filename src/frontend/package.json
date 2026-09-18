@@ -7,7 +7,7 @@
     "dev": "vite --host 127.0.0.1",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview --host 127.0.0.1",
-    "test": "playwright test",
+    "test": "playwright test --config ../../tests/ui/playwright.config.ts",
     "format": "prettier --write src *.ts *.json index.html ../../tests/ui/*.ts",
     "format:check": "prettier --check src *.ts *.json index.html ../../tests/ui/*.ts"
   },
