@@ -41,3 +41,7 @@ dist/
 
 # Docs
 docs/
+# Frontend dependencies and test artifacts
+node_modules/
+playwright-report/
+test-results/
