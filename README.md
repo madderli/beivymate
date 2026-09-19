@@ -29,6 +29,14 @@ The Tester Agent MVP supports:
 ## Project Structure
 
 ```text
-src/
-└── beivymate/
-    └── application/
+src/beivymate/    Python business services, runtime and local API
+src/frontend/    Browser UI
+resources/       Customer configuration, examples and shipped templates
+tests/           Project tests and validation tools
+```
+
+## Personal portal (UI M02)
+
+The local account portal supports initialization, login, recovery and settings.
+Workspace/task execution is connected in subsequent UI milestones; the complete
+external trial release is not yet ready. See [frontend startup and validation](src/frontend/README.md).

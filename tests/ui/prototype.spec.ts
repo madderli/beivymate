@@ -35,16 +35,10 @@ test("disconnected default shows no fixture records, fake login or writable acti
   await expect(
     page.getByRole("button", { name: "登录", exact: true }),
   ).toBeDisabled();
-  await page.getByRole("button", { name: "查看页面布局（只读）" }).click();
   await expect(
-    page.getByRole("button", { name: "新建任务", exact: true }),
-  ).toBeDisabled();
-  await expect(page.getByText("医院信息系统", { exact: true })).toHaveCount(0);
-  await expect(page.getByText("不能当作正式记录")).toHaveCount(0);
-  await page.getByRole("button", { name: "与 Agent 对话" }).click();
-  await expect(
-    page.getByRole("button", { name: "发送消息", exact: true }),
-  ).toBeDisabled();
+    page.getByRole("button", { name: "查看页面布局（只读）" }),
+  ).toHaveCount(0);
+  await expect(page.locator(".task-row")).toHaveCount(0);
   expect(
     await page.evaluate(
       () =>
@@ -63,7 +57,7 @@ test("HTML fallback is not treated as a successful API response", async ({
     }),
   );
   await page.goto("/");
-  await expect(page.getByRole("alert")).toContainText("后端 API 未接通");
+  await expect(page.getByRole("alert")).toContainText("后端接口未接通");
   await expect(
     page.getByRole("button", { name: "登录", exact: true }),
   ).toBeDisabled();
@@ -191,7 +185,7 @@ test("conversation never fabricates a reply and model options come from backend"
       ? r.fulfill({ status: 503, json: { message: "模型连接不可用" } })
       : r.fulfill({ json: [] }),
   );
-  await page.getByRole("button", { name: "与 Agent 对话" }).click();
+  await page.getByRole("button", { name: "与助手对话" }).click();
   await page.getByLabel("对话模型").selectOption("local-test");
   await page
     .getByRole("textbox", { name: "发送消息", exact: true })
@@ -267,9 +261,9 @@ test("outage preserves a stale snapshot, disables writes and recovers", async ({
   await page.route("**/api/v1/workbench", (r) =>
     r.fulfill({ json: boardFixture() }),
   );
-  await expect(page.getByText("后端已连接", { exact: true })).toBeVisible({
-    timeout: 8000,
-  });
+  await expect(
+    page.getByRole("button", { name: "新建任务", exact: true }),
+  ).toBeEnabled({ timeout: 8000 });
 });
 
 test("artifact arriving after a task switch cannot open on the new task", async ({

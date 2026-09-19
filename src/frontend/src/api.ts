@@ -28,7 +28,10 @@ export async function request<T>(
     if (init.body && !(init.body instanceof FormData))
       headers.set("Content-Type", "application/json");
     if (init.method && init.method !== "GET") {
-      if (!csrf && path !== "/session")
+      if (
+        !csrf &&
+        !["/session", "/account/initialize", "/account/recover"].includes(path)
+      )
         throw new ApiError("登录会话缺少操作凭证，请重新登录。", 401);
       if (csrf) headers.set("X-CSRF-Token", csrf);
     }
@@ -40,7 +43,7 @@ export async function request<T>(
     });
     if (!response.headers.get("content-type")?.includes("application/json"))
       throw new ApiError(
-        "后端 API 未接通或返回格式不正确，操作没有被确认完成。",
+        "后端接口未接通或返回格式不正确，操作没有被确认完成。",
         response.status,
       );
     const data: unknown = await response.json();
