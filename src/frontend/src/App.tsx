@@ -1,3 +1,4 @@
+import { PersonalLogin, AccountSettings } from "./Account";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Activity,
@@ -73,15 +74,14 @@ export default function App() {
   const [error, setError] = useState("");
   const [connectionError, setConnectionError] = useState("");
   const [busy, setBusy] = useState(false);
-  const [layout, setLayout] = useState(false);
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
   const [dark, setDark] = useState(() => preference("beivy-theme") === "dark");
   const [navOpen, setNavOpen] = useState(false);
   const [agentMenu, setAgentMenu] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
   const [notifications, setNotifications] = useState(false);
-  const [modal, setModal] = useState<"task" | "workspace" | null>(null);
+  const [modal, setModal] = useState<"task" | "workspace" | "account" | null>(
+    null,
+  );
   const [editing, setEditing] = useState<Workspace>();
   const [tab, setTab] = useState("workflow");
   const [selected, setSelected] = useState(0);
@@ -321,107 +321,24 @@ export default function App() {
       </div>
     </div>
   );
-  if (!session?.authenticated && !layout)
+  if (!session?.authenticated)
     return (
-      <div className="login-page">
-        <section className="login-story">
-          <Brand />
-          <div className="story-content">
-            <span className="eyebrow">YOUR PERSONAL AI WORK PARTNER</span>
-            <h1>
-              把专注留给判断。
-              <br />
-              <span>让助手接住日常。</span>
-            </h1>
-            <p>
-              围绕真实任务、业务证据与人类确认，
-              <br />
-              逐步连接你的工作。
-            </p>
-          </div>
-          <small>个人工作空间 · 数据保存在后端 · 由你作出决定</small>
-        </section>
-        <section className="login-panel">
-          <div className="login-card">
-            <span className="pill">UI DESIGN · M01</span>
-            <h2>登录你的工作台</h2>
-            <p className="muted">本地账户登录 · Tester Agent</p>
-            {connection !== "ready" && unavailable}
-            <form
-              onSubmit={async (e) => {
-                e.preventDefault();
-                setBusy(true);
-                setError("");
-                try {
-                  const s = await api.login(username, password);
-                  setPassword("");
-                  if (!s.authenticated)
-                    throw new Error("登录未成功，请核对账户。");
-                  setSession(s);
-                  setBoard(await api.board());
-                  setConnection("ready");
-                } catch (e) {
-                  setError((e as Error).message);
-                  setSession(null);
-                  setBoard(emptyBoard());
-                } finally {
-                  setPassword("");
-                  setBusy(false);
-                }
-              }}
-            >
-              <label>
-                用户名
-                <input
-                  autoComplete="username"
-                  required
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                />
-              </label>
-              <label>
-                密码
-                <input
-                  type="password"
-                  autoComplete="current-password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
-              </label>
-              <label>
-                工作角色
-                <select>
-                  <option>Tester · 测试工程师</option>
-                  <option disabled>PM Agent · 规划中</option>
-                  <option disabled>Developer Agent · 规划中</option>
-                </select>
-              </label>
-              <button
-                className="primary full"
-                disabled={connection !== "ready" || busy}
-              >
-                登录
-              </button>
-            </form>
-            {(error || connectionError) && (
-              <p className="notice error" role="alert">
-                {error || connectionError}
-              </p>
-            )}
-            <p className="muted">
-              账户初始化和密码恢复由 M02 接入。M01 不提供免密登录。
-            </p>
-            <button className="secondary full" onClick={() => setLayout(true)}>
-              查看页面布局（只读）
-            </button>
-          </div>
-        </section>
-      </div>
+      <PersonalLogin
+        session={session}
+        connected={connection === "ready"}
+        connectionError={connectionError}
+        refresh={refresh}
+        loggedIn={async (s) => {
+          go("home");
+          setSession(s);
+          await refresh();
+        }}
+      />
     );
+
   const nav = [
     ["home", "我的工作", LayoutDashboard],
-    ["workspaces", "Workspace", FolderKanban],
+    ["workspaces", "工作区", FolderKanban],
     ["knowledge", "知识管理", BookOpen],
     ["automation", "自动化资产", ListChecks],
     ["connections", "企业连接", Link2],
@@ -439,7 +356,7 @@ export default function App() {
         <Brand />
         <button
           className="agent-card"
-          aria-label="选择 Agent 角色"
+          aria-label="选择助手角色"
           aria-expanded={agentMenu}
           onClick={() => setAgentMenu(!agentMenu)}
         >
@@ -447,7 +364,7 @@ export default function App() {
             <Bot size={23} />
           </span>
           <div>
-            <strong>Tester Agent</strong>
+            <strong>测试助手</strong>
             <small>你的测试工作伙伴</small>
           </div>
           <ChevronDown size={15} />
@@ -455,10 +372,10 @@ export default function App() {
         {agentMenu && (
           <div className="agent-menu">
             <button onClick={() => setAgentMenu(false)}>
-              ✓ Tester Agent · 当前角色
+              ✓ 测试助手 · 当前角色
             </button>
-            <button disabled>PM Agent · 规划中</button>
-            <button disabled>Developer Agent · 规划中</button>
+            <button disabled>产品经理助手 · 规划中</button>
+            <button disabled>开发助手 · 规划中</button>
           </div>
         )}
         <span className="nav-caption">工作台</span>
@@ -482,7 +399,7 @@ export default function App() {
             <button
               className="icon-button"
               aria-label="新增工作区"
-              disabled={!can("workspace.write")}
+              title="新增工作区"
               onClick={() => {
                 setEditing(undefined);
                 setModal("workspace");
@@ -507,7 +424,12 @@ export default function App() {
           <button className="settings-nav" onClick={() => go("settings")}>
             <Settings size={18} /> 设置与个性化
           </button>
-          <button className="profile" onClick={() => go("settings")}>
+          <button
+            className="profile"
+            aria-label="个人账户设置"
+            title="个人账户设置"
+            onClick={() => setModal("account")}
+          >
             <span className="avatar">
               {session?.user?.name.slice(0, 1) || "人"}
             </span>
@@ -517,7 +439,7 @@ export default function App() {
             </span>
           </button>
           <div className="prototype">
-            <small>M01 · 前后端接口待联调</small>
+            <small>个人工作门户</small>
           </div>
         </div>
       </aside>
@@ -548,13 +470,11 @@ export default function App() {
             )}
           </div>
           <div className="top-actions">
-            <span className="demo-label">
-              {authorized
-                ? "后端已连接"
-                : session?.authenticated
-                  ? "连接中断 · 显示上次快照（可能过期）"
-                  : "未连接 / 未登录"}
-            </span>
+            {!authorized && session?.authenticated && (
+              <span className="demo-label" role="status">
+                连接中断 · 显示上次快照（可能过期）
+              </span>
+            )}
             <button
               className="icon-button"
               aria-label="切换明暗主题"
@@ -574,7 +494,7 @@ export default function App() {
               onClick={() => setChatOpen(!chatOpen)}
             >
               <MessageSquare size={17} />
-              <span>与 Agent 对话</span>
+              <span>与助手对话</span>
             </button>
           </div>
         </header>
@@ -611,7 +531,7 @@ export default function App() {
             <>
               <section className="welcome">
                 <div>
-                  <span className="eyebrow">YOUR WORK, IN FOCUS</span>
+                  <span className="eyebrow">专注你的工作</span>
                   <h1>
                     {session?.user ? `你好，${session.user.name}` : "我的工作"}{" "}
                     <span className="greeting-spark">✦</span>
@@ -755,12 +675,11 @@ export default function App() {
           {route.page === "workspaces" && (
             <>
               <PageHead
-                title="我的 Workspace"
+                title="我的工作区"
                 text="产品范围与业务知识独立管理。"
                 action={
                   <button
                     className="primary"
-                    disabled={!can("workspace.write")}
                     onClick={() => {
                       setEditing(undefined);
                       setModal("workspace");
@@ -802,7 +721,6 @@ export default function App() {
                   <>
                     <button
                       className="secondary"
-                      disabled={!can("workspace.write")}
                       onClick={() => {
                         setEditing(workspace);
                         setModal("workspace");
@@ -1028,7 +946,7 @@ export default function App() {
                           className="secondary full"
                           onClick={() => setChatOpen(true)}
                         >
-                          与 Agent 对话
+                          与助手对话
                         </button>
                       </aside>
                     )}
@@ -1053,7 +971,7 @@ export default function App() {
                   <p>
                     执行矩阵及缺陷列表将在执行服务接入后显示。本页面没有模拟轮次或通过结果。
                   </p>
-                  <span className="pill">UI MVP 功能 · 待接口接入</span>
+                  <span className="pill">功能待接入</span>
                 </div>
               )}
               {tab === "defects" && (
@@ -1119,7 +1037,7 @@ export default function App() {
                       ? "自动化资产"
                       : "企业连接"
                 }
-                text="保留已确认的 UI MVP 范围，按功能逐步联通后端。"
+                text="相关功能正在逐步接入，开放后可在此管理。"
               />
               <div className="artifact-grid">
                 {(route.page === "knowledge"
@@ -1131,8 +1049,8 @@ export default function App() {
                     ]
                   : route.page === "automation"
                     ? [
-                        ["API 自动化", "Python / pytest / HTTPX"],
-                        ["Web UI 自动化", "Python / pytest / Playwright"],
+                        ["接口自动化", "生成、管理与执行接口测试脚本"],
+                        ["网页界面自动化", "生成、管理与执行浏览器测试脚本"],
                         ["用例与脚本关联", "覆盖范围、版本与验证证据"],
                       ]
                     : [
@@ -1156,6 +1074,9 @@ export default function App() {
                 title="设置与个性化"
                 text="界面偏好可以本地保存，账户和业务数据由后端管理。"
               />
+              {session?.authenticated && can("account.manage") && (
+                <AccountSettings session={session} changed={refresh} />
+              )}
               <section className="panel settings-panel">
                 <h2>个人与服务</h2>
                 <p>当前用户：{session?.user?.name || "尚未登录"}</p>
@@ -1172,7 +1093,7 @@ export default function App() {
                   <div>
                     <strong>模型策略</strong>
                     <p>
-                      配置模型连接，按对话或 Skill 选择；运行快照固定实际模型。
+                      配置模型连接，按对话或技能选择；运行快照固定实际模型。
                     </p>
                   </div>
                   <button
@@ -1185,18 +1106,7 @@ export default function App() {
                 <div className="setting-row">
                   <div>
                     <strong>账户与授权</strong>
-                    <p>本地账户、恢复码、外测全功能授权在 M02 接入。</p>
-                  </div>
-                  <button className="secondary" disabled>
-                    管理账户（待接入）
-                  </button>
-                </div>
-                <div className="setting-row">
-                  <div>
-                    <strong>旧版原型数据</strong>
-                    <p>
-                      未删除或自动迁移浏览器中的旧演示数据，但不会将其当作正式业务记录加载。
-                    </p>
+                    <p>本地身份、试用权限与企业凭据分别管理。</p>
                   </div>
                 </div>
                 <button
@@ -1205,11 +1115,13 @@ export default function App() {
                     if (authorized)
                       void mutate(async () => {
                         await api.logout();
+                        requestGeneration.current++;
+                        refreshFlight.current = null;
+                        artifactGeneration.current++;
+                        setArtifact(null);
                         setSession(null);
                         setBoard(emptyBoard());
-                        setLayout(false);
                       });
-                    else setLayout(false);
                   }}
                 >
                   {authorized ? "退出登录" : "返回登录"}
@@ -1225,8 +1137,7 @@ export default function App() {
               </div>
             )}
           <footer className="page-footer">
-            <span>BeIvyMate · UI Design Milestone 01</span>
-            <span>{authorized ? "使用后台数据" : "页面基线 · 待联调"}</span>
+            <span>BeIvyMate · 个人工作助手</span>
           </footer>
         </main>
       </div>
@@ -1236,7 +1147,7 @@ export default function App() {
             <span className="agent-avatar">
               <Bot size={20} />
             </span>
-            <strong>Tester Agent</strong>
+            <strong>测试助手</strong>
             <button
               className="icon-button"
               aria-label="关闭对话"
@@ -1266,7 +1177,7 @@ export default function App() {
                   ))}
               </select>
             </label>
-            <small>仅当前对话，不修改任务的 Skill 模型策略。</small>
+            <small>仅当前对话，不修改任务的技能模型策略。</small>
             <button className="text-button" onClick={() => setModelHelp(true)}>
               查看模型策略设计
             </button>
@@ -1362,6 +1273,34 @@ export default function App() {
           saved={refresh}
         />
       )}
+      {modal === "account" && session?.authenticated && (
+        <Dialog title="个人账户" close={() => setModal(null)}>
+          <div className="dialog-body">
+            {can("account.manage") ? (
+              <AccountSettings
+                session={session}
+                changed={async () => {
+                  await refresh();
+                }}
+              />
+            ) : (
+              <p>账户设置暂时不可用，请确认连接与权限后重试。</p>
+            )}
+          </div>
+        </Dialog>
+      )}
+      {modal === "workspace" && !can("workspace.write") && (
+        <Dialog title="新增工作区" close={() => setModal(null)}>
+          <div className="dialog-body">
+            <p>
+              当前版本尚未开放工作区创建。工作区管理将在下一阶段接入，届时可创建并保存产品范围与知识配置。
+            </p>
+            <button className="primary" onClick={() => setModal(null)}>
+              知道了
+            </button>
+          </div>
+        </Dialog>
+      )}
       {modal === "workspace" && can("workspace.write") && (
         <WorkspaceForm
           workspace={editing}
@@ -1441,16 +1380,14 @@ export default function App() {
           <div className="dialog-body">
             <p>连接由配置管理，用户只能选择已经验证且获授权的模型。</p>
             <p>
-              步骤显式选择 → 任务 Skill 策略 →
+              步骤显式选择 → 任务技能策略 →
               角色默认策略。能力、上下文和数据权限是硬约束。
             </p>
             <p>
-              聊天模型只影响当前会话。任务启动前解析模型并保存 Run
+              聊天模型只影响当前会话。任务启动前解析模型并保存运行
               快照，不静默跨供应商切换。
             </p>
-            <div className="notice">
-              M01 提供接口和页面边界，具体策略由后端实现，不由浏览器决定。
-            </div>
+            <div className="notice">模型策略由后台服务统一执行。</div>
           </div>
         </Dialog>
       )}

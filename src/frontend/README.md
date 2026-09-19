@@ -1,8 +1,19 @@
 # BeIvyMate UI · M01 设计基线
 
-默认入口为真实 API 驱动的前端骨架。**M01 尚未提供 Web API 服务，因此独立启动前端会显示“后台服务未连接”**，可以查看只读布局；业务操作不会伪装成功。这不是可发布试用版，认证、持久化、后台调度按后续 milestone 逐项接入。
+M02 已接通本地账户 API：初始化、登录/退出、修改名称/密码、恢复码以及安全凭据存储。Workspace/Task 和后台工作流仍按 M03/M04 接入，尚未开放的操作禁用，不显示模拟业务数据。完整 UI MVP 完成前不是对外发布版本。
 
 ## 启动
+
+先在仓库根目录启动后端（仅监听本机）：
+
+```sh
+.venv/bin/python -m pip install -e ".[dev]"
+.venv/bin/python -m beivymate.application.web
+```
+
+首次启动在终端显示一次初始化码，在页面中创建账户并保存恢复码。默认数据目录为 `~/.beivymate`，可以通过 `--data-dir` 指定。Windows 使用 `.venv\Scripts\python.exe`。数据目录不要放入 Git 仓库。
+
+另开终端启动前端：
 
 ```sh
 npm ci --prefix src/frontend
@@ -37,6 +48,21 @@ PLAYWRIGHT_CHANNEL=chrome npm test --prefix src/frontend
 
 Windows PowerShell：设置 `$env:PLAYWRIGHT_CHANNEL = 'chrome'` 后运行 `npm test --prefix src/frontend`。
 
-测试数据和接口替身只在 `tests/ui`。浏览器测试证明前端接口行为，不等同于真实后端联调。Python 业务代码没有因 M01 修改。后续每个功能需补充真实 HTTP→Application→Runtime 集成测试，再做用户场景验收。
+测试数据和接口替身只在 `tests/ui`。浏览器测试证明前端接口行为，不等同于真实后端联调。M02 已有真实 HTTP→账户服务→SQLite 浏览器验收；任务和 Runtime 联调在后续 milestone 完成。
 
 Playwright 配置位于 `tests/ui/playwright.config.ts`，仅用于 BeIvyMate 自身 UI 测试，不属于客户自动化 Skill。测试结果输出至 `tests/ui/test-results/`（不提交）；测试服务工作目录显式指向 `src/frontend`。
+
+
+M02 真实服务浏览器验收（专用临时数据库，不使用个人账户）：
+
+```sh
+BEIVYMATE_REAL_API=1 PLAYWRIGHT_CHANNEL=chrome npm test --prefix src/frontend
+```
+
+Windows PowerShell：设置 `$env:BEIVYMATE_REAL_API = '1'` 及 `$env:PLAYWRIGHT_CHANNEL = 'chrome'` 后运行同一 npm 命令。测试启动 8001/4173 端口的隔离服务，结束后清理数据库；关闭认证流程 trace，避免记录恢复码。默认 `npm test` 仍运行可控接口的 UI 契约回归。
+
+会话 8 小时有效，HttpOnly/SameSite Cookie；密码使用 Argon2，恢复码与会话令牌仅保存哈希。系统凭据库不可用时拒绝保存，不回退到明文。试用版当前无期限、授权全部功能，实际入口仅开放已实现能力；支付、商业许可证签发和企业 SSO 不在 M02。
+
+账户规则：用户名支持员工邮箱、工号或中文名称（1～254 字符，不含空白/控制字符，大小写精确匹配）。新设或重置密码要求 12～256 字符，包含大小写字母、数字和符号，不含空白；校验以中文显示并在后端再次执行。已有账户的原密码仍可登录，改密时采用新规则。登录页不再提供原型的“查看页面布局”入口。
+
+中文界面规则：系统导航、角色、表单、按钮和说明使用中文（工作区、测试助手、技能、运行等）；品牌名、客户配置名称、交付内容、文件路径和技术标识保留原值。交付语言选择不改变界面语言。

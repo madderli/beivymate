@@ -60,7 +60,7 @@ export function TaskForm({
           </label>
           <div className="form-grid">
             <label>
-              主 Workspace
+              主工作区
               <select
                 name="workspace"
                 required
@@ -149,7 +149,7 @@ export function TaskForm({
               交付语言
               <select name="locale">
                 <option value="zh-CN">中文</option>
-                <option value="en-US">English</option>
+                <option value="en-US">英语</option>
               </select>
             </label>
           </div>
@@ -195,7 +195,7 @@ export function WorkspaceForm({
   const [busy, setBusy] = useState(false);
   return (
     <Dialog
-      title={workspace ? "配置 Workspace" : "新增 Workspace"}
+      title={workspace ? "配置工作区" : "新增工作区"}
       close={() => {
         if (!busy) close();
       }}

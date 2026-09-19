@@ -101,6 +101,12 @@ export type ModelConnection = {
   capabilities: string[];
 };
 export type Session = {
+  needsInitialization?: boolean;
+  entitlement?: {
+    edition: "trial";
+    features: string[];
+    expiresAt: number | null;
+  };
   authenticated: boolean;
   user?: { id: string; name: string };
   csrfToken?: string;
