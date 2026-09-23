@@ -105,7 +105,7 @@ class UnderstandingArtifact(Contract):
     revision: int = Field(default=1, ge=1)
     task_id: Text | None = None
     run_id: Text | None = None
-    step_id: Text = "tester_requirement_understanding"
+    step_id: Text = "requirement_understand"
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     requirement_id: Text
     model: Text

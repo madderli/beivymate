@@ -10,15 +10,17 @@ class FakeRuntime:
     def __init__(self) -> None:
         self.received_context = None
 
-    def run(
+    def start(
         self,
         workflow,
-        context=None,
+        context,
+        checkpoint_path,
     ):
 
         self.received_context = context
 
-        return context
+        from types import SimpleNamespace
+        return SimpleNamespace(context=context.snapshot(), status="waiting_review")
 
 
 def test_tester_agent_accepts_requirement():
@@ -52,6 +54,6 @@ def test_tester_agent_accepts_requirement():
     )
 
     assert (
-        runtime.received_context
-        is result
+        runtime.received_context.get("requirement")
+        == result.get("requirement")
     )

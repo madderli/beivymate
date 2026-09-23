@@ -73,7 +73,7 @@ def test_analysis_rejects_bad_upstream_before_llm(tmp_path,mode):
     provider = Provider()
     a,path,state = waiting(provider,tmp_path)
     context = AgentContext.restore(state.context)
-    upstream = context.get('tester_requirement_understanding_artifact')
+    upstream = context.get('requirement_understand_artifact')
     from beivymate.runtime.checkpoint import digest
     context.set('accepted_artifact_hashes',{} if mode == 'unaccepted' else {upstream.id:digest(upstream)})
     req = context.get('requirement')

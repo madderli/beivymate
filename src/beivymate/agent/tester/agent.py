@@ -43,10 +43,16 @@ class TesterAgent:
             "global"
         )
 
-        return self._runtime.run(
-            workflow = self._workflow,
-            context = context,
-        )
+        # Convenience generation still uses durable authorization/review checkpoints.
+        from uuid import uuid4
+        from beivymate.documents.defaults import data_directory
+        checkpoint = data_directory() / "runs" / uuid4().hex / "checkpoint.json"
+        checkpoint.parent.mkdir(parents=True, exist_ok=True)
+        state = self._runtime.start(self._workflow, context, checkpoint)
+        result = AgentContext.restore(state.context)
+        result.set('checkpoint_path', str(checkpoint))
+        result.set('run_status', state.status)
+        return result
 
     def start(self, requirement: Requirement | None, checkpoint_path: Path, *, task_id: str | None = None,
               context: AgentContext | None = None):

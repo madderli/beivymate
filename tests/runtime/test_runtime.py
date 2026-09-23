@@ -34,11 +34,10 @@ def test_runtime_loads_user_workflow(
         id: smoke_test
         name: Smoke Test
         description: Test workflow.
-        steps:
-         - tester_requirement_understanding
         ---
 
-        # Smoke Test
+## 步骤：understand
+- 技能：requirement_understand
         """,
         encoding="utf-8",
     )
@@ -48,7 +47,7 @@ def test_runtime_loads_user_workflow(
     registry = SkillRegistry()
 
     registry.register(
-        "tester_requirement_understanding",
+        "requirement_understand",
         RecordingSkill(records),
     )
 
@@ -60,7 +59,7 @@ def test_runtime_loads_user_workflow(
         str(workflow_file)
     )
 
-    context = runtime.run(
+    context = runtime._execute(
         workflow=workflow,
     )
 

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 export function AttachmentInput({
   value,
   change,
@@ -6,12 +6,26 @@ export function AttachmentInput({
   value: File[];
   change: (files: File[]) => void;
 }) {
+  const input = useRef<HTMLInputElement>(null);
   const [error, setError] = useState("");
   return (
     <div className="attachment-field">
-      <label>
-        需求附件
+      <div>
+        <span>需求附件</span>
+        <button
+          className="secondary"
+          type="button"
+          onClick={() => input.current?.click()}
+        >
+          选择附件
+        </button>
+        <span className="muted">
+          {value.length ? `已选择 ${value.length} 个附件` : "未选择附件"}
+        </span>
         <input
+          ref={input}
+          aria-label="需求附件"
+          hidden
           type="file"
           multiple
           accept=".md,.txt,.pdf,.docx,.xlsx,.png,.jpg,.jpeg"
@@ -35,7 +49,7 @@ export function AttachmentInput({
             change([...value, ...files]);
           }}
         />
-      </label>
+      </div>
       <p className="muted">
         创建任务时交给后端保存。当前选择是未提交草稿，关闭页面后不会保留。
       </p>

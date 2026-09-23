@@ -8,7 +8,7 @@ from beivymate.application.composition import TEMPLATE_ROOT, KNOWLEDGE_ROOT
 from beivymate.configuration.loader import load_model_definition, load_template_definition
 from beivymate.configuration.template_resolver import TemplateResolver
 from beivymate.configuration.models import TemplateDefinition, WorkflowDefinition, WorkflowStepDefinition
-from beivymate.agent.tester.skills.tester_requirement_understanding import TesterRequirementUnderstandingSkill
+from beivymate.agent.tester.skills.requirement_understand import RequirementUnderstandSkill
 from beivymate.knowledge.service import KnowledgeService
 from beivymate.knowledge.models import KnowledgeQuery
 from beivymate.model.entity.requirement import Requirement
@@ -22,16 +22,16 @@ from beivymate.runtime.workflow import Workflow
 
 def runtime_for(template, gateway, model):
     registry = SkillRegistry()
-    registry.register("tester_requirement_understanding", TesterRequirementUnderstandingSkill(gateway, model, template))
+    registry.register("requirement_understand", RequirementUnderstandSkill(gateway, model, template))
     return Runtime(registry)
 
 
 def export(state, directory):
     context = AgentContext.restore(state.context)
-    artifact = context.get("tester_requirement_understanding_artifact")
+    artifact = context.get("requirement_understand_artifact")
     if artifact:
-        (directory / "understanding.json").write_text(artifact.model_dump_json(indent=2), encoding="utf-8")
-        (directory / "understanding.md").write_text(artifact.markdown, encoding="utf-8")
+        (directory / "requirement_understand.json").write_text(artifact.model_dump_json(indent=2), encoding="utf-8")
+        (directory / "requirement_understand.md").write_text(artifact.markdown, encoding="utf-8")
     (directory / "summary.json").write_text(json.dumps({
         "run_id": state.run_id, "status": state.status,
         "structured_valid": artifact.validation_status == "structured" if artifact else False,
@@ -42,7 +42,7 @@ def export(state, directory):
 
 def start(requirement, directory, *, gateway, model, locale="zh-CN", review="manual", template=None):
     template = template or load_template_definition(TemplateResolver(TEMPLATE_ROOT).resolve_default(
-        "tester", "tester_requirement_understanding", locale))
+        "tester", "requirement_understand", locale))
     directory.mkdir(parents=True, exist_ok=False)
     context = AgentContext()
     context.set("requirement", requirement)
@@ -54,7 +54,7 @@ def start(requirement, directory, *, gateway, model, locale="zh-CN", review="man
     context.set("frozen_knowledge", context.get_knowledge())
     context.set("execution_template", template.model_dump())
     context.set("execution_model", model)
-    step = WorkflowStepDefinition(id="understand", skill="tester_requirement_understanding",
+    step = WorkflowStepDefinition(id="understand", skill="requirement_understand",
         inputs=["requirement"], review_mode=review, authorization_mode="auto")
     runtime = runtime_for(template, gateway, model)
     skill = runtime._skill_registry.get(step.skill)
@@ -106,7 +106,7 @@ def main():
         state = start(Requirement(id=args.id, title=args.title, content=args.requirement.read_text(encoding="utf-8")),
                       args.output, gateway=gateway, model=config.model, locale=args.locale, review=args.review)
     print(json.dumps({"status": state.status, "subject_hash": state.subject_hash,
-                      "result": str(args.output / "understanding.md")}, ensure_ascii=False))
+                      "result": str(args.output / "requirement_understand.md")}, ensure_ascii=False))
 
 
 if __name__ == "__main__":

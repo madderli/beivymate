@@ -1,6 +1,12 @@
 from pathlib import Path
 
 
+def default_template_filename(skill_id: str) -> str:
+    if skill_id == 'requirement_understand':
+        return 'RequirementUnderstandTemplate.md'
+    return 'Default' + ''.join(part.capitalize() for part in skill_id.split('_')) + 'Template.md'
+
+
 class TemplateResolver:
 
     def __init__(
@@ -21,8 +27,9 @@ class TemplateResolver:
             self._template_root
             / role
             / template_name
+            / "templates"
             / locale
-            / ("Default" + "".join(part.capitalize() for part in template_name.split("_")) + "Template.md")
+            / default_template_filename(template_name)
         )
 
         if not path.exists():

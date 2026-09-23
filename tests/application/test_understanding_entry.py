@@ -23,7 +23,7 @@ def test_requirement_to_saved_result_then_restore(tmp_path):
     directory = tmp_path / 'run'
     state = start(Requirement(id='R',title='支付',content='支持支付'),directory,gateway=gateway,model='fake')
     assert state.status == 'waiting_review'
-    assert '支持支付' in (directory/'understanding.md').read_text()
+    assert '支持支付' in (directory/'requirement_understand.md').read_text()
     context = AgentContext.restore(state.context)
     runtime = runtime_for(TemplateDefinition.model_validate(context.get('execution_template')),gateway,'fake')
     state = runtime.resume(directory/'checkpoint.json',decision='approved',actor='human',expected_subject_hash=state.subject_hash)

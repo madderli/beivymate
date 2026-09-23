@@ -7,7 +7,7 @@ class WorkflowStepDefinition(BaseModel):
     id: str = Field(min_length=1)
     skill: str = Field(min_length=1)
     inputs: list[str] = Field(default_factory=list)
-    analysis_strategy: Literal["simple", "standard", "deep"] = "standard"
+    analysis_strategy: Literal["simple", "standard", "deep"] | None = None
     review_mode: Literal["manual", "auto"] = "manual"
     authorization_mode: Literal["manual", "auto"] = "manual"
 
@@ -54,6 +54,12 @@ class WorkflowDefinition(BaseModel):
         if self.step_definitions:
             if len(self.steps) != len(self.step_definitions):
                 raise ValueError("steps and step_definitions must have the same length")
+            available = set()
+            for step in self.step_definitions:
+                for ref in step.inputs:
+                    if ref.startswith('steps.') and (len(ref.split('.')) < 3 or ref.split('.')[1] not in available):
+                        raise ValueError(f'步骤 {step.id} 引用了尚未提供的步骤产物：{ref}')
+                available.add(step.id)
             ids = [step.id for step in self.step_definitions]
             if len(ids) != len(set(ids)):
                 raise ValueError("workflow step IDs must be unique")

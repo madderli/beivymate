@@ -28,11 +28,11 @@ def test_load_smoke_test_workflow():
 
     assert isinstance(workflow, WorkflowDefinition)
     assert workflow.id == "smoke_test"
-    assert workflow.name == "Smoke Test"
-    assert workflow.description == "Default smoke test workflow."
+    assert workflow.name == "冒烟测试准备（需求理解）"
+    assert workflow.description == "仅完成冒烟测试前的需求理解，不执行测试。"
 
     assert workflow.steps == [
-        "tester_requirement_understanding",
+        "requirement_understand",
     ]
 
 
@@ -41,11 +41,11 @@ def test_load_uat_workflow():
 
     assert isinstance(workflow, WorkflowDefinition)
     assert workflow.id == "uat"
-    assert workflow.name == "UAT"
-    assert workflow.description == "Default user acceptance testing workflow."
+    assert workflow.name == "用户验收测试"
+    assert workflow.description == "从需求理解到测试报告的用户验收流程。"
 
     assert workflow.steps == [
-        "tester_requirement_understanding",
+        "requirement_understand",
         "test_analysis",
         "test_design",
         "test_execution",

@@ -31,11 +31,7 @@ class RecordingSkill(Skill):
 
 def files(tmp_path):
     workflow = tmp_path / "workflow.md"
-    workflow.write_text("---\nid: flow\nname: Flow\nsteps:\n  - first.md\n  - second.md\n---\n")
-    (tmp_path / "first.md").write_text(
-        "---\nid: first\nskill: recording\ninputs:\n  - requirement\nanalysis_strategy: simple\nreview_mode: auto\nauthorization_mode: auto\n---\n")
-    (tmp_path / "second.md").write_text(
-        "---\nid: second\nskill: recording\ninputs:\n  - result\nanalysis_strategy: deep\nreview_mode: manual\nauthorization_mode: auto\n---\n")
+    workflow.write_text("---\nid: flow\nname: Flow\n---\n\n## 步骤：first\n- 技能：recording\n- 输入：requirement\n- 分析策略：simple\n- 结果确认：auto\n- 执行授权：auto\n\n## 步骤：second\n- 技能：recording\n- 输入：result\n- 分析策略：deep\n- 结果确认：manual\n- 执行授权：auto\n")
     return workflow
 
 
@@ -69,12 +65,12 @@ def test_missing_inputs_fail_before_skill(tmp_path):
     assert skill.records == []
 
 
-@pytest.mark.parametrize("old,new", [("id: second", "id: first"),
-                                      ("review_mode: manual", "review_mode: invalid"),
-                                      ("analysis_strategy: deep", "analysis_strategy: typo")])
+@pytest.mark.parametrize("old,new", [("步骤：second", "步骤：first"),
+                                      ("结果确认：manual", "结果确认：invalid"),
+                                      ("分析策略：deep", "分析策略：typo")])
 def test_invalid_step_configuration(tmp_path, old, new):
     workflow = files(tmp_path)
-    step = tmp_path / "second.md"
+    step = workflow
     step.write_text(step.read_text().replace(old, new))
     with pytest.raises(ValueError):
         load_workflow_definition(workflow)
@@ -83,6 +79,5 @@ def test_invalid_step_configuration(tmp_path, old, new):
 def test_legacy_repeated_skills_get_unique_step_ids(tmp_path):
     workflow = tmp_path / "flow.md"
     workflow.write_text("---\nid: f\nname: F\nsteps:\n  - same\n  - same\n---\n")
-    definition = load_workflow_definition(workflow)
-    assert definition.steps == ["same", "same"]
-    assert [step.id for step in definition.resolved_steps()] == ["step_1", "step_2"]
+    with pytest.raises(ValueError, match="单文件步骤"):
+        load_workflow_definition(workflow)

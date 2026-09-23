@@ -25,8 +25,11 @@ class ReportService:
             if upstream is not None:upstream.require_data()
         if analysis is not None and understanding is not None and (analysis.understanding_id!=understanding.id or analysis.understanding_hash!=digest(understanding)):
             raise ValueError('Analysis/understanding mismatch')
-        if design is not None and analysis is not None and (design.analysis_id!=analysis.id or design.analysis_hash!=digest(analysis)):
+        if design is not None and design.input_kind == "analysis" and analysis is not None and (design.analysis_id!=analysis.id or design.analysis_hash!=digest(analysis)):
             raise ValueError('Design/analysis mismatch')
+        if design is not None and design.input_kind == 'understanding' and understanding is not None:
+            if design.input_id != understanding.id or design.input_hash != digest(understanding):
+                raise ValueError('Design/understanding mismatch')
         if not rounds: raise ValueError('Select execution rounds')
         task=design.task_id if design is not None else rounds[0].plan.task_id
         if not task or any(r.plan.task_id!=task or not r.completed for r in rounds):
@@ -99,6 +102,7 @@ class ReportService:
             'coverage':design.coverage if design is not None else {},'uncovered':[u.model_dump() for u in design.proposals.uncovered] if design is not None else []}
         payload=json.dumps({'facts':facts,'limitations':limitations,'simulation':simulation},ensure_ascii=False)
         system='根据给定过程事实用中文评估需求符合性、已发现缺陷对客户的影响和风险。不得编造数字、关闭状态、工具或环境。没有准入标准不能声称满足上线标准。仅提供建议，人类决定发布。返回指定 JSON。'
+        system += "\n" + getattr(self, "skill_instructions", "")
         budget=ContextBudget();budget.check_request(system+payload)
         response=self.gateway.chat(LLMRequest(model=self.model,messages=[ChatMessage(role='system',content=system),ChatMessage(role='user',content=payload)],response_schema=ReportAssessment.model_json_schema(),max_output_tokens=budget.output_reserve))
         assessment=ReportAssessment.model_validate_json(response.content)

@@ -1,5 +1,3 @@
-from pydantic import BaseModel, Field
-
 from beivymate.knowledge.models import (
     KnowledgeDocument,
     KnowledgeQuery,

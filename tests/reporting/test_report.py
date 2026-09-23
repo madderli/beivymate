@@ -23,9 +23,9 @@ class Provider:
 def test_report_after_three_rounds(tmp_path):
     runpy.run_path(str(ROOT/'tests/execution/test_full_pipeline.py'))['test_full_pipeline_three_rounds'](tmp_path)
     def read(cls,name):return cls.model_validate_json((tmp_path/name).read_text())
-    u=read(UnderstandingArtifact,'understanding.json');a=read(AnalysisArtifact,'analysis.json');d=read(DesignArtifact,'design.json')
+    u=read(UnderstandingArtifact,'requirement_understand.json');a=read(AnalysisArtifact,'analysis.json');d=read(DesignArtifact,'design.json')
     rounds=[read(ExecutionArtifact,f'execution-round-{n}.json') for n in (1,2,3)]
-    service=ReportService(LLMGateway(Provider()),'synthetic',ROOT/'resources/template/tester/test_report/zh-CN/DefaultBriefTestReportTemplate.docx')
+    service=ReportService(LLMGateway(Provider()),'synthetic',ROOT/'resources/skills/tester/test_report/templates/zh-CN/DefaultBriefTestReportTemplate.docx')
     report=service.generate(u,a,d,rounds,simulation=True)
     assert report.facts['counts']=={'pass':3,'failed':0,'blocked':0,'not_run':0}
     assert len(report.facts['attempt_history'])==9
@@ -59,9 +59,8 @@ def test_report_after_three_rounds(tmp_path):
     from beivymate.application.composition import create_tester_agent
     from beivymate.model.entity.requirement import Requirement
     (tmp_path/'historical.md').write_text('---\nid: inputs.previous_execution\ncheckpoint: execution-checkpoint-3.json\nsource_key: steps.execute.test_execution\n---\n')
-    (tmp_path/'company-report.md').write_text('---\nid: delivery_summary\nskill: test_report\ninputs:\n  - inputs.previous_execution\nauthorization_mode: auto\nreview_mode: manual\n---\n')
     flow=tmp_path/'company-process.md'
-    flow.write_text('---\nid: company-process\nname: 公司自定义过程\nimports:\n  - historical.md\nsteps:\n  - company-report.md\n---\n')
+    flow.write_text('---\nid: company-process\nname: 公司自定义过程\nimports:\n  - historical.md\n---\n\n## 步骤：delivery_summary\n- 技能：test_report\n- 输入：inputs.previous_execution\n- 执行授权：auto\n- 结果确认：manual\n')
     agent=create_tester_agent(str(flow),LLMGateway(Provider()),'synthetic',template_path='does-not-exist.md')
     c=AgentContext();c.set('simulation',True);c.set('report_output_directory',str(tmp_path/'independent'))
     state=agent.start(None,tmp_path/'independent-run.json',task_id=d.task_id,context=c)
@@ -109,17 +108,24 @@ def test_report_after_three_rounds(tmp_path):
     bindings += [(f'execution_{n}',f'execution-checkpoint-{n}.json','steps.execute.test_execution') for n in (1,2,3)]
     for name,checkpoint,key in bindings:
         (tmp_path/f'import-{name}.md').write_text(f'---\nid: inputs.{name}\ncheckpoint: {checkpoint}\nsource_key: {key}\n---\n')
-    (tmp_path/'complete-report-step.md').write_text('---\nid: final_report\nskill: test_report\ninputs:\n'+
-        ''.join(f'  - inputs.{name}\n' for name,_,_ in bindings)+'authorization_mode: auto\nreview_mode: manual\n---\n')
     flow=tmp_path/'complete-report-workflow.md'
     flow.write_text('---\nid: complete-report\nname: 五阶段离线验证\nimports:\n'+
-        ''.join(f'  - import-{name}.md\n' for name,_,_ in bindings)+'steps:\n  - complete-report-step.md\n---\n')
+        ''.join(f'  - import-{name}.md\n' for name,_,_ in bindings)+'---\n\n## 步骤：final_report\n- 技能：test_report\n- 输入：'+'、'.join(f'inputs.{name}' for name,_,_ in bindings)+'\n- 执行授权：auto\n- 结果确认：manual\n')
     agent=create_tester_agent(str(flow),LLMGateway(Provider()),'synthetic')
-    c=AgentContext();c.set('simulation',True);c.set('report_output_directory',str(tmp_path/'final-reports'))
+    c=AgentContext();c.set('simulation',True);c.set('task_output_directory',str(tmp_path/'final-reports'))
     state=agent.start(None,tmp_path/'final-report-checkpoint.json',task_id=d.task_id,context=c)
     assert state.status=='waiting_review'
     output=AgentContext.restore(state.context)
+    assert Path(output.get('test_report_directory')).is_relative_to(tmp_path/'final-reports')
     final=output.get('test_report_artifact')
+    from beivymate.documents.runtime import store_for,owner_for
+    from beivymate.documents.models import DocumentRef
+    refs=output.get('document_outputs')['final_report']
+    assert set(refs)=={'test_report','test_report_data','test_report_word'}
+    documents=store_for(output)
+    assert documents.read(owner_for(output),DocumentRef.model_validate(refs['test_report_word']))==(Path(output.get('test_report_directory'))/'report.docx').read_bytes()
+    assert all(item['origin']['rounds']==[1,2,3] for item in documents.list(owner_for(output)) if item['ref']['id'] in {r['id'] for r in refs.values()})
+
     assert final.facts['rounds']==[1,2,3] and final.facts['counts']['pass']==3
     assert final.facts['defects'][0]['verifications'][0]['result']=='pass'
     state=agent.resume(tmp_path/'final-report-checkpoint.json',decision='approved',actor='synthetic-reviewer',

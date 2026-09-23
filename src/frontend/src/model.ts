@@ -60,6 +60,12 @@ export type ConversationOperation = {
   message?: string;
 };
 export type Task = {
+  configPath?: string;
+  configurationIssue?: string;
+  taskType?: string;
+  analysisStrategy?: string;
+  reviewMode?: string;
+  testCasesPath?: string;
   runId?: string;
   runs?: RunSummary[];
   owner?: Actor;
@@ -82,6 +88,9 @@ export type Task = {
   allowedActions: string[];
 };
 export type Workspace = {
+  product?: string;
+  project?: string;
+  configPath?: string;
   id: string;
   name: string;
   subtitle: string;

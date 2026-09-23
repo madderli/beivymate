@@ -19,6 +19,8 @@ class TestExecutionSkill(Skill):
         if context.get('task_id') != artifact.plan.task_id:
             raise ValueError('Execution task mismatch')
         self.service.export()
+        for key, name in (('execution_results','test-execution-results.xlsx'), ('defects','defects.xlsx'), ('execution_history','execution-results.json')):
+            context.set(f"steps.{context.get('step_id')}.{key}", {'document_file':str(self.service.directory/name)})
         context.set('test_execution_artifact',artifact)
         context.set(f"steps.{context.get('step_id')}.test_execution",artifact)
 

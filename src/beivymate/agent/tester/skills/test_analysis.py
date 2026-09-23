@@ -64,7 +64,7 @@ class TestAnalysisSkill(Skill):
                    SourceSnapshot.capture('template:' + self._template.id, self._template.content, self._template.version)]
         sources += [SourceSnapshot.capture('knowledge:' + k.id, k.content, k.version) for k in knowledge]
         prompt = json.dumps({
-            'language': context.get_locale(), 'analysis_strategy': context.get('analysis_strategy', 'standard'),
+            'language': context.get_locale(), 'analysis_strategy': (context.get('analysis_strategy') or 'standard'),
             'requirement': requirement.model_dump(), 'understanding': understanding.data.model_dump(),
             'knowledge': [{'ref': 'knowledge:' + k.id, 'content': k.content} for k in knowledge],
             'template': self._template.content,

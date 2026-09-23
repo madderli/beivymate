@@ -1,0 +1,22 @@
+{
+  "configuration/workflow/m6_test_analysis.md": "0039095a375761ad369cd099e8d0c829784c3d8549b395f4d1a933ec3f1db507",
+  "configuration/workflow/m7_test_design.md": "a26d39b640fa348ad689f811aab873922f85adf672a1e28f6567456ec07de990",
+  "configuration/workflow/m8_test_execution.md": "b65de144bbc78708b376e53612de47284589b6af631c662d17774a9260c5d6ff",
+  "configuration/workflow/smoke_test.md": "fae618c02c24b8b9e4d19ad3d86c4fc7b14d20c1403eb7563402c6ae3e42ccee",
+  "configuration/workflow/uat.md": "05a209179454689b30c116698eef5744dc9db49b83f5f83ca399d206ed22467e",
+  "skills/tester/requirement_understand/SKILL.md": "67ae9dfcaeca855ecd88fbda39459871e30b730ee07d2c7051c79b3dc058c86a",
+  "skills/tester/requirement_understand/templates/en-US/RequirementUnderstandTemplate.md": "3e8421023bee17603931bbaec1eb3ef39fb9ca7d325891caf77090d9adc9eaf3",
+  "skills/tester/requirement_understand/templates/zh-CN/RequirementUnderstandTemplate.md": "b3f85f95ebfbcf35947ba1ded628cbe99a74099542b1ca5c2bff070e6a16a799",
+  "skills/tester/test_analysis/SKILL.md": "818533003e98ea7160492fc13c7894f4a78da81b49665e353d93e99b829e84de",
+  "skills/tester/test_analysis/templates/en-US/DefaultTestAnalysisTemplate.md": "c2fe7d525f0f20568042ebdd92a59a6c1315adb93f153637af77802a21112603",
+  "skills/tester/test_analysis/templates/zh-CN/DefaultTestAnalysisTemplate.md": "2b5d4fea91d0004a9167e35347ece1b6fdbdbdc72acb38094959ccd1144af8ac",
+  "skills/tester/test_design/SKILL.md": "43b4d3ad6f529bcaba6d0611bdcba48840dc8f3b727b8a7592d82ab1c6aedb66",
+  "skills/tester/test_design/templates/DefaultTestCaseTemplate.xlsx": "17d0a97cac887a5863742aee7a25b4467342f1084d88216aa7565607baa85960",
+  "skills/tester/test_design/templates/en-US/DefaultTestDesignTemplate.md": "e20ef279d5c836e4abc968379a36a2ad14e90290006f4e5af805c351c0730975",
+  "skills/tester/test_design/templates/zh-CN/DefaultTestDesignTemplate.md": "9ae2ccafc8047a59881edd2ab9fbaaac50f72e8805d33e00dd9a107c65a61bc9",
+  "skills/tester/test_execution/SKILL.md": "697112694d452751a6c4c4018de0cc848a6e85a3f5ec6e2ec9ae5ffe383d6edd",
+  "skills/tester/test_execution/templates/zh-CN/DefaultDefectTemplate.md": "ed8279f4fe4d7e86859e31544fa08dc6ba3f9ae9638a7291654f4a496746fc0d",
+  "skills/tester/test_execution/templates/zh-CN/DefaultExecutionPlanTemplate.md": "4d3cc539c13f2a6ab00620fbdf64f338932aed11bb30751c239fd773913ebb4a",
+  "skills/tester/test_report/SKILL.md": "6a286ab295520d6a9bedaadaf379689f6710a6b6cb969043d9cd586e8a00fd5f",
+  "skills/tester/test_report/templates/zh-CN/DefaultBriefTestReportTemplate.docx": "3d84f08912047b1ac3f16d68a27a0a34e954108c935e59daaa4a435d05048b40"
+}

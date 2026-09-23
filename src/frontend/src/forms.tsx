@@ -31,6 +31,7 @@ export function TaskForm({
       }}
     >
       <form
+        noValidate
         className="dialog-body"
         onChange={() => {
           requestKey.current = crypto.randomUUID();
@@ -143,7 +144,7 @@ export function TaskForm({
             </label>
             <label>
               环境标识
-              <input name="environment" required />
+              <input name="environment" placeholder="可选，执行测试前配置" />
             </label>
             <label>
               交付语言
@@ -153,8 +154,39 @@ export function TaskForm({
               </select>
             </label>
           </div>
+          <label>
+            任务类型
+            <select name="taskType">
+              <option value="requirement">完整需求</option>
+              <option value="incremental">增量需求</option>
+              <option value="defect">缺陷验证</option>
+              <option value="regression">回归测试</option>
+            </select>
+          </label>
+          <label>
+            分析策略
+            <select name="analysisStrategy">
+              <option value="standard">标准</option>
+              <option value="simple">简要</option>
+              <option value="deep">深入</option>
+            </select>
+          </label>
+          <p className="muted strategy-help">
+            简要：聚焦直接相关规则与未知项；标准：覆盖常规分析维度；深入：进一步分析跨产品依赖、项目例外和版本影响。策略会保存到任务配置。
+          </p>
+          <label>
+            确认方式
+            <select name="reviewMode">
+              <option value="manual">人工确认</option>
+              <option value="auto">自动确认</option>
+            </select>
+          </label>
+          <label>
+            用例保存路径
+            <input name="testCasesPath" placeholder="可选，设计用例时配置" />
+          </label>
           <p className="muted">
-            编号、关联任务和附件由后端创建。保存不代表开始执行。
+            编号、关联任务和附件会自动保存。创建后可编辑任务配置，执行功能在后续阶段开放。
           </p>
         </fieldset>
         {error && (
@@ -195,12 +227,14 @@ export function WorkspaceForm({
   const [busy, setBusy] = useState(false);
   return (
     <Dialog
+      className="workspace-dialog"
       title={workspace ? "配置工作区" : "新增工作区"}
       close={() => {
         if (!busy) close();
       }}
     >
       <form
+        noValidate
         className="dialog-body"
         onSubmit={async (e) => {
           e.preventDefault();
@@ -221,9 +255,9 @@ export function WorkspaceForm({
           }
         }}
       >
-        <fieldset disabled={busy}>
+        <fieldset disabled={busy} className="workspace-fields">
           <label>
-            产品标识
+            工作区标识
             <input
               required
               name="id"
@@ -238,6 +272,14 @@ export function WorkspaceForm({
           <label>
             产品范围
             <input name="subtitle" defaultValue={workspace?.subtitle} />
+          </label>
+          <label>
+            产品标识
+            <input name="product" defaultValue={workspace?.product} />
+          </label>
+          <label>
+            客户项目（可选）
+            <input name="project" defaultValue={workspace?.project} />
           </label>
           <label>
             知识来源

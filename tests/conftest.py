@@ -35,3 +35,8 @@ def offline_by_default(request, monkeypatch):
     monkeypatch.setattr(socket.socket, "connect", blocked)
     monkeypatch.setattr(socket.socket, "connect_ex", blocked)
     monkeypatch.setattr(socket, "create_connection", blocked)
+
+
+@pytest.fixture(autouse=True)
+def isolated_customer_data(tmp_path, monkeypatch):
+    monkeypatch.setenv('BEIVYMATE_DATA_DIR', str(tmp_path / 'customer-data'))

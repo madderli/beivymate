@@ -8,6 +8,7 @@ export const session: Session = {
     "task.execute",
     "workspace.write",
     "artifact.read",
+    "documents.manage",
     "artifact.review",
     "chat",
   ],
@@ -46,7 +47,7 @@ export function boardFixture(): Board {
           {
             id: "understand",
             name: "需求理解",
-            skill: "tester_requirement_understanding",
+            skill: "requirement_understand",
             status: "review",
             detail: "第 3 版待确认",
             review: true,
@@ -72,7 +73,7 @@ export function boardFixture(): Board {
           {
             id: "understand",
             name: "需求理解",
-            skill: "tester_requirement_understanding",
+            skill: "requirement_understand",
             status: "pending",
             detail: "等待启动",
             review: true,

@@ -5,7 +5,7 @@ from uuid import uuid4
 from beivymate.assets.excel import ExcelExporter
 from beivymate.model.artifact.test_design import DesignData, DesignArtifact, RequirementReference
 from beivymate.model.artifact.test_analysis import AnalysisArtifact
-from beivymate.model.artifact.requirement_understanding import SourceSnapshot
+from beivymate.model.artifact.requirement_understanding import SourceSnapshot, UnderstandingArtifact
 from beivymate.runtime.checkpoint import digest
 from beivymate.runtime.llm.models import LLMRequest, ChatMessage
 from beivymate.runtime.memory import ContextBudget
@@ -37,6 +37,8 @@ class TestDesignSkill(Skill):
         artifact = self.review_subject(context)
         if artifact:
             self.store.accept_design(artifact)
+            from beivymate.documents.case_assets import archive_cases
+            archive_cases(artifact, self.store.catalog, context)
 
     def can_auto_accept(self, context):
         artifact = self.review_subject(context)
@@ -48,9 +50,11 @@ class TestDesignSkill(Skill):
         exporter = ExcelExporter(self.excel_template, self.mapping)  # Fail before model invocation.
         bound = context.get('step_inputs', {})
         analyses = [value for value in bound.values() if isinstance(value, AnalysisArtifact)]
-        if len(analyses) != 1:
-            raise ValueError('Test design requires one bound accepted AnalysisArtifact')
-        analysis = analyses[0]
+        understandings = [value for value in bound.values() if isinstance(value, UnderstandingArtifact)]
+        if len(analyses) > 1 or (not analyses and len(understandings) != 1):
+            raise ValueError('Test design requires one bound accepted analysis or understanding artifact')
+        analysis = analyses[0] if analyses else understandings[0]
+        source_kind = 'analysis' if analyses else 'understanding'
         data = analysis.require_data()
         if context.get('accepted_artifact_hashes', {}).get(analysis.id) != digest(analysis):
             raise ValueError('Analysis is unaccepted or has changed')
@@ -68,15 +72,18 @@ class TestDesignSkill(Skill):
         versions = context.get('target_versions', {})
         if not versions:
             raise ValueError('Target product versions are required')
-        conditions = {f'analysis:{analysis.id}:r{analysis.revision}:condition:{i}': item.model_dump()
-                      for i,item in enumerate(data.test_conditions.items, 1)}
+        findings = data.test_conditions.items if analyses else [item
+            for name in type(data).model_fields if name != 'unknowns'
+            for item in getattr(data, name).items]
+        conditions = {f'{source_kind}:{analysis.id}:r{analysis.revision}:condition:{i}': item.model_dump()
+                      for i,item in enumerate(findings, 1)}
         if not conditions:
             raise ValueError('Analysis contains no test conditions')
         candidates = [self.store.latest(identity) for identity in context.get('candidate_case_ids', [])]
         if any(c.project_id != context.get('project_id') or c.product_id not in versions for c in candidates):
             raise ValueError('Candidate case is outside the task product/project/version scope')
         candidate_ids = {c.id for c in candidates}
-        payload = {'template':self.template.content, 'locale':context.get_locale(), 'analysis':data.model_dump(),
+        payload = {'template':self.template.content, 'locale':context.get_locale(), source_kind:data.model_dump(),
                    'conditions':conditions, 'catalog':self.store.catalog.model_dump(), 'versions':versions,
                    'project_id':context.get('project_id'), 'existing_cases':[c.model_dump(mode='json') for c in candidates],
                    'schema':DesignData.model_json_schema()}
@@ -157,8 +164,9 @@ class TestDesignSkill(Skill):
         coverage = {ref:[case.number for proposal,case in zip(proposals.cases,cases)
                          if ref in proposal.condition_refs and proposal.action not in {'retire', 'discard'}] for ref in conditions}
         artifact = DesignArtifact(id=design_id, step_id=context.get('step_id','test_design'), task_id=context.get('task_id'),
-            run_id=context.get('run_id'), analysis_id=analysis.id, analysis_revision=analysis.revision, analysis_hash=digest(analysis),
-            sources=[SourceSnapshot.capture('analysis:'+analysis.id, analysis.model_dump_json(),str(analysis.revision)),
+            run_id=context.get('run_id'), analysis_id=analysis.id if analyses else None, analysis_revision=analysis.revision if analyses else None, analysis_hash=digest(analysis) if analyses else None,
+            input_kind=source_kind, input_id=analysis.id, input_revision=analysis.revision, input_hash=digest(analysis),
+            sources=[SourceSnapshot.capture(source_kind+':'+analysis.id, analysis.model_dump_json(),str(analysis.revision)),
                      SourceSnapshot.capture('template:'+self.template.id,self.template.content,self.template.version),
                      SourceSnapshot.capture('catalog',self.store.catalog.model_dump_json())],
             project_id=context.get('project_id'), case_requirement_refs={c.id:[requirement_ref] for c in cases},
@@ -172,6 +180,8 @@ class TestDesignSkill(Skill):
         (output/(design_id+'.md')).write_text(artifact.markdown,encoding='utf-8')
         context.set('test_design_exports', {'artifact':str(output/(design_id+'.json')),
                     'excel':str(output/(design_id+'.xlsx')), 'summary':str(output/(design_id+'.md')), 'excel_status':'exported'})
+        context.set(f'steps.{artifact.step_id}.test_design_data', {'document_file':str(output/(design_id+'.json'))})
+        context.set(f'steps.{artifact.step_id}.test_cases', {'document_file':str(output/(design_id+'.xlsx'))})
         context.set('test_design',artifact.markdown)
         context.set('stage_quality',context.get('stage_quality',[])+[{'artifact_id':artifact.id,'step_id':artifact.step_id,
                     'structured_valid':True,'uncovered_conditions':len(uncovered)}])

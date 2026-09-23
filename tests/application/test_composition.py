@@ -45,11 +45,12 @@ def create_test_workflow(
         id: smoke_test
         name: Smoke Test
         description: Test workflow.
-        steps:
-          - tester_requirement_understanding
         ---
 
-        # Smoke Test
+## 步骤：understand
+- 技能：requirement_understand
+- 执行授权：auto
+- 结果确认：manual
         """,
         encoding="utf-8",
     )
@@ -63,12 +64,12 @@ def create_test_template(
 
     template_file = (
         tmp_path
-        / "tester_requirement_understanding.md"
+        / "requirement_understand.md"
     )
 
     template_file.write_text(
         """---
-        id: tester_requirement_understanding
+        id: requirement_understand
         name: 测试人员需求理解模板
         description: 测试人员需求理解测试模板
         role: tester
@@ -166,7 +167,7 @@ def test_tester_agent_executes_configured_workflow(
 
     assert (
         context.get(
-            "tester_requirement_understanding"
+            "requirement_understand"
         )
         == "Fake requirement understanding result"
     )
@@ -224,7 +225,7 @@ def test_tester_agent_uses_configured_template(
     assert "## 4. 测试风险" in prompt
 
     assert (
-        "tester_requirement_understanding"
+        "requirement_understand"
         in prompt
     )
 
