@@ -2,19 +2,19 @@ from pathlib import Path
 
 import pytest
 
-from beivymate.agent.tester.skills.tester_requirement_understanding import TesterRequirementUnderstandingSkill as UnderstandingSkill
+from beivymate.agent.tester.skills.requirement_understand import RequirementUnderstandSkill as UnderstandingSkill
 from beivymate.configuration.loader import load_template_definition
 from beivymate.model.entity.requirement import Requirement
 from beivymate.model.artifact.requirement_understanding import UnderstandingData
 
 
-ROOT = Path(__file__).resolve().parents[3] / "resources/template/tester/tester_requirement_understanding"
+ROOT = Path(__file__).resolve().parents[3] / "resources/skills/tester/requirement_understand/templates"
 
 
 @pytest.mark.parametrize("locale", ["zh-CN", "en-US"])
 @pytest.mark.parametrize("strategy", ["simple", "standard", "deep"])
 def test_strategy_and_language_preserve_contract(locale, strategy):
-    template = load_template_definition(ROOT / locale / "DefaultTesterRequirementUnderstandingTemplate.md")
+    template = load_template_definition(ROOT / locale / "RequirementUnderstandTemplate.md")
     skill = UnderstandingSkill(None, "fake", template)
     requirement = Requirement(id="R", title="Payment", content="Accept payment")
     prompt = skill._build_prompt(requirement, requirement.model_dump(), [], strategy, locale)
@@ -27,7 +27,7 @@ def test_strategy_and_language_preserve_contract(locale, strategy):
 
 
 def test_invalid_strategy_fails_without_model_call():
-    template = load_template_definition(ROOT / "zh-CN/DefaultTesterRequirementUnderstandingTemplate.md")
+    template = load_template_definition(ROOT / "zh-CN/RequirementUnderstandTemplate.md")
     skill = UnderstandingSkill(None, "fake", template)
     requirement = Requirement(id="R", title="T", content="C")
     with pytest.raises(ValueError, match="Unknown analysis strategy"):

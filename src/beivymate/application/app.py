@@ -44,7 +44,7 @@ WORKFLOW_PATH = (
 )
 
 
-def create_gateway(
+def _create_gateway(
     provider: str,
     base_url: str,
     timeout: float,
@@ -77,6 +77,14 @@ def create_gateway(
     raise ValueError(
         f"Unsupported LLM provider: {provider}"
     )
+
+
+def create_gateway(provider, base_url, timeout, api_key_env=None, max_retries=2):
+    binding = dict(provider=provider, base_url=base_url, timeout=timeout,
+                   api_key_env=api_key_env, max_retries=max_retries)
+    gateway = _create_gateway(**binding)
+    gateway.configuration_binding = binding  # References only; never persist API keys.
+    return gateway
 
 
 def main(argv=None) -> None:
@@ -135,7 +143,7 @@ def main(argv=None) -> None:
     )
 
     result = context.get(
-        "tester_requirement_understanding"
+        "requirement_understand"
     )
 
     print()

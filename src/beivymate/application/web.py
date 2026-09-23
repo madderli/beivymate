@@ -50,9 +50,12 @@ class Credential(BaseModel):
     secret: str = Field(min_length=1, max_length=8192, repr=False)
 
 
-def create_app(data_dir: Path, setup_token: str, *, origins=None, vault=None):
+def create_app(data_dir: Path, setup_token: str, *, origins=None, vault=None, workflow_root=None):
     service = IdentityService(data_dir / 'identity.sqlite3', setup_token)
     vault = vault or CredentialVault()
+    from beivymate.portal.service import PortalService
+    from beivymate.application.portal_api import portal_router
+    portal = PortalService(data_dir / 'work', workflow_root or Path(__file__).resolve().parents[3] / 'resources/configuration/workflow')
     allowed_origins = set(origins or [
         f'http://{host}:{port}' for host in ('127.0.0.1', 'localhost')
         for port in (8000, 5173, 4173)
@@ -77,11 +80,16 @@ def create_app(data_dir: Path, setup_token: str, *, origins=None, vault=None):
                 return JSONResponse({'message': '请求来源未获允许。'}, status_code=403)
             if request.headers.get('sec-fetch-site') == 'cross-site':
                 return JSONResponse({'message': '不接受跨站操作。'}, status_code=403)
+            if request.url.path == '/api/v1/tasks' and request.method == 'POST':
+                try:
+                    service.require(request.cookies.get(COOKIE), request.headers.get('x-csrf-token', ''), 'task.create')
+                except IdentityError as exc:
+                    return JSONResponse({'message': str(exc)}, status_code=exc.status)
             total = 0
             chunks = []
             async for chunk in request.stream():
                 total += len(chunk)
-                if total > 16384:
+                if total > (101 * 1024 * 1024 if request.url.path == '/api/v1/tasks' and request.method == 'POST' else 256 * 1024):
                     return JSONResponse({'message': '请求过大。'}, status_code=413)
                 chunks.append(chunk)
             request._body = b''.join(chunks)
@@ -95,6 +103,63 @@ def create_app(data_dir: Path, setup_token: str, *, origins=None, vault=None):
         return service.require(request.cookies.get(COOKIE),
             request.headers.get('x-csrf-token', '') if request.method != 'GET' else None,
             capability)
+
+    from beivymate.configuration.library import ConfigurationLibrary
+    library = ConfigurationLibrary(Path(__file__).resolve().parents[3] / 'resources', data_dir / 'configuration')
+    app.state.configuration_library = library
+    portal.custom_workflow_root = data_dir / 'configuration/workflows'
+
+    @app.get('/api/v1/configuration/{kind}')
+    def configurations(kind: str, request: Request):
+        require(request, 'configuration.manage')
+        try:
+            return {'items': library.list(kind)}
+        except (ValueError, OSError) as exc:
+            raise IdentityError(str(exc), 422) from None
+
+    @app.put('/api/v1/configuration/{kind}/{identity}')
+    async def save_configuration(kind: str, identity: str, request: Request):
+        require(request, 'configuration.manage')
+        try:
+            body = await request.json()
+            if not isinstance(body, dict) or set(body) - {'content', 'revision', 'copyFrom'} or not isinstance(body.get('content'), str):
+                raise ValueError('配置请求格式不正确')
+            return library.save(kind, identity, body['content'], body.get('revision'), copy_from=body.get('copyFrom'))
+        except PermissionError as exc:
+            raise IdentityError(str(exc), 403) from None
+        except FileExistsError as exc:
+            raise IdentityError(str(exc), 409) from None
+        except (ValueError, OSError) as exc:
+            raise IdentityError(str(exc), 422) from None
+
+    from beivymate.documents.service import DocumentStore
+    from beivymate.application.document_api import document_router
+    app.state.documents = DocumentStore(data_dir / 'work' / 'documents')
+    app.include_router(document_router(app.state.documents, require))
+
+    @app.get('/api/v1/configuration/skills/{identity}/templates')
+    def templates(identity: str, request: Request):
+        require(request, 'configuration.manage')
+        try:
+            return {'items': library.templates(identity)}
+        except (ValueError, OSError) as exc:
+            raise IdentityError(str(exc), 422) from None
+
+    @app.put('/api/v1/configuration/skills/{identity}/templates')
+    async def save_template(identity: str, request: Request):
+        require(request, 'configuration.manage')
+        import base64
+        try:
+            body = await request.json()
+            if not isinstance(body, dict) or set(body) != {'name', 'content', 'revision'} or not all(isinstance(value,str) for value in body.values()):
+                raise ValueError('模板请求格式不正确')
+            return library.save_template(identity,body['name'],base64.b64decode(body['content'],validate=True),body['revision'])
+        except PermissionError as exc:
+            raise IdentityError(str(exc),403) from None
+        except FileExistsError as exc:
+            raise IdentityError(str(exc),409) from None
+        except (ValueError, OSError) as exc:
+            raise IdentityError(str(exc),422) from None
 
     @app.get('/api/v1/session')
     def session(request: Request):
@@ -143,12 +208,6 @@ def create_app(data_dir: Path, setup_token: str, *, origins=None, vault=None):
         service.rename(request.cookies[COOKIE], body.name)
         return {'saved': True}
 
-    @app.get('/api/v1/workbench')
-    def workbench(request: Request):
-        require(request, 'workbench.read')
-        # M03 owns the business repository. No fabricated tasks or writable capabilities.
-        return {'workspaces': [], 'tasks': [], 'workflows': [], 'models': []}
-
     @app.put('/api/v1/account/credentials/{connection}')
     def save_credential(connection: str, body: Credential, request: Request):
         account = require(request, 'credentials.manage')
@@ -163,12 +222,15 @@ def create_app(data_dir: Path, setup_token: str, *, origins=None, vault=None):
         vault.delete(account['user']['id'], connection)
         return {'deleted': True}
 
+    app.include_router(portal_router(portal, require))
+    app.state.portal = portal
     return app
 
 
 def main():
     parser = argparse.ArgumentParser(description='BeIvyMate local personal portal')
-    parser.add_argument('--data-dir', type=Path, default=Path.home() / '.beivymate')
+    from beivymate.documents.defaults import data_directory
+    parser.add_argument('--data-dir', type=Path, default=data_directory())
     parser.add_argument('--port', type=int, default=8000)
     args = parser.parse_args()
     token = secrets.token_urlsafe(24)

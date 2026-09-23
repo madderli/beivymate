@@ -13,15 +13,16 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 TEMPLATE_PATH = (
     PROJECT_ROOT
     / "resources"
-    / "template"
+    / "skills"
     / "tester"
-    / "tester_requirement_understanding"
+    / "requirement_understand"
+        / "templates"
     / "zh-CN"
-    / "DefaultTesterRequirementUnderstandingTemplate.md"
+    / "RequirementUnderstandTemplate.md"
 )
 
 
-def test_load_default_tester_requirement_understanding_template():
+def test_load_default_requirement_understand_template():
 
     template = load_template_definition(
         TEMPLATE_PATH
@@ -29,7 +30,7 @@ def test_load_default_tester_requirement_understanding_template():
 
     assert (
         template.id
-        == "default_tester_requirement_understanding"
+        == "default_requirement_understand"
     )
 
     assert (

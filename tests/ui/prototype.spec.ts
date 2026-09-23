@@ -108,6 +108,12 @@ test("task creation uploads attachments and preserves the form on server failure
   await page.getByRole("button", { name: "新建任务", exact: true }).click();
   const dialog = page.getByRole("dialog");
   await dialog.getByLabel("任务名称").fill("寿险产品验收");
+  await expect(dialog.getByRole("button", { name: "选择附件" })).toBeVisible();
+  await dialog
+    .getByLabel("需求附件")
+    .dispatchEvent("cancel", { bubbles: true });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByLabel("任务名称")).toHaveValue("寿险产品验收");
   await dialog.getByLabel("需求附件").setInputFiles({
     name: "requirement.md",
     mimeType: "text/markdown",
@@ -334,7 +340,7 @@ test("workspace save success refreshes the server snapshot", async ({
   });
   await page.getByRole("button", { name: "新增工作区", exact: true }).click();
   const dialog = page.getByRole("dialog");
-  await dialog.getByLabel("产品标识").fill("NEW");
+  await dialog.getByLabel("工作区标识").fill("NEW");
   await dialog.getByLabel("工作区名称").fill("新的产品");
   await dialog.getByRole("button", { name: "保存工作区" }).click();
   await expect(dialog).toHaveCount(0);
@@ -405,4 +411,120 @@ test("related task navigation preserves group identity", async ({ page }) => {
     page.getByRole("heading", { name: "问诊支付同步", exact: true }),
   ).toBeVisible();
   await expect(page.locator(".task-overline")).toContainText("关联任务");
+});
+
+test("published file recovery targets historical revision and preserves failure warning", async ({
+  page,
+}) => {
+  await connected(page);
+  const historical = { id: "doc-1", revision: 1, sha256: "1".repeat(64) };
+  let recovered = false;
+  let attempts = 0;
+  let submitted: unknown;
+  await page.route("**/api/v1/documents", (r) =>
+    r.fulfill({
+      json: {
+        items: [
+          {
+            ref: { id: "doc-1", revision: 2, sha256: "2".repeat(64) },
+            origin: { task: "task", skill: "test_report" },
+            policy: { filename: "test_report.md", editable: true, asset: true },
+            path: "/customer/draft.md",
+            confirmed_by: null,
+            lifecycle: "draft",
+            upstream_changed: false,
+            working_file_changed: false,
+            published_file_changed: !recovered,
+            file_changed: !recovered,
+            publications: [
+              {
+                ref: historical,
+                path: "/customer/published.md",
+                status: recovered ? "ok" : "changed",
+              },
+            ],
+          },
+        ],
+      },
+    }),
+  );
+  await page.route("**/api/v1/documents/doc-1/text?*", (r) =>
+    r.fulfill({ json: { content: "New draft" } }),
+  );
+  await page.route("**/api/v1/documents/actions", (r) => {
+    submitted = r.request().postDataJSON();
+    attempts++;
+    if (attempts === 1)
+      return r.fulfill({ status: 503, json: { message: "目录暂不可写" } });
+    recovered = true;
+    return r.fulfill({
+      json: {
+        path: "/customer/published.md",
+        backup: "/customer/conflict-backup",
+      },
+    });
+  });
+  await page.getByRole("button", { name: "设置", exact: true }).click();
+  await page
+    .getByRole("button", { name: "产物与工作资产", exact: true })
+    .click();
+  await page.getByRole("dialog").getByRole("combobox").selectOption("doc-1");
+  await expect(page.getByRole("alert")).toContainText("发布文件异常");
+  page.on("dialog", (dialog) => dialog.accept());
+  await page
+    .getByRole("button", { name: "恢复发布版本 1", exact: true })
+    .click();
+  await expect(page.getByText("目录暂不可写", { exact: true })).toBeVisible();
+  await expect(page.getByText(/发布文件异常/)).toBeVisible();
+  await page
+    .getByRole("button", { name: "恢复发布版本 1", exact: true })
+    .click();
+  await expect(page.getByText(/发布文件异常/)).toHaveCount(0);
+  expect(submitted).toEqual({ action: "restore-publication", ref: historical });
+});
+
+test("sidebar keeps workspace heading fixed and groups settings and personal actions", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await connected(page);
+  const board = boardFixture();
+  board.workspaces = Array.from({ length: 45 }, (_, i) => ({
+    ...board.workspaces[0],
+    id: `WS-${i}`,
+    name: `产品 ${i}`,
+  }));
+  await page.route("**/api/v1/workbench", (r) => r.fulfill({ json: board }));
+  await page.reload();
+  const list = page.locator(".workspace-scroll");
+  await expect(list.getByRole("button")).toHaveCount(45);
+  const heading = page.locator(".sidebar-workspaces > .nav-caption");
+  const before = await heading.boundingBox();
+  await list.evaluate((el) => {
+    el.scrollTop = el.scrollHeight;
+  });
+  expect(await list.evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
+  expect((await heading.boundingBox())?.y).toBe(before?.y);
+  await expect(
+    heading.getByRole("button", { name: "新增工作区" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "退出登录", exact: true }),
+  ).toHaveCount(0);
+  await page.getByRole("button", { name: "设置", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "产物与工作资产", exact: true }),
+  ).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(
+    page.getByRole("navigation", { name: "设置子菜单" }),
+  ).toHaveCount(0);
+  await page.getByRole("button", { name: "个人空间", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "退出登录", exact: true }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "个性化与配色", exact: true }).click();
+  await expect(page.getByLabel("配色方案预览")).toContainText(
+    "海盐蓝 · 规划中",
+  );
 });

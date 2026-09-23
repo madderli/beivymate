@@ -68,9 +68,11 @@ def test_tester_agent_uses_runtime_knowledge(
         id: tester_knowledge_integration
         name: Tester Knowledge Integration
         description: Tester knowledge integration workflow
-        steps:
-            - tester_requirement_understanding
         ---
+## 步骤：understand
+- 技能：requirement_understand
+- 执行授权：auto
+- 结果确认：manual
         """,
         encoding = "utf-8",
     )

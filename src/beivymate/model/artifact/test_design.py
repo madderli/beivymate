@@ -146,9 +146,13 @@ class DesignArtifact(Contract):
     step_id: Text
     task_id: Text | None = None
     run_id: Text | None = None
-    analysis_id: Text
-    analysis_revision: int = Field(ge=1)
-    analysis_hash: Text
+    analysis_id: Text | None = None
+    analysis_revision: int | None = Field(default=None, ge=1)
+    analysis_hash: Text | None = None
+    input_kind: Literal['analysis', 'understanding'] = 'analysis'
+    input_id: Text | None = None
+    input_revision: int | None = Field(default=None, ge=1)
+    input_hash: Text | None = None
     sources: list[SourceSnapshot]
     raw_response: str
     proposals: DesignData
@@ -162,6 +166,19 @@ class DesignArtifact(Contract):
     model: Text
     locale: Text | None = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+    @model_validator(mode='after')
+    def validate_input_lineage(self):
+        if self.input_kind == 'understanding':
+            if not all((self.input_id, self.input_revision, self.input_hash)):
+                raise ValueError('Understanding-based design requires input identity, revision and hash')
+            if any(value is not None for value in (self.analysis_id, self.analysis_revision, self.analysis_hash)):
+                raise ValueError('Understanding-based design cannot claim an analysis source')
+        elif not all((self.analysis_id, self.analysis_revision, self.analysis_hash)):
+            raise ValueError('Analysis-based design requires an accepted analysis reference')
+        elif self.input_id is not None and (self.input_id, self.input_revision, self.input_hash) != (self.analysis_id, self.analysis_revision, self.analysis_hash):
+            raise ValueError('Design input lineage mismatch')
+        return self
 
     def require_data(self):
         return self.proposals

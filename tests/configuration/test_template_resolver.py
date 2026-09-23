@@ -3,7 +3,7 @@ from pathlib import Path
 
 def test_resolver_supports_other_skill_template(tmp_path):
     from beivymate.configuration.template_resolver import TemplateResolver
-    template = tmp_path / "tester/test_analysis/zh-CN/DefaultTestAnalysisTemplate.md"
+    template = tmp_path / "tester/test_analysis/templates/zh-CN/DefaultTestAnalysisTemplate.md"
     template.parent.mkdir(parents=True)
     template.write_text("Test fixture only", encoding="utf-8")
     assert TemplateResolver(tmp_path).resolve_default("tester", "test_analysis") == template
@@ -26,9 +26,10 @@ def test_resolve_default_template(
     template_path = (
         template_root
         / "tester"
-        / "tester_requirement_understanding"
+        / "requirement_understand"
+        / "templates"
         / "zh-CN"
-        / "DefaultTesterRequirementUnderstandingTemplate.md"
+        / "RequirementUnderstandTemplate.md"
     )
 
     template_path.parent.mkdir(
@@ -37,7 +38,7 @@ def test_resolve_default_template(
 
     template_path.write_text(
         """---
-        id: default_tester_requirement_understanding
+        id: default_requirement_understand
         name: 测试工程师需求理解模板
         description: 默认模板
         role: tester
@@ -55,7 +56,7 @@ def test_resolve_default_template(
 
     result = resolver.resolve_default(
         role = "tester",
-        template_name = "tester_requirement_understanding",
+        template_name = "requirement_understand",
         locale = "zh-CN",
     )
 
@@ -76,7 +77,7 @@ def test_resolve_default_template_not_found(
 
         resolver.resolve_default(
             role = "tester",
-            template_name = "tester_requirement_understanding",
+            template_name = "requirement_understand",
             locale = "zh-CN",
         )
 
@@ -92,17 +93,19 @@ def test_resolve_default_template_for_different_locale(
     zh_template = (
         template_root
         / "tester"
-        / "tester_requirement_understanding"
+        / "requirement_understand"
+        / "templates"
         / "zh-CN"
-        / "DefaultTesterRequirementUnderstandingTemplate.md"
+        / "RequirementUnderstandTemplate.md"
     )
 
     en_template = (
         template_root
         / "tester"
-        / "tester_requirement_understanding"
+        / "requirement_understand"
+        / "templates"
         / "en-US"
-        / "DefaultTesterRequirementUnderstandingTemplate.md"
+        / "RequirementUnderstandTemplate.md"
     )
 
     zh_template.parent.mkdir(
@@ -129,13 +132,13 @@ def test_resolve_default_template_for_different_locale(
 
     zh_result = resolver.resolve_default(
         role = "tester",
-        template_name = "tester_requirement_understanding",
+        template_name = "requirement_understand",
         locale = "zh-CN",
     )
 
     en_result = resolver.resolve_default(
         role = "tester",
-        template_name = "tester_requirement_understanding",
+        template_name = "requirement_understand",
         locale = "en-US",
     )
 

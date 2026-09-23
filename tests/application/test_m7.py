@@ -67,6 +67,15 @@ def test_three_stage_pipeline(tmp_path,bad,overlap):
     assert state.index==2 and state.status=='waiting_review' and provider.calls==3
     artifact=AgentContext.restore(state.context).get('test_design_artifact')
     assert isinstance(artifact,DesignArtifact)
+    from beivymate.documents.runtime import store_for, owner_for
+    from beivymate.documents.models import DocumentRef
+    restored_context=AgentContext.restore(state.context)
+    refs=restored_context.get('document_outputs')['design']
+    assert set(refs)=={'test_design','test_design_data','test_cases'}
+    documents=store_for(restored_context)
+    assert documents.read(owner_for(restored_context),DocumentRef.model_validate(refs['test_cases']))==(tmp_path/(artifact.id+'.xlsx')).read_bytes()
+    assert documents.read(owner_for(restored_context),DocumentRef.model_validate(refs['test_design_data']))==(tmp_path/(artifact.id+'.json')).read_bytes()
+
     assert artifact.case_revisions[0].requirement_refs[0].requirement_id == 'R'
     assert len(artifact.case_revisions[0].requirement_refs[0].sha256) == 64
     assert artifact.case_requirement_refs[artifact.case_revisions[0].id][0].requirement_id == 'R'
@@ -144,3 +153,53 @@ def test_existing_case_pipeline(tmp_path,action,target):
     assert store.active_for_version('p','1','hospital-a')[0].revision==1
     if action=='revise':
         assert store.active_for_version('p','2','hospital-a')[0].revision==2
+
+
+@pytest.mark.parametrize('project',[None,'hospital-a'])
+def test_accepted_cases_archive_by_actual_product_and_function(tmp_path,project):
+    from beivymate.documents.runtime import store_for,owner_for
+    from beivymate.documents.models import DocumentRef
+    from beivymate.documents.service import segment
+    catalog=ProductCatalog(products={'p':'Func01','p2':'Func02'},functions=[
+        {'id':'billing','product_id':'p','name':'收费'},
+        {'id':'pay','product_id':'p','name':'支付','parent_id':'billing'},
+        {'id':'refund','product_id':'p','name':'退费','parent_id':'billing'},
+        {'id':'lab','product_id':'p2','name':'检验'}])
+    cases=CaseStore(tmp_path/'cases.db',catalog)
+    class Multiple(Provider):
+        def chat(self,request):
+            response=super().chat(request)
+            if self.calls==3:
+                data=json.loads(response.content);base=data['cases'][0]
+                data['cases']=[dict(base,title=title,product_id=product,function_id=function,project_id=project)
+                               for title,product,function in [('支付','p','pay'),('退费','p','refund'),('检验','p2','lab')]]
+                response.content=json.dumps(data,ensure_ascii=False)
+            return response
+    provider=Multiple()
+    agent=create_tester_agent(str(ROOT/'resources/configuration/workflow/m7_test_design.md'),LLMGateway(provider),'fake',design_store=cases)
+    context=AgentContext()
+    for key,value in {'actor':'author','maintainer':'owner','project_id':project,'target_versions':{'p':'1','p2':'1'},'design_output_directory':str(tmp_path/'customer')}.items():context.set(key,value)
+    checkpoint=tmp_path/'run.json'
+    state=agent.start(Requirement(id='R',title='支付',content='支付成功更新状态'),checkpoint,task_id='task',context=context)
+    while state.status=='waiting_review':
+        state=agent.resume(checkpoint,decision='approved',actor='reviewer',expected_subject_hash=state.subject_hash)
+    assert state.status=='completed'
+    restored=AgentContext.restore(state.context);documents=store_for(restored);owner=owner_for(restored)
+    refs=restored.get('case_asset_refs')['design']
+    assert len(refs)==3
+    archive=[item for item in documents.list(owner) if item['origin']['source_asset_id']]
+    assert {(item['origin']['product'],item['origin']['function']) for item in archive}=={('p','pay'),('p','refund'),('p2','lab')}
+    for item in archive:
+        origin=item['origin'];path=Path(item['path'])
+        assert path.is_relative_to(tmp_path/'customer/assets/products')
+        assert origin['project']==project
+        assert ('/projects/' in str(path))==bool(project)
+        if origin['product']=='p':assert '/functions/'+segment('billing')+'/'+segment(origin['function']) in str(path)
+        ref=DocumentRef.model_validate(item['ref']);data=json.loads(documents.read(owner,ref))
+        assert data['id']==origin['source_asset_id'] and data['revision']==origin['source_asset_revision']
+        assert data['review_status']=='accepted'
+        assert cases.latest(data['id']).publication_status=='unpublished'
+        documents.publish_asset(owner,ref,'reviewer')
+    before=len(documents.list(owner))
+    agent._workflow.skills[-1].on_accepted(restored)
+    assert len(documents.list(owner))==before and provider.calls==3

@@ -24,14 +24,14 @@ def main():
     parser.add_argument('--output',type=Path,required=True)
     parser.add_argument('--model-config',type=Path,default=MODEL_PATH)
     parser.add_argument('--simulation',action='store_true')
-    parser.add_argument('--template',type=Path,default=TEMPLATE_ROOT/'tester/test_report/zh-CN/DefaultBriefTestReportTemplate.docx')
+    parser.add_argument('--template',type=Path,default=TEMPLATE_ROOT/'tester/test_report/templates/zh-CN/DefaultBriefTestReportTemplate.docx')
     parser.add_argument('--previous-report',type=Path)
     args=parser.parse_args()
     import tempfile
     args.output.mkdir(parents=True,exist_ok=True)
     with tempfile.TemporaryFile(dir=args.output):pass
     u,a,d=[accepted(args.design_checkpoint,key) for key in
-        ('tester_requirement_understanding_artifact','test_analysis_artifact','test_design_artifact')]
+        ('requirement_understand_artifact','test_analysis_artifact','test_design_artifact')]
     rounds=[accepted(p,'test_execution_artifact') for p in args.execution_checkpoint]
     config=load_model_definition(args.model_config)
     if not config.enabled or not config.base_url:parser.error('Model unavailable')

@@ -35,8 +35,9 @@ resources/       Customer configuration, examples and shipped templates
 tests/           Project tests and validation tools
 ```
 
-## Personal portal (UI M02)
+## Personal portal (UI M02–M03)
 
 The local account portal supports initialization, login, recovery and settings.
-Workspace/task execution is connected in subsequent UI milestones; the complete
+Workspaces, linked tasks, editable configurations and attachments are persisted locally.
+Runtime execution is connected in subsequent UI milestones; the complete
 external trial release is not yet ready. See [frontend startup and validation](src/frontend/README.md).

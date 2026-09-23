@@ -126,7 +126,7 @@ def test_script_defect_reuse_and_handoff_snapshot(tmp_path):
 def test_default_plan_template_is_runnable(tmp_path):
     from beivymate.application.execute import load_plan
     root=Path(__file__).resolve().parents[2]
-    p=load_plan(root/'resources/template/tester/test_execution/zh-CN/DefaultExecutionPlanTemplate.md')
+    p=load_plan(root/'resources/skills/tester/test_execution/templates/zh-CN/DefaultExecutionPlanTemplate.md')
     assert ExecutionService(tmp_path,p.task_id).start_round(p).round_number==1
     bad=tmp_path/'bad.md';bad.write_text('# empty template')
     with pytest.raises(ValueError,match='json'):load_plan(bad)

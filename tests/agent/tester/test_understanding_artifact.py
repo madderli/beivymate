@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from beivymate.agent.tester.skills.tester_requirement_understanding import TesterRequirementUnderstandingSkill
+from beivymate.agent.tester.skills.requirement_understand import RequirementUnderstandSkill
 from beivymate.configuration.models import TemplateDefinition
 from beivymate.model.artifact.requirement_understanding import UnderstandingArtifact, UnderstandingData
 from beivymate.model.entity.requirement import Requirement
@@ -26,7 +26,7 @@ def execute(content, path=None):
             assert "Machine-readable output contract" in request.messages[1].content
             return LLMResponse(model="fake", content=content)
 
-    skill = TesterRequirementUnderstandingSkill(Gateway(), "fake", TemplateDefinition(
+    skill = RequirementUnderstandSkill(Gateway(), "fake", TemplateDefinition(
         id="template", name="需求理解", role="tester", version="1", content="分析业务规则"))
     context = AgentContext()
     context.set("requirement", Requirement(id="REQ-1", title="支付", content="支持支付"))
@@ -40,16 +40,16 @@ def execute(content, path=None):
 
 
 def test_structured_artifact_roundtrip_and_provenance(tmp_path):
-    path = tmp_path / "understanding.json"
+    path = tmp_path / "requirement_understand.json"
     context = execute(json.dumps(payload(), ensure_ascii=False), path)
-    artifact = context.get("tester_requirement_understanding_artifact")
+    artifact = context.get("requirement_understand_artifact")
     assert UnderstandingArtifact.load(path) == artifact
     assert artifact.validation_status == "structured"
     assert artifact.acceptance == "pending"
     assert artifact.sources[0].version == "2"
     assert artifact.task_id == "TASK-1" and artifact.run_id == "RUN-1"
     assert artifact.data.unknowns[0].blocking
-    assert "支持支付" in context.get("tester_requirement_understanding")
+    assert "支持支付" in context.get("requirement_understand")
     with pytest.raises(FileExistsError):
         artifact.save_new(path)
     saved = json.loads(path.read_text())
@@ -61,7 +61,7 @@ def test_structured_artifact_roundtrip_and_provenance(tmp_path):
 
 @pytest.mark.parametrize("invalid", ["旧 Markdown", '{"objective_scope": {}}'])
 def test_legacy_or_invalid_output_never_marked_structured(invalid):
-    artifact = execute(invalid).get("tester_requirement_understanding_artifact")
+    artifact = execute(invalid).get("requirement_understand_artifact")
     assert artifact.data is None
     assert artifact.validation_status == "unvalidated"
     assert artifact.validation_errors
@@ -72,7 +72,7 @@ def test_legacy_or_invalid_output_never_marked_structured(invalid):
 def test_unknown_or_template_evidence_rejected(ref):
     data = payload()
     data["objective_scope"]["items"][0]["source_refs"] = [ref]
-    artifact = execute(json.dumps(data)).get("tester_requirement_understanding_artifact")
+    artifact = execute(json.dumps(data)).get("requirement_understand_artifact")
     assert artifact.validation_status == "unvalidated"
 
 

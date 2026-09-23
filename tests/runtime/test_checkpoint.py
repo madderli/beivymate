@@ -137,7 +137,7 @@ def test_explicit_workflow_cannot_bypass_confirmation():
 
 def test_real_artifact_restores_types_and_records_version(tmp_path):
     import json
-    from beivymate.agent.tester.skills.tester_requirement_understanding import TesterRequirementUnderstandingSkill
+    from beivymate.agent.tester.skills.requirement_understand import RequirementUnderstandSkill
     from beivymate.configuration.models import TemplateDefinition
     from beivymate.model.artifact.requirement_understanding import UnderstandingArtifact, UnderstandingData
     from beivymate.model.entity.requirement import Requirement
@@ -154,7 +154,7 @@ def test_real_artifact_restores_types_and_records_version(tmp_path):
             return LLMResponse(model="fake", content=json.dumps(data))
 
     gateway = Gateway()
-    skill = TesterRequirementUnderstandingSkill(gateway, "fake", TemplateDefinition(
+    skill = RequirementUnderstandSkill(gateway, "fake", TemplateDefinition(
         id="t", name="T", role="tester", version="1", content="分析需求"))
     registry = SkillRegistry()
     registry.register("understand", skill)

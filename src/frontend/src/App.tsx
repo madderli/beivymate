@@ -1,6 +1,10 @@
+import { DocumentLibrary } from "./DocumentLibrary";
+import { ConfigurationLibrary } from "./ConfigurationLibrary";
+import { TaskEdit } from "./TaskEdit";
 import { PersonalLogin, AccountSettings } from "./Account";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  LogOut,
   Activity,
   ArrowDown,
   ArrowRight,
@@ -77,11 +81,18 @@ export default function App() {
   const [dark, setDark] = useState(() => preference("beivy-theme") === "dark");
   const [navOpen, setNavOpen] = useState(false);
   const [agentMenu, setAgentMenu] = useState(false);
+  const [sidebarMenu, setSidebarMenu] = useState<
+    "settings" | "personal" | null
+  >(null);
   const [chatOpen, setChatOpen] = useState(false);
   const [notifications, setNotifications] = useState(false);
   const [modal, setModal] = useState<"task" | "workspace" | "account" | null>(
     null,
   );
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [documentsOpen, setDocumentsOpen] = useState(false);
+  const [configurationOpen, setConfigurationOpen] = useState(false);
+  const [deleteTask, setDeleteTask] = useState<Task | null>(null);
   const [editing, setEditing] = useState<Workspace>();
   const [tab, setTab] = useState("workflow");
   const [selected, setSelected] = useState(0);
@@ -339,9 +350,6 @@ export default function App() {
   const nav = [
     ["home", "我的工作", LayoutDashboard],
     ["workspaces", "工作区", FolderKanban],
-    ["knowledge", "知识管理", BookOpen],
-    ["automation", "自动化资产", ListChecks],
-    ["connections", "企业连接", Link2],
   ] as const;
   return (
     <div className={`app-shell ${chatOpen ? "chat-visible" : ""}`}>
@@ -352,7 +360,12 @@ export default function App() {
           onClick={() => setNavOpen(false)}
         />
       )}
-      <aside className={`sidebar ${navOpen ? "mobile-open" : ""}`}>
+      <aside
+        className={`sidebar ${navOpen ? "mobile-open" : ""}`}
+        onKeyDown={(event) => {
+          if (event.key === "Escape") setSidebarMenu(null);
+        }}
+      >
         <Brand />
         <button
           className="agent-card"
@@ -408,39 +421,154 @@ export default function App() {
               <Plus size={16} />
             </button>
           </div>
-          {board.workspaces.map((w) => (
-            <button key={w.id} onClick={() => go("workspace", w.id)}>
-              <i className={`dot ${w.color}`} />
-              <span>{w.id}</span>
-            </button>
-          ))}
-          {!board.workspaces.length && (
-            <p className="muted sidebar-empty">
-              {authorized ? "还没有工作区" : "连接后显示工作区"}
-            </p>
-          )}
+          <div className="workspace-scroll">
+            {board.workspaces.map((w) => (
+              <button key={w.id} onClick={() => go("workspace", w.id)}>
+                <i className={`dot ${w.color}`} />
+                <span>{w.id}</span>
+              </button>
+            ))}
+            {!board.workspaces.length && (
+              <p className="muted sidebar-empty">
+                {authorized ? "还没有工作区" : "连接后显示工作区"}
+              </p>
+            )}
+          </div>
         </div>
         <div className="sidebar-bottom">
-          <button className="settings-nav" onClick={() => go("settings")}>
-            <Settings size={18} /> 设置与个性化
-          </button>
+          {sidebarMenu && (
+            <button
+              className="sidebar-dismiss"
+              aria-label="关闭侧栏子菜单"
+              onClick={() => setSidebarMenu(null)}
+            />
+          )}
           <button
-            className="profile"
-            aria-label="个人账户设置"
-            title="个人账户设置"
-            onClick={() => setModal("account")}
+            className="settings-nav sidebar-trigger"
+            aria-label="设置"
+            aria-expanded={sidebarMenu === "settings"}
+            onClick={() =>
+              setSidebarMenu(sidebarMenu === "settings" ? null : "settings")
+            }
+          >
+            <Settings size={18} />
+            <span>设置</span>
+            <ChevronRight size={14} />
+          </button>
+          {sidebarMenu === "settings" && (
+            <nav className="sidebar-submenu" aria-label="设置子菜单">
+              <strong>设置</strong>
+              <button
+                disabled={!can("configuration.manage")}
+                onClick={() => {
+                  setSidebarMenu(null);
+                  setConfigurationOpen(true);
+                }}
+              >
+                技能与工作流配置
+              </button>
+              <button
+                disabled={!can("documents.manage")}
+                onClick={() => {
+                  setSidebarMenu(null);
+                  setDocumentsOpen(true);
+                }}
+              >
+                产物与工作资产
+              </button>
+              <button
+                onClick={() => {
+                  setSidebarMenu(null);
+                  go("knowledge");
+                }}
+              >
+                知识管理
+              </button>
+              <button
+                onClick={() => {
+                  setSidebarMenu(null);
+                  go("automation");
+                }}
+              >
+                自动化资产
+              </button>
+              <button
+                onClick={() => {
+                  setSidebarMenu(null);
+                  go("connections");
+                }}
+              >
+                企业连接
+              </button>
+              <button
+                onClick={() => {
+                  setSidebarMenu(null);
+                  setModelHelp(true);
+                }}
+              >
+                模型策略
+              </button>
+            </nav>
+          )}
+          <button
+            className="profile sidebar-trigger"
+            aria-label="个人空间"
+            title="个人空间"
+            aria-expanded={sidebarMenu === "personal"}
+            onClick={() =>
+              setSidebarMenu(sidebarMenu === "personal" ? null : "personal")
+            }
           >
             <span className="avatar">
               {session?.user?.name.slice(0, 1) || "人"}
             </span>
             <span>
-              <strong>{session?.user?.name || "未登录"}</strong>
-              <small>{authorized ? "个人工作空间" : "页面布局 · 只读"}</small>
+              <strong>个人空间</strong>
+              <small>{session?.user?.name}</small>
             </span>
+            <ChevronRight size={14} />
           </button>
-          <div className="prototype">
-            <small>个人工作门户</small>
-          </div>
+          {sidebarMenu === "personal" && (
+            <nav className="sidebar-submenu" aria-label="个人空间子菜单">
+              <strong>个人空间</strong>
+              <button
+                aria-label="个人账户设置"
+                onClick={() => {
+                  setSidebarMenu(null);
+                  setModal("account");
+                }}
+              >
+                账户与安全
+              </button>
+              <button
+                onClick={() => {
+                  setSidebarMenu(null);
+                  go("settings");
+                }}
+              >
+                个性化与配色
+              </button>
+              <button
+                disabled={busy}
+                onClick={() =>
+                  void mutate(async () => {
+                    await api.logout();
+                    requestGeneration.current++;
+                    refreshFlight.current = null;
+                    artifactGeneration.current++;
+                    setArtifact(null);
+                    setSession(null);
+                    setBoard(emptyBoard());
+                    setModal(null);
+                    setSidebarMenu(null);
+                  })
+                }
+              >
+                <LogOut size={16} />
+                退出登录
+              </button>
+            </nav>
+          )}
         </div>
       </aside>
       <div className="main-shell">
@@ -730,7 +858,11 @@ export default function App() {
                     </button>
                     <button
                       className="primary"
-                      disabled={!can("task.create") || !board.workflows.length}
+                      disabled={
+                        !can("task.create") ||
+                        !board.workflows.length ||
+                        !board.workspaces.length
+                      }
                       onClick={() => setModal("task")}
                     >
                       新建任务
@@ -742,6 +874,9 @@ export default function App() {
                 <BookOpen />
                 <div>
                   <strong>{workspace.knowledge || "尚未配置知识来源"}</strong>
+                  {workspace.configPath && (
+                    <p>配置文件：{workspace.configPath}</p>
+                  )}
                   <p>
                     {workspace.paused
                       ? "工作区调度已暂停"
@@ -794,7 +929,9 @@ export default function App() {
                       <button
                         className="primary"
                         key={verb}
-                        disabled={!can("task.execute") || busy}
+                        disabled={
+                          !(can("task.manage") || can("task.execute")) || busy
+                        }
                         onClick={() => action(task, verb)}
                       >
                         {(
@@ -1017,11 +1154,32 @@ export default function App() {
                     </div>
                   ))}
                   {!task.attachments?.length && <p>暂无附件</p>}
-                  <div className="notice">
-                    配置编辑、版本冲突与历史输入绑定尚未接通。执行快照不会被页面修改。
-                  </div>
-                  <button className="secondary" disabled>
-                    编辑流程（待接入）
+                  {task.configPath && <p>配置文件：{task.configPath}</p>}
+                  {task.configurationIssue && (
+                    <p role="alert">{task.configurationIssue}</p>
+                  )}
+                  <button
+                    className="secondary"
+                    disabled={
+                      !can("task.manage") ||
+                      !["pending", "paused"].includes(task.status)
+                    }
+                    onClick={() => setEditingTask(task)}
+                  >
+                    编辑任务配置
+                  </button>
+                  <button
+                    className="secondary"
+                    disabled={
+                      !can("task.delete") ||
+                      !["pending", "paused"].includes(task.status)
+                    }
+                    onClick={() => {
+                      setError("");
+                      setDeleteTask(task);
+                    }}
+                  >
+                    删除任务
                   </button>
                 </section>
               )}
@@ -1071,14 +1229,14 @@ export default function App() {
           {route.page === "settings" && (
             <>
               <PageHead
-                title="设置与个性化"
+                title="个人空间"
                 text="界面偏好可以本地保存，账户和业务数据由后端管理。"
               />
               {session?.authenticated && can("account.manage") && (
                 <AccountSettings session={session} changed={refresh} />
               )}
               <section className="panel settings-panel">
-                <h2>个人与服务</h2>
+                <h2>个性化与配色</h2>
                 <p>当前用户：{session?.user?.name || "尚未登录"}</p>
                 <div className="setting-row">
                   <div>
@@ -1091,41 +1249,28 @@ export default function App() {
                 </div>
                 <div className="setting-row">
                   <div>
-                    <strong>模型策略</strong>
-                    <p>
-                      配置模型连接，按对话或技能选择；运行快照固定实际模型。
-                    </p>
+                    <strong>配色方案</strong>
+                    <p>更多配色正在设计中；当前可切换浅色与深色主题。</p>
                   </div>
-                  <button
-                    className="secondary"
-                    onClick={() => setModelHelp(true)}
-                  >
-                    查看设计
-                  </button>
-                </div>
-                <div className="setting-row">
-                  <div>
-                    <strong>账户与授权</strong>
-                    <p>本地身份、试用权限与企业凭据分别管理。</p>
+                  <div className="palette-options" aria-label="配色方案预览">
+                    <span>
+                      <i style={{ background: "#638878" }} />
+                      常春藤 · 当前
+                    </span>
+                    <span>
+                      <i style={{ background: "#6385b2" }} />
+                      海盐蓝 · 规划中
+                    </span>
+                    <span>
+                      <i style={{ background: "#9a86af" }} />
+                      鸢尾紫 · 规划中
+                    </span>
+                    <span>
+                      <i style={{ background: "#b89360" }} />
+                      暖沙金 · 规划中
+                    </span>
                   </div>
                 </div>
-                <button
-                  className="secondary"
-                  onClick={() => {
-                    if (authorized)
-                      void mutate(async () => {
-                        await api.logout();
-                        requestGeneration.current++;
-                        refreshFlight.current = null;
-                        artifactGeneration.current++;
-                        setArtifact(null);
-                        setSession(null);
-                        setBoard(emptyBoard());
-                      });
-                  }}
-                >
-                  {authorized ? "退出登录" : "返回登录"}
-                </button>
               </section>
             </>
           )}
@@ -1273,6 +1418,61 @@ export default function App() {
           saved={refresh}
         />
       )}
+      {editingTask && (
+        <TaskEdit
+          task={editingTask}
+          workflows={board.workflows}
+          close={() => setEditingTask(null)}
+          saved={refresh}
+        />
+      )}
+      {documentsOpen && (
+        <DocumentLibrary close={() => setDocumentsOpen(false)} />
+      )}
+      {configurationOpen && (
+        <ConfigurationLibrary close={() => setConfigurationOpen(false)} />
+      )}
+      {deleteTask && (
+        <Dialog
+          title="删除任务"
+          close={() => {
+            if (!busy) setDeleteTask(null);
+          }}
+        >
+          <div className="dialog-body">
+            <p>
+              删除“{deleteTask.title}
+              ”后将从任务列表移除，已有记录保留归档，编号不会重复使用。不会同时删除关联任务。
+            </p>
+            {error && <p role="alert">{error}</p>}
+            <button
+              className="secondary"
+              disabled={busy}
+              onClick={() => setDeleteTask(null)}
+            >
+              取消
+            </button>
+            <button
+              className="primary"
+              disabled={busy}
+              onClick={() =>
+                void mutate(async () => {
+                  await api.action(
+                    deleteTask.id,
+                    "delete",
+                    deleteTask.revision,
+                    crypto.randomUUID(),
+                  );
+                  setDeleteTask(null);
+                  go("home");
+                })
+              }
+            >
+              确认删除
+            </button>
+          </div>
+        </Dialog>
+      )}
       {modal === "account" && session?.authenticated && (
         <Dialog title="个人账户" close={() => setModal(null)}>
           <div className="dialog-body">
@@ -1292,9 +1492,7 @@ export default function App() {
       {modal === "workspace" && !can("workspace.write") && (
         <Dialog title="新增工作区" close={() => setModal(null)}>
           <div className="dialog-body">
-            <p>
-              当前版本尚未开放工作区创建。工作区管理将在下一阶段接入，届时可创建并保存产品范围与知识配置。
-            </p>
+            <p>当前连接或账户权限不允许管理工作区，请检查连接后重试。</p>
             <button className="primary" onClick={() => setModal(null)}>
               知道了
             </button>

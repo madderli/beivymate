@@ -35,6 +35,10 @@ class Runtime:
             [step.skill for step in definition.resolved_steps()]
         )
 
+        for step, skill in zip(definition.resolved_steps(), skills):
+            spec = getattr(skill, 'definition', None)
+            if spec is not None and step.analysis_strategy and step.analysis_strategy not in spec.analysis_strategies:
+                raise ValueError('步骤指定了该 Skill 不支持的分析策略：' + step.id)
         return Workflow(
             definition = definition,
             skills = skills,
@@ -62,6 +66,13 @@ class Runtime:
                 raise ValueError(f"Step {step.id} is missing inputs: {', '.join(missing)}")
             context.set("step_id", step.id)
             context.set("step_inputs", {ref: context.get(ref) for ref in step.inputs})
+            document_refs=[]
+            for reference in step.inputs:
+                parts=reference.split('.')
+                if len(parts)==3 and parts[0]=='steps':
+                    ref=context.get('document_outputs',{}).get(parts[1],{}).get(parts[2])
+                    if ref is not None:document_refs.append(ref)
+            context.set('document_input_refs',document_refs)
             context.set("analysis_strategy", step.analysis_strategy)
             context.set("review_mode", step.review_mode)
             context.set("authorization_mode", step.authorization_mode)
@@ -115,6 +126,9 @@ class Runtime:
         context = AgentContext.restore(context.snapshot())
         imported = import_inputs(workflow.definition.imports, workflow.base_directory, context)
         context.set('workflow_imports', imported)
+        if not context.has('document_store_directory'):
+            from beivymate.documents.defaults import data_directory
+            context.set('document_store_directory', str(data_directory() / 'work' / 'documents'))
         definition = workflow.definition.model_copy(deep=True)
         if review_mode is not None and review_mode not in {"manual", "auto"}:
             raise ValueError("review_mode must be manual or auto")
@@ -126,6 +140,8 @@ class Runtime:
                 step.review_mode = "manual"
                 step.authorization_mode = "manual"
         definition.step_definitions = resolved
+        context.set('skill_packages', {step.skill: self._skill_registry.get(step.skill).snapshot
+            for step in resolved if hasattr(self._skill_registry.get(step.skill), 'snapshot')})
         state = Checkpoint(workflow=definition, context=context.snapshot())
         context = AgentContext.restore(state.context)
         context.set("run_id", state.run_id)
@@ -154,6 +170,18 @@ class Runtime:
         context = AgentContext.restore(state.context)
         steps = state.workflow.resolved_steps()
         skills = self._skill_registry.resolve([step.skill for step in steps])
+        from copy import copy
+        for index, (step, registered) in enumerate(zip(steps, skills)):
+            snapshot = context.get('skill_packages', {}).get(step.skill)
+            if snapshot is not None and getattr(registered, 'snapshot', None) != snapshot:
+                if not hasattr(registered, 'restore'):
+                    raise ValueError('恢复运行需要原 Skill：' + step.skill)
+                isolated = copy(registered)
+                isolated.executor = copy(registered.executor)
+                if hasattr(isolated.executor, 'service'):
+                    isolated.executor.service = copy(isolated.executor.service)
+                isolated.restore(snapshot)
+                skills[index] = isolated
 
         if decision is not None:
             if state.status not in {"waiting_authorization", "waiting_review"}:
@@ -186,6 +214,8 @@ class Runtime:
             # Reconcile accepted assets after restart as well as normal continuation.
             for i in range(state.index):
                 context.set("step_id", steps[i].id)
+                confirmation=next((d.actor for d in reversed(state.decisions) if d.step_id==steps[i].id and d.phase=="review"), "runtime:acceptance-policy")
+                context.set("document_confirmation_actor", confirmation)
                 skills[i].on_accepted(context)
             step, skill = steps[state.index], skills[state.index]
             context.set("step_id", step.id)
@@ -245,7 +275,10 @@ class Runtime:
                 raise
         for step, skill in zip(steps, skills):
             context.set("step_id", step.id)
+            confirmation=next((d.actor for d in reversed(state.decisions) if d.step_id==step.id and d.phase=="review"), "runtime:acceptance-policy")
+            context.set("document_confirmation_actor", confirmation)
             skill.on_accepted(context)
+        state.context = context.snapshot()
         state.status = "completed"
         state.write(checkpoint_path)
         return state

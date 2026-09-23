@@ -39,7 +39,10 @@ class TestReportSkill(Skill):
         context.set(f"steps.{context.get('step_id')}.test_report",result)
         output=context.get('report_output_directory')
         if not output:raise ValueError('report_output_directory required')
-        context.set('test_report_directory',str(self.service.export(result,output)))
+        directory = self.service.export(result,output)
+        context.set('test_report_directory',str(directory))
+        for key, name in (('test_report_data','report.json'), ('test_report_word','report.docx')):
+            context.set(f"steps.{context.get('step_id')}.{key}", {'document_file':str(Path(directory)/name)})
     def review_subject(self,context):return context.get(f"steps.{context.get('step_id')}.test_report")
     def can_auto_accept(self,context):
         artifact=self.review_subject(context)

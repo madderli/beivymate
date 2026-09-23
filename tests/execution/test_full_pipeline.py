@@ -50,7 +50,7 @@ def test_full_pipeline_three_rounds(tmp_path):
         'target_versions':{'payment':'1'},'design_output_directory':str(tmp_path)}.items():context.set(key,value)
     checkpoint=tmp_path/'design-checkpoint.json'
     state=agent.start(requirement,checkpoint,task_id='SIMULATED',context=context)
-    for key,name in [('tester_requirement_understanding_artifact','understanding'),('test_analysis_artifact','analysis'),('test_design_artifact','design')]:
+    for key,name in [('requirement_understand_artifact','requirement_understand'),('test_analysis_artifact','analysis'),('test_design_artifact','design')]:
         artifact=AgentContext.restore(state.context).get(key)
         (tmp_path/(name+'.json')).write_text(artifact.model_dump_json(indent=2))
         (tmp_path/(name+'.md')).write_text(artifact.markdown)
@@ -81,9 +81,8 @@ def test_full_pipeline_three_rounds(tmp_path):
         (tmp_path/f'execution-round-{number}.json').write_text(finished.model_dump_json(indent=2))
         workflow=ROOT/'resources/configuration/workflow/m8_test_execution.md'
         if number==3:
-            (tmp_path/'auto-execute.md').write_text('---\nid: execute\nskill: test_execution\nauthorization_mode: auto\nreview_mode: auto\n---\n')
             workflow=tmp_path/'auto-workflow.md'
-            workflow.write_text('---\nid: simulated-auto\nname: 模拟自动确认\nsteps:\n  - auto-execute.md\n---\n')
+            workflow.write_text('---\nid: simulated-auto\nname: 模拟自动确认\n---\n\n## 步骤：execute\n- 技能：test_execution\n- 执行授权：auto\n- 结果确认：auto\n')
         execution_agent=create_tester_agent(str(workflow),None,'synthetic',execution_service=service)
         context=AgentContext();context.set('execution_round_number',number)
         path=tmp_path/f'execution-checkpoint-{number}.json'
@@ -94,6 +93,19 @@ def test_full_pipeline_three_rounds(tmp_path):
             assert any(d.phase=='review' and d.mode=='auto' for d in state.decisions)
         delivered=AgentContext.restore(state.context).get('test_execution_artifact')
         assert delivered.completed and delivered.deliverables
+        from beivymate.documents.runtime import store_for, owner_for
+        from beivymate.documents.models import DocumentRef
+        restored_context=AgentContext.restore(state.context)
+        refs=restored_context.get('document_outputs')['execute']
+        assert set(refs)=={'test_execution','execution_results','defects','execution_history'}
+        documents=store_for(restored_context)
+        pinned=documents.read(owner_for(restored_context),DocumentRef.model_validate(refs['execution_history']))
+        assert len(json.loads(pinned)['rounds'])==number
+        if number==1:
+            first_ref=DocumentRef.model_validate(refs['execution_history'])
+            first_content=pinned
+        assert documents.read(owner_for(restored_context),first_ref)==first_content
+
         if number==3:
             assert delivered.defects[0].verifications[0].result=='pass'
         assert state.status=='completed'
@@ -111,3 +123,25 @@ def test_full_pipeline_three_rounds(tmp_path):
     (tmp_path/'validation-summary.json').write_text(json.dumps({'simulation':True,'real_model_calls':0,
         'synthetic_provider_calls':provider.calls,'rounds':3,'case_count':3,'defect_count':1,
         'status':'passed','verification_round':3,'verification_result':'pass','automatic_review_round':3,'result_matrix':matrix,'boundary':'仅验证程序串联，不验证模型质量或真实产品行为'},ensure_ascii=False,indent=2))
+
+
+def test_design_directly_from_accepted_understanding(tmp_path):
+    provider = SyntheticProvider()
+    store = CaseStore(tmp_path/'cases.db', ProductCatalog(products={'payment':'Func01'},
+        functions=[{'id':'pay','product_id':'payment','name':'支付'}]))
+    workflow=tmp_path/'direct.md'
+    workflow.write_text('---\nid: direct\nname: 简单需求\n---\n\n## 步骤：understand\n- 技能：requirement_understand\n- 输入：requirement\n- 执行授权：auto\n- 结果确认：manual\n\n## 步骤：design\n- 技能：test_design\n- 输入：steps.understand.requirement_understanding\n- 执行授权：auto\n- 结果确认：manual\n')
+    agent=create_tester_agent(str(workflow),LLMGateway(provider),'synthetic',design_store=store)
+    context=AgentContext()
+    for key,value in {'actor':'tester','maintainer':'tester','project_id':'demo',
+        'target_versions':{'payment':'1'},'design_output_directory':str(tmp_path)}.items():context.set(key,value)
+    path=tmp_path/'run.json'
+    state=agent.start(Requirement(id='R',title='支付',content='支付成功更新状态'),path,context=context)
+    assert state.status=='waiting_review'
+    provider.calls=2  # Next synthetic response is a design, not an analysis.
+    state=agent.resume(path,decision='approved',actor='reviewer',expected_subject_hash=state.subject_hash)
+    artifact=AgentContext.restore(state.context).get('test_design_artifact')
+    assert artifact.input_kind=='understanding' and artifact.analysis_id is None
+    assert len(artifact.case_revisions)==3
+    assert all(ref.startswith('understanding:') for ref in artifact.coverage)
+    assert state.status=='waiting_review'

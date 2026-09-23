@@ -31,7 +31,7 @@ def validate_mvp(requirement, output, gateway, model, *, rounds=3, catalog=None)
     summary={'simulation':True,'execution_mode':'simulated_manual','model':model,'status':'running','calls':[]}
     def save(state):
         ctx=AgentContext.restore(state.context)
-        for key,name in [('tester_requirement_understanding_artifact','understanding'),('test_analysis_artifact','analysis'),('test_design_artifact','design')]:
+        for key,name in [('requirement_understand_artifact','requirement_understand'),('test_analysis_artifact','analysis'),('test_design_artifact','design')]:
             artifact=ctx.get(key)
             if artifact:
                 (output/(name+'.json')).write_text(artifact.model_dump_json(indent=2))
@@ -75,9 +75,8 @@ def validate_mvp(requirement, output, gateway, model, *, rounds=3, catalog=None)
         bindings += [(f'execution_{n}',f'execution-checkpoint-{n}.json','steps.execute.test_execution') for n in range(1,rounds+1)]
         for name,file,key in bindings:
             (output/f'import-{name}.md').write_text(f'---\nid: inputs.{name}\ncheckpoint: {file}\nsource_key: {key}\n---\n')
-        (output/'report-step.md').write_text('---\nid: report\nskill: test_report\ninputs:\n'+''.join(f'  - inputs.{name}\n' for name,_,_ in bindings)+'authorization_mode: auto\nreview_mode: manual\n---\n')
         flow=output/'report-workflow.md'
-        flow.write_text('---\nid: m10-report\nname: M10 模拟验收报告\nimports:\n'+''.join(f'  - import-{name}.md\n' for name,_,_ in bindings)+'steps:\n  - report-step.md\n---\n')
+        flow.write_text('---\nid: m10-report\nname: M10 模拟验收报告\nimports:\n'+''.join(f'  - import-{name}.md\n' for name,_,_ in bindings)+'---\n\n## 步骤：report\n- 技能：test_report\n- 输入：'+'、'.join(f'inputs.{name}' for name,_,_ in bindings)+'\n- 执行授权：auto\n- 结果确认：manual\n')
         reporter=create_tester_agent(str(flow),gateway,model)
         c=AgentContext();c.set('simulation',True);c.set('report_output_directory',str(output/'reports'))
         st=reporter.start(None,output/'report-checkpoint.json',task_id='M10-VALIDATION',context=c)
