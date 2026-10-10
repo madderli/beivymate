@@ -1,3 +1,4 @@
+import { WorkflowSteps } from "./WorkflowSteps";
 import { useEffect, useState } from "react";
 import { request } from "./api";
 import { SkillTemplates } from "./SkillTemplates";
@@ -10,7 +11,13 @@ type Entry = {
   content: string;
   path: string;
 };
-export function ConfigurationLibrary({ close }: { close: () => void }) {
+export function ConfigurationLibrary({
+  close,
+  initialKind = "skills",
+}: {
+  close: () => void;
+  initialKind?: "skills" | "workflows";
+}) {
   const [models, setModels] = useState<Entry[]>([]);
   useEffect(() => {
     let active = true;
@@ -25,7 +32,7 @@ export function ConfigurationLibrary({ close }: { close: () => void }) {
       active = false;
     };
   }, []);
-  const [kind, setKind] = useState("skills");
+  const [kind, setKind] = useState<string>(initialKind);
   const [items, setItems] = useState<Entry[]>([]);
   const [selected, setSelected] = useState<Entry>();
   const [content, setContent] = useState("");
@@ -34,9 +41,16 @@ export function ConfigurationLibrary({ close }: { close: () => void }) {
   const [busy, setBusy] = useState(false);
   const [templateDirty, setTemplateDirty] = useState(false);
   const [copy, setCopy] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [baseId, setBaseId] = useState("");
+  const [newName, setNewName] = useState("");
+  const [newId, setNewId] = useState("");
+  const [newInstructions, setNewInstructions] = useState("");
   useEffect(() => {
     let active = true;
     setSelected(undefined);
+    setCreating(false);
+    setBaseId("");
     setError("");
     setItems([]);
     request<{ items: Entry[] }>(`/configuration/${kind}`)
@@ -51,9 +65,11 @@ export function ConfigurationLibrary({ close }: { close: () => void }) {
     };
   }, [kind]);
   const canDiscard = () =>
-    !selected ||
-    (!copy && !templateDirty && content === selected.content) ||
-    window.confirm("修改尚未保存，确认放弃当前草稿？");
+    creating
+      ? window.confirm("创建内容尚未保存，确认放弃当前草稿？")
+      : !selected ||
+        (!copy && !templateDirty && content === selected.content) ||
+        window.confirm("修改尚未保存，确认放弃当前草稿？");
   return (
     <Dialog
       title="技能与工作流配置"
@@ -69,6 +85,7 @@ export function ConfigurationLibrary({ close }: { close: () => void }) {
           配置类型
           <select
             disabled={busy}
+            aria-label="配置类型"
             value={kind}
             onChange={(e) => {
               if (canDiscard()) setKind(e.target.value);
@@ -78,6 +95,112 @@ export function ConfigurationLibrary({ close }: { close: () => void }) {
             <option value="workflows">工作流</option>
           </select>
         </label>
+        <div className="configuration-create-actions">
+          <button
+            className="primary"
+            disabled={busy || !items.length}
+            onClick={() => {
+              if (canDiscard()) {
+                setCreating(true);
+                setBaseId(items[0]?.id || "");
+                setNewName("");
+                setNewId("");
+                setNewInstructions("");
+                setError("");
+              }
+            }}
+          >
+            {kind === "skills" ? "新建技能" : "新建工作流"}
+          </button>
+        </div>
+        {creating && (
+          <form
+            className="configuration-create-form"
+            onSubmit={(e) => {
+              e.preventDefault();
+              const source = items.find((i) => i.id === baseId);
+              if (!source) return;
+              if (items.some((i) => i.id === newId)) {
+                setError("标识已存在，请使用不同的标识。");
+                return;
+              }
+              const header = source.content
+                .replace(/^id:.*$/m, `id: ${newId}`)
+                .replace(
+                  /^name:.*$/m,
+                  `name: ${JSON.stringify(newName.trim())}`,
+                );
+              setSelected(source);
+              setIdentity(newId);
+              setContent(
+                kind === "skills"
+                  ? header +
+                      (newInstructions.trim()
+                        ? `\n## 客户工作要求\n\n${newInstructions.trim()}\n`
+                        : "")
+                  : header,
+              );
+              setCopy(true);
+              setCreating(false);
+              setError("");
+            }}
+          >
+            <h3>{kind === "skills" ? "创建自定义技能" : "创建自定义工作流"}</h3>
+            <p>
+              {kind === "skills"
+                ? "选择基础能力，再填写工作要求。执行契约和模板一并继承；系统默认文件保持只读。"
+                : "选择起始工作流，随后通过步骤列表增加、删除或调整顺序。保存后即可用于任务。"}
+            </p>
+            <label>
+              {kind === "skills" ? "基础技能" : "起始工作流"}
+              <select
+                aria-label={kind === "skills" ? "基础技能" : "起始工作流"}
+                value={baseId}
+                onChange={(e) => setBaseId(e.target.value)}
+              >
+                {items.map((i) => (
+                  <option value={i.id} key={i.id}>
+                    {i.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              新配置名称
+              <input
+                required
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+              />
+            </label>
+            <label>
+              新配置标识
+              <input
+                required
+                pattern="[a-z][a-z0-9_-]*"
+                title="使用小写字母开头，可包含数字、下划线和连字符"
+                value={newId}
+                onChange={(e) => setNewId(e.target.value)}
+              />
+            </label>
+            {kind === "skills" && (
+              <label>
+                工作要求
+                <textarea
+                  value={newInstructions}
+                  onChange={(e) => setNewInstructions(e.target.value)}
+                  placeholder="描述希望技能完成的工作、质量标准及注意事项"
+                />
+              </label>
+            )}
+            <div className="dialog-actions">
+              <button type="button" onClick={() => setCreating(false)}>
+                取消创建
+              </button>
+              <button className="primary">继续编辑</button>
+            </div>
+          </form>
+        )}
         <label>
           选择配置
           <select
@@ -86,6 +209,7 @@ export function ConfigurationLibrary({ close }: { close: () => void }) {
             value={selected?.id || ""}
             onChange={(e) => {
               if (!canDiscard()) return;
+              setCreating(false);
               const item = items.find((i) => i.id === e.target.value);
               setSelected(item);
               setContent(item?.content || "");
@@ -102,7 +226,7 @@ export function ConfigurationLibrary({ close }: { close: () => void }) {
             ))}
           </select>
         </label>
-        {selected && (
+        {selected && !creating && (
           <>
             <p className="muted">{selected.path}</p>
             {kind === "skills" && !copy && (
@@ -165,6 +289,13 @@ export function ConfigurationLibrary({ close }: { close: () => void }) {
                   }}
                 />
               </label>
+            )}
+            {kind === "workflows" && (
+              <WorkflowSteps
+                content={content}
+                change={setContent}
+                readonly={busy || (selected.builtin && !copy)}
+              />
             )}
             <label>
               配置内容

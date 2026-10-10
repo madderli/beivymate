@@ -5,6 +5,12 @@ import {
 } from "../../src/frontend/node_modules/@playwright/test";
 import { boardFixture, session } from "./fixtures";
 async function connected(page: Page) {
+  await page.route("**/api/v1/tasks/*/runs", (route) =>
+    route.fulfill({ json: [] }),
+  );
+  await page.route("**/api/v1/notifications", (route) =>
+    route.fulfill({ json: [] }),
+  );
   await page.route("**/api/v1/session", (route) =>
     route.fulfill({ json: session }),
   );
@@ -15,9 +21,7 @@ async function connected(page: Page) {
     route.fulfill({ json: [] }),
   );
   await page.goto("/");
-  await expect(
-    page.getByRole("heading", { name: "你好，林晓 ✦" }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "你好，林晓" })).toBeVisible();
 }
 test("disconnected default shows no fixture records, fake login or writable actions", async ({
   page,
@@ -192,6 +196,7 @@ test("conversation never fabricates a reply and model options come from backend"
       : r.fulfill({ json: [] }),
   );
   await page.getByRole("button", { name: "与助手对话" }).click();
+  await page.getByText("模型设置", { exact: true }).click();
   await page.getByLabel("对话模型").selectOption("local-test");
   await page
     .getByRole("textbox", { name: "发送消息", exact: true })
@@ -338,6 +343,7 @@ test("workspace save success refreshes the server snapshot", async ({
     });
     return r.fulfill({ status: 201, json: { id: value.id } });
   });
+  await page.getByRole("button", { name: "工作区管理", exact: true }).click();
   await page.getByRole("button", { name: "新增工作区", exact: true }).click();
   const dialog = page.getByRole("dialog");
   await dialog.getByLabel("工作区标识").fill("NEW");
@@ -505,9 +511,9 @@ test("sidebar keeps workspace heading fixed and groups settings and personal act
   });
   expect(await list.evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
   expect((await heading.boundingBox())?.y).toBe(before?.y);
-  await expect(
-    heading.getByRole("button", { name: "新增工作区" }),
-  ).toBeVisible();
+  await expect(heading.getByRole("button", { name: "新增工作区" })).toHaveCount(
+    0,
+  );
   await expect(
     page.getByRole("button", { name: "退出登录", exact: true }),
   ).toHaveCount(0);
@@ -527,4 +533,69 @@ test("sidebar keeps workspace heading fixed and groups settings and personal act
   await expect(page.getByLabel("配色方案预览")).toContainText(
     "海盐蓝 · 规划中",
   );
+});
+
+test("production conversation layout uses API counts and keeps task conversation history", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await connected(page);
+  await expect(page.locator(".conversation-inline")).toBeVisible();
+  await expect(
+    page.getByRole("region", { name: "未完成任务概览" }),
+  ).toContainText("2 个未完成任务");
+  await expect(page.locator(".task-run-column")).toHaveCount(0);
+  await expect(page.locator(".stats-grid")).toHaveCount(0);
+  await page.screenshot({
+    path: "/tmp/beivymate-production-home.png",
+    fullPage: true,
+  });
+  await page.route("**/api/v1/conversations/**/messages", (r) =>
+    r.fulfill({
+      json: [
+        {
+          id: "preserved",
+          role: "assistant",
+          text: "原任务讨论记录，来源于服务器",
+        },
+      ],
+    }),
+  );
+  await page.locator(".briefing-tasks .task-row").first().click();
+  await expect(page.locator(".conversation-inline")).toContainText(
+    "原任务讨论记录",
+  );
+  const top = await page.locator(".task-conversation-layout").boundingBox();
+  const chat = await page.locator(".conversation-inline").boundingBox();
+  expect(Math.abs(top!.y - chat!.y)).toBeLessThan(3);
+  await page.screenshot({
+    path: "/tmp/beivymate-production-task.png",
+    fullPage: true,
+  });
+  await page.getByRole("button", { name: "返回我的工作" }).click();
+  await page.locator(".briefing-tasks .task-row").first().click();
+  await expect(page.locator(".conversation-inline")).toContainText(
+    "原任务讨论记录",
+  );
+});
+
+test("empty assistant homepage guides workspace then task creation", async ({
+  page,
+}) => {
+  await connected(page);
+  const board = boardFixture();
+  board.tasks = [];
+  board.workspaces = [];
+  await page.route("**/api/v1/workbench", (r) => r.fulfill({ json: board }));
+  await page.reload();
+  await expect(
+    page.getByRole("region", { name: "未完成任务概览" }),
+  ).toContainText("先创建产品或项目工作区");
+  await expect(
+    page.getByRole("button", { name: "新建任务", exact: true }),
+  ).toBeDisabled();
+  await page.getByRole("button", { name: "创建工作区", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "新增工作区", exact: true }),
+  ).toBeVisible();
 });

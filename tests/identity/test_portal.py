@@ -42,7 +42,7 @@ def test_real_initialization_login_logout_restart(portal):
     cookie = client.cookies.get(COOKIE)
     state = client.get('/api/v1/session').json()
     assert state['user']['id'] and state['entitlement']['features'] == ['*']
-    assert 'task.execute' not in state['capabilities']
+    assert 'task.execute' in state['capabilities']
     assert client.get('/api/v1/workbench').json()['tasks'] == []
     restarted = IdentityService(path/'identity.sqlite3', 'new-bootstrap')
     assert restarted.session(cookie)['user']['id'] == state['user']['id']
@@ -152,7 +152,7 @@ def test_name_change_preserves_identity_and_entitlement(portal):
 
 def test_entitlement_cannot_grant_unimplemented_features_and_can_expire():
     from beivymate.identity.access import AccessPolicy
-    assert 'task.execute' not in AccessPolicy().capabilities(0)
+    assert 'task.execute' in AccessPolicy().capabilities(0)
     assert AccessPolicy(expires_at=100).capabilities(100)==['account.manage']
     limited=AccessPolicy(features=frozenset({'workbench.read'}))
     assert limited.capabilities(0)==['account.manage','workbench.read']

@@ -24,6 +24,7 @@ class Draft(BaseModel):
 
 
 class WorkspaceDraft(Draft):
+    outputDirectory: str = Field(default='', max_length=2000)
     name: str = Field(min_length=1, max_length=120)
     subtitle: str = Field(default='', max_length=2000)
     knowledge: str = Field(default='', max_length=4000)
@@ -32,6 +33,7 @@ class WorkspaceDraft(Draft):
 
 
 class TaskDraft(Draft):
+    outputDirectory: str = Field(default='', max_length=2000)
     title: str = Field(min_length=1, max_length=200)
     workspace: str = Field(min_length=1, max_length=80)
     workflow: str = Field(min_length=1, max_length=120)

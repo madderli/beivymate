@@ -30,7 +30,7 @@ test("real local account initialization, refresh, logout and recovery", async ({
   await page.getByLabel("密码", { exact: true }).fill("Browser-password-123!");
   await page.getByRole("button", { name: "登录", exact: true }).click();
   await expect(
-    page.getByRole("heading", { name: "你好，外测用户 ✦" }),
+    page.getByRole("heading", { name: "你好，外测用户" }),
   ).toBeVisible();
   await expect(
     page.getByRole("button", { name: "新建任务", exact: true }),
@@ -52,7 +52,24 @@ test("real local account initialization, refresh, logout and recovery", async ({
   await expect(
     configuration.getByLabel("配置内容", { exact: true }),
   ).toHaveAttribute("readonly", "");
-  await configuration.getByRole("button", { name: "创建自定义副本" }).click();
+  await configuration
+    .getByRole("button", { name: "新建技能", exact: true })
+    .click();
+  await configuration
+    .getByLabel("基础技能", { exact: true })
+    .selectOption("test_analysis");
+  await configuration
+    .getByLabel("新配置名称", { exact: true })
+    .fill("支付分析");
+  await configuration
+    .getByLabel("新配置标识", { exact: true })
+    .fill("test_analysis_custom");
+  await configuration
+    .getByLabel("工作要求", { exact: true })
+    .fill("重点分析支付异常和重复提交。");
+  await configuration
+    .getByRole("button", { name: "继续编辑", exact: true })
+    .click();
   await expect(
     configuration.getByRole("combobox", { name: "运行模型", exact: true }),
   ).toHaveValue("null");
@@ -102,7 +119,38 @@ test("real local account initialization, refresh, logout and recovery", async ({
     "当前账户暂无已登记产物",
   );
   await page.getByRole("button", { name: "关闭弹窗" }).click();
+  await page.getByRole("button", { name: "设置", exact: true }).click();
+  await page
+    .getByRole("button", { name: "技能与工作流配置", exact: true })
+    .click();
+  await configuration
+    .getByLabel("配置类型", { exact: true })
+    .selectOption("workflows");
+  await configuration
+    .getByRole("button", { name: "新建工作流", exact: true })
+    .click();
+  await configuration
+    .getByLabel("起始工作流", { exact: true })
+    .selectOption("smoke_test");
+  await configuration
+    .getByLabel("新配置名称", { exact: true })
+    .fill("客户需求检查");
+  await configuration
+    .getByLabel("新配置标识", { exact: true })
+    .fill("customer_check");
+  await configuration
+    .getByRole("button", { name: "继续编辑", exact: true })
+    .click();
+  await expect(configuration.getByLabel("步骤标识").first()).toBeEnabled();
+  await configuration
+    .getByRole("button", { name: "保存配置", exact: true })
+    .click();
+  await expect(
+    configuration.getByLabel("选择配置", { exact: true }),
+  ).toHaveValue("customer_check");
+  await configuration.getByRole("button", { name: "关闭弹窗" }).click();
   for (const id of ["HIS", "CIS"]) {
+    await page.getByRole("button", { name: "工作区管理", exact: true }).click();
     await page.getByRole("button", { name: "新增工作区", exact: true }).click();
     const dialog = page.getByRole("dialog");
     expect(
@@ -114,6 +162,7 @@ test("real local account initialization, refresh, logout and recovery", async ({
     await dialog.getByRole("button", { name: "保存工作区" }).click();
     await expect(dialog).toHaveCount(0);
   }
+  await page.getByRole("button", { name: "我的工作", exact: true }).click();
   await page.getByRole("button", { name: "新建任务", exact: true }).click();
   const creation = page.getByRole("dialog");
   await creation.getByLabel("任务名称", { exact: true }).fill("跨产品支付验证");
@@ -209,7 +258,7 @@ test("real local account initialization, refresh, logout and recovery", async ({
   await page.getByLabel("密码", { exact: true }).fill("Updated-password-456!");
   await page.getByRole("button", { name: "登录", exact: true }).click();
   await expect(
-    page.getByRole("heading", { name: "你好，外测用户 ✦" }),
+    page.getByRole("heading", { name: "你好，外测用户" }),
   ).toBeVisible();
   await page.getByRole("button", { name: "个人空间", exact: true }).click();
   await page.getByRole("button", { name: "个性化与配色", exact: true }).click();
@@ -233,7 +282,7 @@ test("real local account initialization, refresh, logout and recovery", async ({
   await page.getByLabel("密码", { exact: true }).fill("Third-password-789!");
   await page.getByRole("button", { name: "登录", exact: true }).click();
   await expect(
-    page.getByRole("heading", { name: "你好，更新后的用户 ✦" }),
+    page.getByRole("heading", { name: "你好，更新后的用户" }),
   ).toBeVisible();
   const stored = await page.evaluate(() =>
     JSON.stringify({ ...localStorage, ...sessionStorage }),

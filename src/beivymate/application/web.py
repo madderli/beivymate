@@ -50,7 +50,8 @@ class Credential(BaseModel):
     secret: str = Field(min_length=1, max_length=8192, repr=False)
 
 
-def create_app(data_dir: Path, setup_token: str, *, origins=None, vault=None, workflow_root=None):
+def create_app(data_dir: Path, setup_token: str, *, origins=None, vault=None, workflow_root=None,
+               run_prepare=None, run_restore=None, worker_enabled=True):
     service = IdentityService(data_dir / 'identity.sqlite3', setup_token)
     vault = vault or CredentialVault()
     from beivymate.portal.service import PortalService
@@ -60,7 +61,23 @@ def create_app(data_dir: Path, setup_token: str, *, origins=None, vault=None, wo
         f'http://{host}:{port}' for host in ('127.0.0.1', 'localhost')
         for port in (8000, 5173, 4173)
     ])
-    app = FastAPI(title='BeIvyMate local portal', docs_url=None, redoc_url=None, openapi_url=None)
+    from contextlib import asynccontextmanager
+    from beivymate.scheduling.service import RunService
+    from beivymate.application.run_inputs import prepare, restore_runtime
+    runs = RunService(data_dir, portal, run_prepare or prepare, run_restore or restore_runtime)
+    portal.runs = runs
+
+    @asynccontextmanager
+    async def lifespan(app):
+        if worker_enabled:
+            runs.start()
+        try:
+            yield
+        finally:
+            if worker_enabled:
+                runs.close()
+
+    app = FastAPI(lifespan=lifespan, title='BeIvyMate local portal', docs_url=None, redoc_url=None, openapi_url=None)
     app.state.identity = service
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=['127.0.0.1', 'localhost'])
 
@@ -223,6 +240,9 @@ def create_app(data_dir: Path, setup_token: str, *, origins=None, vault=None, wo
         return {'deleted': True}
 
     app.include_router(portal_router(portal, require))
+    from beivymate.application.run_api import run_router
+    app.include_router(run_router(runs, require))
+    app.state.runs = runs
     app.state.portal = portal
     return app
 

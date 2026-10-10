@@ -120,7 +120,8 @@ class Runtime:
         return context
 
     def start(self, workflow: Workflow, context: AgentContext, checkpoint_path: Path,
-              *, review_mode: str | None = None, force_manual: bool = False) -> Checkpoint:
+              *, review_mode: str | None = None, force_manual: bool = False,
+              execute: bool = True, run_id: str | None = None) -> Checkpoint:
         """Start a durable run. Caller supplies a new path in its run directory."""
         from beivymate.runtime.workflow_inputs import import_inputs
         context = AgentContext.restore(context.snapshot())
@@ -142,17 +143,18 @@ class Runtime:
         definition.step_definitions = resolved
         context.set('skill_packages', {step.skill: self._skill_registry.get(step.skill).snapshot
             for step in resolved if hasattr(self._skill_registry.get(step.skill), 'snapshot')})
-        state = Checkpoint(workflow=definition, context=context.snapshot())
+        state = Checkpoint(workflow=definition, context=context.snapshot(),
+                           **({"run_id": run_id} if run_id else {}))
         context = AgentContext.restore(state.context)
         context.set("run_id", state.run_id)
         state.context = context.snapshot()
         state.write(checkpoint_path, new=True)
-        return self.resume(checkpoint_path)
+        return self.resume(checkpoint_path) if execute else state
 
     @exclusive_resume
     def resume(self, checkpoint_path: Path, *, decision: str | None = None,
                actor: str | None = None, comment: str = "",
-               expected_subject_hash: str | None = None) -> Checkpoint:
+               expected_subject_hash: str | None = None, one_step: bool = False) -> Checkpoint:
         """Single-writer local API; actor identity must be supplied by a trusted caller.
 
         An interrupted/failed tool action is never blindly replayed.
@@ -260,6 +262,8 @@ class Runtime:
                     state.index += 1
                     state.status = "ready"
                     state.write(checkpoint_path)
+                    if one_step:
+                        return state
                 else:
                     state.status = "waiting_review"
                     state.write(checkpoint_path)

@@ -19,6 +19,6 @@ class AccessPolicy:
         # Account recovery and logout remain available after an entitlement expires.
         available = {'account.manage'}
         if self.expires_at is None or now < self.expires_at:
-            implemented = {'documents.manage', 'configuration.manage', 'workbench.read', 'credentials.manage', 'workspace.write', 'task.create', 'task.manage', 'task.delete', 'task.read'}
+            implemented = {'task.execute', 'documents.manage', 'configuration.manage', 'workbench.read', 'credentials.manage', 'workspace.write', 'task.create', 'task.manage', 'task.read'}
             available |= implemented if '*' in self.features else implemented & self.features
         return sorted(available)

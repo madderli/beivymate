@@ -60,6 +60,7 @@ class PortalService:
                 CREATE TABLE IF NOT EXISTS attachment (
                     id TEXT PRIMARY KEY, group_id TEXT NOT NULL, name TEXT NOT NULL, data BLOB NOT NULL
                 );
+                CREATE TABLE IF NOT EXISTS workspace_preference (owner TEXT PRIMARY KEY, workspace TEXT NOT NULL);
                 CREATE TABLE IF NOT EXISTS sequence (number INTEGER PRIMARY KEY AUTOINCREMENT);
                 CREATE TABLE IF NOT EXISTS request (
                     owner TEXT NOT NULL, key TEXT NOT NULL, signature TEXT NOT NULL, result TEXT NOT NULL,
@@ -180,7 +181,7 @@ class PortalService:
             data.update(paused=row['status'] == 'paused', color='purple')
         else:
             flow = next((f for f in flows if f['id'] == draft.workflow), None)
-            data.update(group=row['group_id'], main=bool(row['main']), status=row['status'],
+            data.update(createdAt=db.execute('SELECT MIN(at) FROM activity WHERE entity=?', (row['id'],)).fetchone()[0], group=row['group_id'], main=bool(row['main']), status=row['status'],
                 allowedActions=['resume' if row['status'] == 'paused' else 'pause'],
                 steps=[dict(s, status='pending', detail='尚未开始执行') for s in (flow['steps'] if flow else [])],
                 attachments=[{'id': a['id'], 'name': a['name'], 'size': a['size']} for a in db.execute(
@@ -189,17 +190,33 @@ class PortalService:
                 configurationIssue='' if flow else '所选工作流已不存在，请重新配置。')
         return data
 
+    def scheduling_state(self, owner, task):
+        """Read lifecycle only; frozen Runs never reparse mutable customer config."""
+        from contextlib import closing
+        with closing(sqlite3.connect(self.database, timeout=15)) as db:
+            row = db.execute("""
+                SELECT w.status FROM entity t JOIN entity w ON t.workspace=w.id
+                WHERE t.id=? AND t.owner=? AND t.kind='task' AND t.deleted=0
+                  AND w.owner=? AND w.kind='workspace' AND w.deleted=0
+            """, (task, owner, owner)).fetchone()
+            return row[0] if row else None
+
     def board(self, owner):
         flows = self.workflows()
         with self.db() as db:
             rows = db.execute('SELECT * FROM entity WHERE owner=? AND deleted=0 ORDER BY rowid', (owner,)).fetchall()
-            return {'workspaces': [self._view(db, r, flows) for r in rows if r['kind'] == 'workspace'],
+            preference = db.execute('SELECT workspace FROM workspace_preference WHERE owner=?', (owner,)).fetchone()
+            default = preference['workspace'] if preference else next((r['id'] for r in rows if r['kind'] == 'workspace'), '')
+            return {'defaultWorkspace': default, 'workspaces': [self._view(db, r, flows) for r in rows if r['kind'] == 'workspace'],
                     'tasks': [self._view(db, r, flows) for r in rows if r['kind'] == 'task'], 'workflows': flows, 'models': []}
 
     def workspace(self, owner, body, id=None):
         body = dict(body)
         expected = body.pop('expectedRevision', None)
         paused = body.pop('paused', None)
+        make_default = body.pop('isDefault', False)
+        if not isinstance(make_default, bool):
+            raise IdentityError('默认工作区设置无效。', 422)
         with self.db() as db:
             if id:
                 row = self._row(db, owner, id, 'workspace')
@@ -225,6 +242,8 @@ class PortalService:
                 self._write(db, row, value, create=True)
                 db.execute("INSERT INTO entity(id,kind,owner,status) VALUES (?, 'workspace', ?, 'active')", (value.id, owner))
                 self._event(db, value.id, owner, '创建工作区')
+            if make_default or not db.execute('SELECT 1 FROM workspace_preference WHERE owner=?', (owner,)).fetchone():
+                db.execute('INSERT INTO workspace_preference(owner,workspace) VALUES (?,?) ON CONFLICT(owner) DO UPDATE SET workspace=excluded.workspace', (owner, value.id))
         return {'id': value.id}
 
     def create_task(self, owner, body, files, key):
@@ -324,7 +343,9 @@ class PortalService:
             if body.get('expectedRevision') != revision:
                 raise IdentityError('任务状态已变化，请刷新后重试。', 409)
             verb = body.get('action')
-            if verb not in ('pause', 'resume', 'delete'):
+            if verb == 'delete':
+                raise IdentityError('任务及过程文档必须保留，不能删除。', 409)
+            if verb not in ('pause', 'resume'):
                 raise IdentityError('工作流执行将在后续阶段接入，当前仅支持任务管理。', 409)
             if row['status'] not in ('pending', 'paused'):
                 raise IdentityError('任务执行中不能进行此操作。', 409)

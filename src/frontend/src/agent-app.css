@@ -1,0 +1,104 @@
+.production-agent {
+  --accent: #34745b;
+  --accent-soft: #edf3e8;
+}
+.production-agent .ad-sidebar nav button {
+  gap: 8px;
+  padding-inline: 8px;
+  white-space: nowrap;
+}
+.production-agent .ad-sidebar nav button svg {
+  flex-shrink: 0;
+}
+.production-agent .ad-header > button:last-child {
+  font-size: 11px;
+  color: #83917e;
+}
+.production-agent .ad-composer-tools input[hidden] {
+  display: none;
+}
+.production-agent .ad-execution .run-panel {
+  padding: 14px 0;
+  border: 0;
+  box-shadow: none;
+  background: transparent;
+  overflow-wrap: anywhere;
+}
+.production-agent .ad-execution .run-panel h2 {
+  font-size: 13px;
+}
+.production-agent .ad-execution .run-panel p,
+.production-agent .ad-execution .run-panel label {
+  font-size: 11px;
+}
+.production-agent .ad-execution .run-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+.production-agent .ad-execution .run-actions label {
+  display: flex;
+  flex-direction: column;
+}
+.production-agent .ad-execution .run-panel button {
+  font-size: 11px;
+}
+.production-agent .ad-execution .run-panel pre {
+  white-space: pre-wrap;
+}
+.production-agent .ad-execution .run-panel select {
+  width: 100%;
+  font-size: 11px;
+}
+.production-agent .primary {
+  background: #34745b;
+  color: white;
+}
+.production-agent dialog {
+  color: #293b36;
+}
+.production-agent .dialog-body {
+  padding: 8px 0;
+}
+.production-agent .ad-form {
+  padding-top: 15px;
+}
+.production-notice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 24px;
+  font-size: 12px;
+  background: #fff0ee;
+  color: #b44e47;
+  flex-shrink: 0;
+}
+.production-chat-error {
+  margin: 4px auto;
+  color: #b44e47;
+  font-size: 11px;
+}
+.production-attachment {
+  display: block;
+  color: #34745b;
+  font-size: 12px;
+  margin: 8px 0;
+}
+.production-agent .ad-composer-foot {
+  flex-wrap: wrap;
+  gap: 6px 12px;
+}
+.production-agent .ad-steps .badge {
+  font-size: 10px;
+  margin: 4px 0;
+}
+.production-agent .ad-history p {
+  font-size: 11px;
+}
+.production-agent .ad-role-options > button:disabled {
+  opacity: 0.45;
+}
+
+.production-agent .ad-side-bottom > button > svg {
+  margin-left: 0;
+}

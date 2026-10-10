@@ -1,3 +1,6 @@
+import "./workspace-ui.css";
+import { OutputPreferences } from "./OutputPreferences";
+import { RunPanel, RunNotifications } from "./RunPanel";
 import { DocumentLibrary } from "./DocumentLibrary";
 import { ConfigurationLibrary } from "./ConfigurationLibrary";
 import { TaskEdit } from "./TaskEdit";
@@ -85,11 +88,14 @@ export default function App() {
     "settings" | "personal" | null
   >(null);
   const [chatOpen, setChatOpen] = useState(false);
+  const inlineChat = ["home", "task"].includes(route.page);
+  const [statusWorkspace, setStatusWorkspace] = useState("");
   const [notifications, setNotifications] = useState(false);
   const [modal, setModal] = useState<"task" | "workspace" | "account" | null>(
     null,
   );
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [requestedRun, setRequestedRun] = useState<string>();
   const [documentsOpen, setDocumentsOpen] = useState(false);
   const [configurationOpen, setConfigurationOpen] = useState(false);
   const [deleteTask, setDeleteTask] = useState<Task | null>(null);
@@ -175,6 +181,7 @@ export default function App() {
       setArtifact(null);
       setQuery("");
       setFilter("all");
+      setStatusWorkspace("");
       setChatText("");
       setMessages([]);
     };
@@ -212,7 +219,7 @@ export default function App() {
     setMessages([]);
     setChatError("");
     setChatText("");
-    if (!chatOpen || !can("chat")) return;
+    if ((!chatOpen && !inlineChat) || !can("chat")) return;
     api
       .messages(context)
       .then((v) => {
@@ -227,7 +234,13 @@ export default function App() {
     return () => {
       chatGeneration.current++;
     };
-  }, [context, chatOpen, authorized, session?.capabilities.join(",")]);
+  }, [
+    context,
+    chatOpen,
+    inlineChat,
+    authorized,
+    session?.capabilities.join(","),
+  ]);
   async function mutate(operation: () => Promise<unknown>) {
     setBusy(true);
     setError("");
@@ -296,6 +309,7 @@ export default function App() {
     (t) =>
       (!workspace || t.workspace === workspace.id) &&
       (filter === "all" || t.status === filter) &&
+      (!statusWorkspace || t.workspace === statusWorkspace) &&
       `${t.title} ${t.id}`.includes(query),
   );
   const taskRow = (t: Task) => (
@@ -311,6 +325,226 @@ export default function App() {
       <Badge status={t.status} />
       <ChevronRight size={16} />
     </button>
+  );
+  const conversation = (
+    <aside className={`chat-panel ${inlineChat ? "conversation-inline" : ""}`}>
+      <header>
+        <span className="agent-avatar">
+          <Bot size={20} />
+        </span>
+        <strong>{task ? "任务对话" : "你的 AI 工作助手"}</strong>
+        <button
+          className="icon-button"
+          aria-label={inlineChat ? "返回我的工作" : "关闭对话"}
+          onClick={() => (inlineChat ? go("home") : setChatOpen(false))}
+        >
+          {inlineChat ? "新对话" : <X size={18} />}
+        </button>
+      </header>
+      <div className="chat-context">{contextName}</div>
+      <details className="conversation-options">
+        <summary>模型设置</summary>
+        <div className="model-picker">
+          <label>
+            对话模型
+            <select
+              disabled={!can("chat")}
+              value={models[context] || ""}
+              onChange={(e) =>
+                setModels((m) => ({ ...m, [context]: e.target.value }))
+              }
+            >
+              <option value="">自动策略</option>
+              {board.models
+                .filter((m) => m.capabilities.includes("chat"))
+                .map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.name}
+                  </option>
+                ))}
+            </select>
+          </label>
+          <small>仅当前对话，不修改任务的技能模型策略。</small>
+          <button className="text-button" onClick={() => setModelHelp(true)}>
+            查看模型策略设计
+          </button>
+        </div>
+      </details>
+      <div className="chat-messages">
+        {!task && route.page === "home" && (
+          <section className="assistant-briefing" aria-label="未完成任务概览">
+            <h1>
+              {session?.user
+                ? `你好，${session.user.name}`
+                : "你好，开始今天的工作吧"}
+            </h1>
+            {session?.authenticated ? (
+              <>
+                {board.tasks.some(
+                  (t) => !["completed", "stopped"].includes(t.status),
+                ) ? (
+                  <>
+                    <p>
+                      你还有{" "}
+                      {
+                        board.tasks.filter(
+                          (t) => !["completed", "stopped"].includes(t.status),
+                        ).length
+                      }{" "}
+                      个未完成任务。选择一个任务，我会在右侧为你展示工作流程与当前状态。
+                    </p>
+                    <div className="briefing-tasks">
+                      {board.tasks
+                        .filter(
+                          (t) => !["completed", "stopped"].includes(t.status),
+                        )
+                        .map((t) => (
+                          <button
+                            className="task-row"
+                            key={t.id}
+                            onClick={() => go("task", t.id)}
+                          >
+                            <span className="briefing-task-name">
+                              <strong>{t.title}</strong>
+                              <small>
+                                {t.workspace} · {t.id}
+                              </small>
+                            </span>
+                            <Badge status={t.status} />
+                            <ChevronRight size={16} />
+                          </button>
+                        ))}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <p>
+                      {board.workspaces.length
+                        ? "目前没有未完成任务。可以创建一个新任务，选择工作流，开始下一项工作。"
+                        : "欢迎使用 BeIvyMate。先创建产品或项目工作区，再创建任务，让助手协助你完成工作。"}
+                    </p>
+                  </>
+                )}
+                <div className="briefing-actions">
+                  <button
+                    className="secondary"
+                    onClick={() => go("workspaces")}
+                  >
+                    {board.workspaces.length ? "管理工作区" : "创建工作区"}
+                  </button>
+                  <button
+                    className="primary"
+                    disabled={
+                      !can("task.create") ||
+                      !board.workspaces.length ||
+                      !board.workflows.length
+                    }
+                    onClick={() => setModal("task")}
+                  >
+                    新建任务
+                  </button>
+                </div>
+                {!board.workflows.length && (
+                  <p className="muted">
+                    还没有可用工作流，请先在设置中的“技能与工作流配置”创建。
+                  </p>
+                )}
+                <small className="muted">
+                  {authorized
+                    ? "以上状态来自任务记录，随后台运行更新。"
+                    : "连接已中断，以上为上次任务快照，可能已过期。"}
+                </small>
+              </>
+            ) : (
+              <p>正在连接服务，连接恢复后显示当前任务。</p>
+            )}
+          </section>
+        )}
+        {task && messages.length === 0 && can("chat") && (
+          <div className="conversation-welcome">
+            <h2>围绕当前任务继续工作</h2>
+            <p>讨论记录归属于当前任务，切换页面不会停止执行。</p>
+          </div>
+        )}
+        {!can("chat") && (
+          <div className="notice">
+            对话服务未接通或未授权，暂不能发送消息。不会生成固定回复。
+          </div>
+        )}
+        {chatError && (
+          <p role="alert" className="notice error">
+            {chatError}
+          </p>
+        )}
+        {messages.map((m) => (
+          <div
+            key={m.id}
+            className={m.role === "user" ? "user-message" : "assistant-message"}
+          >
+            {m.text}
+          </div>
+        ))}
+      </div>
+      <form
+        className="chat-compose"
+        onSubmit={async (e) => {
+          e.preventDefault();
+          if (!can("chat") || !chatText.trim()) return;
+          const selectedContext = context;
+          const generation = chatGeneration.current;
+          const text = chatText.trim();
+          const signature = JSON.stringify([
+            context,
+            text,
+            models[context] || "",
+          ]);
+          if (messageKey.current?.signature !== signature)
+            messageKey.current = { signature, key: crypto.randomUUID() };
+          setBusy(true);
+          setChatError("");
+          try {
+            await api.message(
+              selectedContext,
+              text,
+              models[selectedContext] || "",
+              messageKey.current.key,
+            );
+            const response = await api.messages(selectedContext);
+            if (generation === chatGeneration.current) {
+              setMessages(response);
+              setChatText("");
+              messageKey.current = null;
+            }
+          } catch (e) {
+            if (generation === chatGeneration.current)
+              setChatError((e as Error).message);
+          } finally {
+            setBusy(false);
+          }
+        }}
+      >
+        <label className="sr-only" htmlFor="chat-input">
+          发送消息
+        </label>
+        <textarea
+          id="chat-input"
+          disabled={!can("chat") || busy}
+          value={chatText}
+          onChange={(e) => setChatText(e.target.value)}
+          placeholder="围绕当前工作对象交流…"
+        />
+        <div>
+          <small>操作遵循后端授权与确认规则</small>
+          <button
+            className="primary icon-button"
+            aria-label="发送消息"
+            disabled={!can("chat") || busy || !chatText.trim()}
+          >
+            <Send size={17} />
+          </button>
+        </div>
+      </form>
+    </aside>
   );
   const unavailable = (
     <div className="notice" role="status">
@@ -349,10 +583,12 @@ export default function App() {
 
   const nav = [
     ["home", "我的工作", LayoutDashboard],
-    ["workspaces", "工作区", FolderKanban],
+    ["workspaces", "工作区管理", FolderKanban],
   ] as const;
   return (
-    <div className={`app-shell ${chatOpen ? "chat-visible" : ""}`}>
+    <div
+      className={`app-shell professional-ui ${route.page === "home" ? "conversation-first" : ""} ${chatOpen && !inlineChat ? "chat-visible" : ""}`}
+    >
       {navOpen && (
         <button
           className="scrim"
@@ -377,8 +613,8 @@ export default function App() {
             <Bot size={23} />
           </span>
           <div>
-            <strong>测试助手</strong>
-            <small>你的测试工作伙伴</small>
+            <strong>测试工程师</strong>
+            <small>工作角色</small>
           </div>
           <ChevronDown size={15} />
         </button>
@@ -407,20 +643,7 @@ export default function App() {
           ))}
         </nav>
         <div className="sidebar-workspaces">
-          <div className="nav-caption">
-            工作区
-            <button
-              className="icon-button"
-              aria-label="新增工作区"
-              title="新增工作区"
-              onClick={() => {
-                setEditing(undefined);
-                setModal("workspace");
-              }}
-            >
-              <Plus size={16} />
-            </button>
-          </div>
+          <div className="nav-caption">工作区</div>
           <div className="workspace-scroll">
             {board.workspaces.map((w) => (
               <button key={w.id} onClick={() => go("workspace", w.id)}>
@@ -571,6 +794,14 @@ export default function App() {
           )}
         </div>
       </aside>
+      {can("task.execute") && (
+        <RunNotifications
+          openTask={(id, run) => {
+            setRequestedRun(run);
+            go("task", id);
+          }}
+        />
+      )}
       <div className="main-shell">
         <header className="topbar">
           <button
@@ -581,7 +812,9 @@ export default function App() {
             <Menu size={21} />
           </button>
           <div className="breadcrumbs">
-            <button onClick={() => go("home")}>个人工作台</button>
+            <span>测试工程师</span>
+            <ChevronRight size={13} />
+            <button onClick={() => go("home")}>个人工作空间</button>
             {workspace && (
               <>
                 <ChevronRight size={13} />
@@ -619,7 +852,11 @@ export default function App() {
             </button>
             <button
               className="chat-toggle"
-              onClick={() => setChatOpen(!chatOpen)}
+              onClick={() =>
+                inlineChat
+                  ? document.getElementById("chat-input")?.focus()
+                  : setChatOpen(!chatOpen)
+              }
             >
               <MessageSquare size={17} />
               <span>与助手对话</span>
@@ -656,154 +893,14 @@ export default function App() {
             </div>
           )}
           {route.page === "home" && (
-            <>
-              <section className="welcome">
-                <div>
-                  <span className="eyebrow">专注你的工作</span>
-                  <h1>
-                    {session?.user ? `你好，${session.user.name}` : "我的工作"}{" "}
-                    <span className="greeting-spark">✦</span>
-                  </h1>
-                  <p>围绕真实任务推进工作，让重要的决定掌握在你手中。</p>
-                </div>
-                <button
-                  className="primary"
-                  disabled={
-                    !can("task.create") ||
-                    !board.workspaces.length ||
-                    !board.workflows.length
-                  }
-                  onClick={() => setModal("task")}
-                >
-                  <Plus size={17} /> 新建任务
-                </button>
-              </section>
-              <div className="stats-grid">
-                {[
-                  ["running", "正在执行", Activity],
-                  ["review", "等待确认", CircleHelp],
-                  ["blocked", "被阻塞", TriangleAlert],
-                  ["completed", "已完成", Check],
-                ].map(([status, label, Icon]) => {
-                  const I = Icon as typeof Activity;
-                  return (
-                    <button
-                      key={status as string}
-                      className="stat-card"
-                      onClick={() =>
-                        setFilter(
-                          filter === status ? "all" : (status as string),
-                        )
-                      }
-                    >
-                      <span>
-                        {label as string}
-                        <I size={19} />
-                      </span>
-                      <strong>
-                        {authorized
-                          ? board.tasks.filter((t) => t.status === status)
-                              .length
-                          : "—"}
-                      </strong>
-                      <small>
-                        {authorized ? "来自后台最新快照" : "等待后台数据"}
-                      </small>
-                    </button>
-                  );
-                })}
-              </div>
-              {pending.length > 0 && (
-                <div className="attention-card">
-                  <CircleHelp />
-                  <div>
-                    <h3>{pending[0].title}</h3>
-                    <p>存在需要你处理的事项，查看证据后再决定。</p>
-                  </div>
-                  <button onClick={() => go("task", pending[0].id)}>
-                    查看任务 <ArrowRight size={16} />
-                  </button>
-                </div>
-              )}
-              <div className="section-heading">
-                <h2>我的工作区</h2>
-                <button
-                  className="text-button"
-                  onClick={() => go("workspaces")}
-                >
-                  全部工作区 <ArrowRight size={16} />
-                </button>
-              </div>
-              <div className="workspace-grid">
-                {board.workspaces.map((w) => (
-                  <button
-                    key={w.id}
-                    className="workspace-card"
-                    onClick={() => go("workspace", w.id)}
-                  >
-                    <div>
-                      <span className={`product-icon ${w.color}`}>
-                        {w.id.slice(0, 1)}
-                      </span>
-                      <strong>{w.id}</strong>
-                    </div>
-                    <h3>{w.name}</h3>
-                    <p>{w.subtitle}</p>
-                    <footer>
-                      <span>
-                        {board.tasks.filter((t) => t.workspace === w.id).length}{" "}
-                        个任务
-                      </span>
-                      <span>{w.paused ? "调度已暂停" : "可用"}</span>
-                    </footer>
-                  </button>
-                ))}
-              </div>
-              <section className="section">
-                <div className="section-heading">
-                  <h2>近期任务</h2>
-                </div>
-                <div className="list-toolbar">
-                  <div className="filter-tabs">
-                    {["all", "running", "review", "blocked"].map((s) => (
-                      <button
-                        key={s}
-                        className={filter === s ? "active" : ""}
-                        onClick={() => setFilter(s)}
-                      >
-                        {s === "all"
-                          ? "全部"
-                          : statusLabels[s as keyof typeof statusLabels]}
-                      </button>
-                    ))}
-                  </div>
-                  <div className="search">
-                    <Search size={16} />
-                    <input
-                      aria-label="搜索任务"
-                      value={query}
-                      onChange={(e) => setQuery(e.target.value)}
-                      placeholder="搜索名称或编号"
-                    />
-                  </div>
-                </div>
-                <div className="task-list">
-                  {currentTasks.map(taskRow)}
-                  {!currentTasks.length && (
-                    <div className="empty">
-                      {authorized
-                        ? "没有匹配的任务。"
-                        : "尚未获取任务，不显示示例记录。"}
-                    </div>
-                  )}
-                </div>
-              </section>
-            </>
+            <section className="conversation-home" aria-label="我的工作对话">
+              {conversation}
+            </section>
           )}
           {route.page === "workspaces" && (
             <>
               <PageHead
-                title="我的工作区"
+                title="工作区管理"
                 text="产品范围与业务知识独立管理。"
                 action={
                   <button
@@ -947,6 +1044,117 @@ export default function App() {
                   </>
                 }
               />
+              <div className="task-conversation-layout">
+                {conversation}
+                <div className="task-run-column">
+                  {can("task.execute") && (
+                    <RunPanel
+                      key={task.id}
+                      task={task}
+                      requestedRun={requestedRun}
+                      changed={refresh}
+                    />
+                  )}
+                  {task && (
+                    <>
+                      <div className="section-heading">
+                        <div>
+                          <h2>执行流程</h2>
+                          <p>
+                            已完成{" "}
+                            {
+                              task.steps.filter((s) => s.status === "completed")
+                                .length
+                            }{" "}
+                            / {task.steps.length} 步 · 状态由后端更新
+                          </p>
+                        </div>
+                        <button
+                          className="text-button"
+                          onClick={() => void refresh()}
+                        >
+                          刷新状态
+                        </button>
+                      </div>
+                      <div className="workflow-layout">
+                        <section className="workflow-canvas">
+                          {task.steps.map((s, i) => (
+                            <div className="step-wrap" key={s.id}>
+                              <button
+                                className={`step-node ${selected === i ? "selected" : ""}`}
+                                onClick={() => {
+                                  artifactGeneration.current++;
+                                  setArtifact(null);
+                                  setSelected(i);
+                                }}
+                              >
+                                <span className={`step-number ${s.status}`}>
+                                  {s.status === "completed" ? (
+                                    <Check size={18} />
+                                  ) : (
+                                    i + 1
+                                  )}
+                                </span>
+                                <div>
+                                  <strong>{s.name}</strong>
+                                  <small>{s.detail}</small>
+                                </div>
+                                <Badge status={s.status} />
+                              </button>
+                              {i < task.steps.length - 1 && (
+                                <div className="step-connector">
+                                  <ArrowDown size={15} />
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                          {!task.steps.length && <p>尚未创建执行步骤。</p>}
+                        </section>
+                        {task.steps[selected] && (
+                          <aside className="step-detail">
+                            <span className="eyebrow">STEP {selected + 1}</span>
+                            <h2>{task.steps[selected].name}</h2>
+                            <Badge status={task.steps[selected].status} />
+                            <dl>
+                              <dt>执行能力</dt>
+                              <dd className="mono">
+                                {task.steps[selected].skill}
+                              </dd>
+                              <dt>审核方式</dt>
+                              <dd>
+                                {task.steps[selected].review
+                                  ? "人工确认"
+                                  : "按工作流配置"}
+                              </dd>
+                              <dt>当前说明</dt>
+                              <dd>{task.steps[selected].detail}</dd>
+                            </dl>
+                            <button
+                              className="primary full"
+                              disabled={
+                                !can("artifact.read") ||
+                                busy ||
+                                !["review", "completed"].includes(
+                                  task.steps[selected].status,
+                                )
+                              }
+                              onClick={() => void openArtifact()}
+                            >
+                              查看产物
+                            </button>
+                            <button
+                              className="secondary full"
+                              onClick={() => setChatOpen(true)}
+                            >
+                              与助手对话
+                            </button>
+                          </aside>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
               <div className="metadata">
                 <span>
                   目标版本 <b>{task.version}</b>
@@ -994,102 +1202,6 @@ export default function App() {
                   </button>
                 ))}
               </div>
-              {tab === "workflow" && (
-                <>
-                  <div className="section-heading">
-                    <div>
-                      <h2>执行流程</h2>
-                      <p>
-                        已完成{" "}
-                        {
-                          task.steps.filter((s) => s.status === "completed")
-                            .length
-                        }{" "}
-                        / {task.steps.length} 步 · 状态由后端更新
-                      </p>
-                    </div>
-                    <button
-                      className="text-button"
-                      onClick={() => void refresh()}
-                    >
-                      刷新状态
-                    </button>
-                  </div>
-                  <div className="workflow-layout">
-                    <section className="workflow-canvas">
-                      {task.steps.map((s, i) => (
-                        <div className="step-wrap" key={s.id}>
-                          <button
-                            className={`step-node ${selected === i ? "selected" : ""}`}
-                            onClick={() => {
-                              artifactGeneration.current++;
-                              setArtifact(null);
-                              setSelected(i);
-                            }}
-                          >
-                            <span className={`step-number ${s.status}`}>
-                              {s.status === "completed" ? (
-                                <Check size={18} />
-                              ) : (
-                                i + 1
-                              )}
-                            </span>
-                            <div>
-                              <strong>{s.name}</strong>
-                              <small>{s.detail}</small>
-                            </div>
-                            <Badge status={s.status} />
-                          </button>
-                          {i < task.steps.length - 1 && (
-                            <div className="step-connector">
-                              <ArrowDown size={15} />
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                      {!task.steps.length && <p>尚未创建执行步骤。</p>}
-                    </section>
-                    {task.steps[selected] && (
-                      <aside className="step-detail">
-                        <span className="eyebrow">STEP {selected + 1}</span>
-                        <h2>{task.steps[selected].name}</h2>
-                        <Badge status={task.steps[selected].status} />
-                        <dl>
-                          <dt>执行能力</dt>
-                          <dd className="mono">{task.steps[selected].skill}</dd>
-                          <dt>审核方式</dt>
-                          <dd>
-                            {task.steps[selected].review
-                              ? "人工确认"
-                              : "按工作流配置"}
-                          </dd>
-                          <dt>当前说明</dt>
-                          <dd>{task.steps[selected].detail}</dd>
-                        </dl>
-                        <button
-                          className="primary full"
-                          disabled={
-                            !can("artifact.read") ||
-                            busy ||
-                            !["review", "completed"].includes(
-                              task.steps[selected].status,
-                            )
-                          }
-                          onClick={() => void openArtifact()}
-                        >
-                          查看产物
-                        </button>
-                        <button
-                          className="secondary full"
-                          onClick={() => setChatOpen(true)}
-                        >
-                          与助手对话
-                        </button>
-                      </aside>
-                    )}
-                  </div>
-                </>
-              )}
               {tab === "artifacts" && (
                 <div className="panel">
                   <h2>阶段产物</h2>
@@ -1160,10 +1272,7 @@ export default function App() {
                   )}
                   <button
                     className="secondary"
-                    disabled={
-                      !can("task.manage") ||
-                      !["pending", "paused"].includes(task.status)
-                    }
+                    disabled={!can("task.manage")}
                     onClick={() => setEditingTask(task)}
                   >
                     编辑任务配置
@@ -1235,6 +1344,7 @@ export default function App() {
               {session?.authenticated && can("account.manage") && (
                 <AccountSettings session={session} changed={refresh} />
               )}
+              {can("account.manage") && <OutputPreferences />}
               <section className="panel settings-panel">
                 <h2>个性化与配色</h2>
                 <p>当前用户：{session?.user?.name || "尚未登录"}</p>
@@ -1286,130 +1396,7 @@ export default function App() {
           </footer>
         </main>
       </div>
-      {chatOpen && (
-        <aside className="chat-panel">
-          <header>
-            <span className="agent-avatar">
-              <Bot size={20} />
-            </span>
-            <strong>测试助手</strong>
-            <button
-              className="icon-button"
-              aria-label="关闭对话"
-              onClick={() => setChatOpen(false)}
-            >
-              <X size={18} />
-            </button>
-          </header>
-          <div className="chat-context">{contextName}</div>
-          <div className="model-picker">
-            <label>
-              对话模型
-              <select
-                disabled={!can("chat")}
-                value={models[context] || ""}
-                onChange={(e) =>
-                  setModels((m) => ({ ...m, [context]: e.target.value }))
-                }
-              >
-                <option value="">自动策略</option>
-                {board.models
-                  .filter((m) => m.capabilities.includes("chat"))
-                  .map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.name}
-                    </option>
-                  ))}
-              </select>
-            </label>
-            <small>仅当前对话，不修改任务的技能模型策略。</small>
-            <button className="text-button" onClick={() => setModelHelp(true)}>
-              查看模型策略设计
-            </button>
-          </div>
-          <div className="chat-messages">
-            {!can("chat") && (
-              <div className="notice">
-                对话服务未接通或未授权，暂不能发送消息。不会生成固定回复。
-              </div>
-            )}
-            {chatError && (
-              <p role="alert" className="notice error">
-                {chatError}
-              </p>
-            )}
-            {messages.map((m) => (
-              <div
-                key={m.id}
-                className={
-                  m.role === "user" ? "user-message" : "assistant-message"
-                }
-              >
-                {m.text}
-              </div>
-            ))}
-          </div>
-          <form
-            className="chat-compose"
-            onSubmit={async (e) => {
-              e.preventDefault();
-              if (!can("chat") || !chatText.trim()) return;
-              const selectedContext = context;
-              const generation = chatGeneration.current;
-              const text = chatText.trim();
-              const signature = JSON.stringify([
-                context,
-                text,
-                models[context] || "",
-              ]);
-              if (messageKey.current?.signature !== signature)
-                messageKey.current = { signature, key: crypto.randomUUID() };
-              setBusy(true);
-              setChatError("");
-              try {
-                await api.message(
-                  selectedContext,
-                  text,
-                  models[selectedContext] || "",
-                  messageKey.current.key,
-                );
-                const response = await api.messages(selectedContext);
-                if (generation === chatGeneration.current) {
-                  setMessages(response);
-                  setChatText("");
-                  messageKey.current = null;
-                }
-              } catch (e) {
-                if (generation === chatGeneration.current)
-                  setChatError((e as Error).message);
-              } finally {
-                setBusy(false);
-              }
-            }}
-          >
-            <label className="sr-only" htmlFor="chat-input">
-              发送消息
-            </label>
-            <textarea
-              id="chat-input"
-              disabled={!can("chat") || busy}
-              value={chatText}
-              onChange={(e) => setChatText(e.target.value)}
-              placeholder="围绕当前工作对象交流…"
-            />
-            <div>
-              <small>操作遵循后端授权与确认规则</small>
-              <button
-                className="primary icon-button"
-                aria-label="发送消息"
-                disabled={!can("chat") || busy || !chatText.trim()}
-              >
-                <Send size={17} />
-              </button>
-            </div>
-          </form>
-        </aside>
-      )}
+      {chatOpen && !inlineChat && conversation}
       {modal === "task" && can("task.create") && (
         <TaskForm
           board={board}

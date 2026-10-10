@@ -116,6 +116,7 @@ class Checkpoint(BaseModel):
         content = self.model_dump_json(indent=2)
         if new:
             with path.open("x", encoding="utf-8") as stream:
+                path.chmod(0o600)
                 stream.write(content)
                 stream.flush()
                 os.fsync(stream.fileno())
@@ -139,18 +140,14 @@ class Checkpoint(BaseModel):
 def exclusive_resume(method):
     """Reject concurrent local resumes; OS releases the lock after process exit."""
     from functools import wraps
-    import fcntl
+    from beivymate.scheduling.locking import exclusive_file
 
     @wraps(method)
     def wrapped(self, checkpoint_path, *args, **kwargs):
         path = Path(checkpoint_path)
-        with path.with_suffix(path.suffix + ".lock").open("a") as lock:
-            try:
-                fcntl.flock(lock.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
-            except BlockingIOError as exc:
-                raise ValueError("Run is already being resumed") from exc
-            try:
+        try:
+            with exclusive_file(path.with_suffix(path.suffix + ".lock")):
                 return method(self, path, *args, **kwargs)
-            finally:
-                fcntl.flock(lock.fileno(), fcntl.LOCK_UN)
+        except BlockingIOError as exc:
+            raise ValueError("Run is already being resumed") from exc
     return wrapped
