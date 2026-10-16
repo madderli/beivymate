@@ -14,7 +14,7 @@ export type Status =
 export const statusLabels: Record<Status, string> = {
   running: "执行中",
   review: "待确认",
-  blocked: "被阻塞",
+  blocked: "被阻碍",
   pending: "待执行",
   completed: "已完成",
   paused: "已暂停",
@@ -60,6 +60,8 @@ export type ConversationOperation = {
   message?: string;
 };
 export type Task = {
+  createdAt?: string;
+  outputDirectory?: string;
   configPath?: string;
   configurationIssue?: string;
   taskType?: string;
@@ -88,6 +90,7 @@ export type Task = {
   allowedActions: string[];
 };
 export type Workspace = {
+  outputDirectory?: string;
   product?: string;
   project?: string;
   configPath?: string;
@@ -122,6 +125,7 @@ export type Session = {
   capabilities: string[];
 };
 export type Board = {
+  defaultWorkspace?: string;
   workspaces: Workspace[];
   tasks: Task[];
   workflows: Workflow[];

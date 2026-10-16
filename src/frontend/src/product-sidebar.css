@@ -1,0 +1,420 @@
+.agent-demo .product-sidebar {
+  width: 300px;
+  height: 100dvh;
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border-right: 1px solid #e2e6de;
+  padding: 0;
+  flex-shrink: 0;
+}
+.product-sidebar .ps-topbar {
+  height: 64px;
+  flex: 0 0 64px;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border-bottom: 1px solid #edf0e9;
+}
+.product-sidebar .brand {
+  gap: 6px;
+  min-width: 0;
+}
+.product-sidebar .brand-icon {
+  width: 28px;
+  height: 28px;
+}
+.product-sidebar .brand-wordmark {
+  width: 108px;
+}
+.ps-role-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+.agent-demo .product-sidebar .ps-role-pill,
+.product-sidebar .ps-role-wrap select {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  height: 32px;
+  margin: 0;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 16px;
+  color: #356b54;
+  background: #e9f0e4;
+  font-size: 13px;
+  font-weight: 600;
+  width: auto;
+  max-width: 110px;
+}
+.ps-role-menu {
+  position: absolute;
+  right: 0;
+  top: 39px;
+  width: 165px;
+  background: white;
+  border: 1px solid #e2e6de;
+  border-radius: 12px;
+  padding: 5px;
+  box-shadow: 0 12px 26px #16231b2e;
+  z-index: 70;
+}
+.agent-demo .ps-role-menu button {
+  width: 100%;
+  padding: 9px 10px;
+  font-size: 12px;
+  justify-content: flex-start;
+  border-radius: 8px;
+}
+.agent-demo .ps-role-menu button[aria-pressed="true"] {
+  color: #356b54;
+  background: #e9f0e4;
+}
+.agent-demo .product-sidebar .ps-close {
+  display: none;
+  padding: 3px;
+  width: 26px;
+  height: 28px;
+  border-radius: 6px;
+  color: #849089;
+  flex-shrink: 0;
+}
+.agent-demo .product-sidebar nav.ps-scroll {
+  flex: 1;
+  min-height: 0;
+  display: block;
+  padding: 14px 12px 10px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  border: 0;
+}
+.ps-section-heading {
+  height: 28px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 12px;
+  color: #849089;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+}
+.ps-section-heading > span {
+  margin-left: auto;
+  font-size: 10px;
+  font-weight: 400;
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+.agent-demo .product-sidebar .ps-nav-item {
+  width: 100%;
+  height: 48px;
+  padding: 0 12px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
+  border: 0;
+  border-radius: 11px;
+  background: transparent;
+  color: #243732;
+  font-size: 15px;
+  font-weight: 600;
+  text-align: left;
+}
+.product-sidebar .ps-icon {
+  flex-shrink: 0;
+  display: block;
+}
+.agent-demo .product-sidebar .ps-nav-item:hover,
+.agent-demo .product-sidebar .ps-tool-item:hover {
+  background: #f2f6ee;
+}
+.agent-demo .product-sidebar .ps-nav-item.active {
+  background: #e9f0e4;
+  color: #356b54;
+}
+.ps-count {
+  margin-left: auto;
+  min-width: 24px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  padding: 0 7px;
+  background: #2437320f;
+  color: #849089;
+  border-radius: 11px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.ps-workspace-heading {
+  display: flex;
+  border-radius: 11px;
+  align-items: center;
+}
+.agent-demo .product-sidebar .ps-workspace-heading.active,
+.agent-demo .product-sidebar .ps-workspace-heading.active .ps-nav-item {
+  background: #e9f0e4;
+  color: #356b54;
+}
+.agent-demo .product-sidebar .ps-workspace-heading .ps-nav-item {
+  flex: 1;
+  width: auto;
+  min-width: 0;
+}
+.agent-demo .product-sidebar .ps-workspace-toggle {
+  width: 38px;
+  height: 40px;
+  padding: 0;
+  margin-right: 4px;
+  border-radius: 8px;
+  color: #849089;
+}
+.ps-workspace-toggle .ps-icon {
+  transition: transform 0.18s;
+}
+.ps-workspace-toggle.expanded .ps-icon {
+  transform: rotate(90deg);
+}
+.agent-demo .product-sidebar .ps-workspaces {
+  flex: none;
+  overflow: visible;
+  padding: 2px 0 8px 42px;
+}
+.product-sidebar .ps-workspaces[hidden] {
+  display: none;
+}
+.agent-demo .product-sidebar .ps-workspace-row {
+  width: 100%;
+  height: 44px;
+  padding: 0 8px;
+  gap: 9px;
+  border-radius: 9px;
+  justify-content: flex-start;
+  background: transparent;
+  font-size: 14px;
+  font-weight: 400;
+  text-align: left;
+}
+.agent-demo .product-sidebar .ps-workspace-row:hover,
+.agent-demo .product-sidebar .ps-workspace-row.active {
+  background: #f2f6ee;
+  color: #356b54;
+}
+.ps-workspace-row > .ps-icon {
+  margin-left: auto;
+  color: #849089;
+}
+.ps-status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #6f9e77;
+  flex-shrink: 0;
+}
+.ps-workspace-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ps-workspace-count {
+  color: #849089;
+}
+.ps-default {
+  border-radius: 5px;
+  padding: 2px 5px;
+  color: #356b54;
+  background: #e9f0e4;
+  font-size: 10px;
+  white-space: nowrap;
+}
+.agent-demo .product-sidebar .ps-new-workspace {
+  height: 34px;
+  padding: 0 8px;
+  color: #849089;
+  font-size: 12px;
+  justify-content: flex-start;
+}
+.ps-workspace-empty {
+  font-size: 11px;
+  color: #849089;
+  margin: 8px;
+}
+.ps-tools {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid #e2e6deb3;
+}
+.agent-demo .product-sidebar .ps-tool-item {
+  width: 100%;
+  height: 44px;
+  padding: 0 12px;
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 11px;
+  color: #849089;
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: 10px;
+  background: transparent;
+}
+.agent-demo .product-sidebar .ps-tool-item.active {
+  background: #f2f6ee;
+  color: #243732;
+}
+.ps-account-bar {
+  position: relative;
+  height: 60px;
+  flex: 0 0 60px;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: white;
+  border-top: 1px solid #e2e6de;
+}
+.agent-demo .ps-account {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  gap: 10px;
+  align-items: center;
+  padding: 0;
+  text-align: left;
+  justify-content: flex-start;
+}
+.ps-avatar {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  background: #e8dfce;
+  color: #85775f;
+  border-radius: 50%;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+.ps-account-copy {
+  min-width: 0;
+  line-height: 1.2;
+}
+.ps-account-copy strong {
+  font-size: 14px;
+  font-weight: 600;
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ps-account-copy small {
+  font-size: 11px;
+  color: #849089;
+  margin-top: 4px;
+  display: block;
+}
+.ps-account-actions {
+  display: flex;
+  gap: 2px;
+  margin-left: auto;
+}
+.agent-demo .ps-account-actions button {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border-radius: 10px;
+  color: #849089;
+}
+.agent-demo .ps-account-actions button:hover {
+  color: #356b54;
+  background: #e9f0e4;
+}
+.ps-account-menu {
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: 75px;
+  border: 1px solid #e2e6de;
+  border-radius: 10px;
+  padding: 5px;
+  background: white;
+  box-shadow: 0 8px 24px #16231b1c;
+}
+.agent-demo .ps-account-menu button {
+  width: 100%;
+  justify-content: flex-start;
+  padding: 9px 12px;
+  font-size: 12px;
+}
+.ps-backdrop {
+  display: none;
+}
+@media (max-width: 600px) {
+  .agent-demo .product-sidebar {
+    display: none;
+    position: fixed;
+    inset: 0 auto 0 0;
+    width: min(390px, calc(100vw - 20px));
+    height: 100dvh;
+    z-index: 60;
+    box-shadow: 10px 0 30px #26382222;
+  }
+  .agent-demo .product-sidebar.open {
+    display: flex;
+  }
+  .agent-demo .product-sidebar .ps-close {
+    display: grid;
+    place-items: center;
+  }
+  .agent-demo .ps-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: #24373240;
+    backdrop-filter: blur(2px);
+    border-radius: 0;
+    padding: 0;
+    z-index: 55;
+  }
+}
+@media (max-width: 360px) {
+  .product-sidebar .ps-topbar {
+    padding-inline: 12px;
+    gap: 6px;
+  }
+  .product-sidebar .brand-wordmark {
+    width: 84px;
+  }
+  .product-sidebar .brand {
+    gap: 5px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ps-workspace-toggle .ps-icon {
+    transition: none;
+  }
+}
+
+/* Keep every trailing indicator on the same vertical axis. */
+.product-sidebar .ps-count {
+  box-sizing: border-box;
+  min-width: 32px;
+  padding-inline: 4px;
+}
+.agent-demo .product-sidebar .ps-workspace-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 32px;
+  width: 32px;
+  margin-right: 12px;
+}
+.agent-demo .product-sidebar .ps-workspace-row {
+  padding-right: 21px;
+}

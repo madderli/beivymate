@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Brand } from "./components";
+import { AuthLayout } from "./AuthLayout";
 import { api, request } from "./api";
 import type { Session } from "./model";
 const passwordRule =
@@ -29,6 +29,9 @@ export function PersonalLogin({
   refresh: () => Promise<void>;
   loggedIn: (session: Session) => Promise<void>;
 }) {
+  const [identityType, setIdentityType] = useState<"email" | "employee">(
+    "email",
+  );
   const [recovery, setRecovery] = useState(false);
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
@@ -36,280 +39,275 @@ export function PersonalLogin({
   const initializing = !!session?.needsInitialization;
   const mode = initializing ? "initialize" : recovery ? "recover" : "login";
   return (
-    <div className="login-page">
-      <section className="login-story">
-        <Brand />
-        <div className="story-content">
-          <span className="eyebrow">你的个人智能工作伙伴</span>
-          <h1>
-            把专注留给判断。
-            <br />
-            <span>让助手接住日常。</span>
-          </h1>
-          <p>
-            个人账户，本机保存。
-            <br />
-            由你决定，让助手协作。
-          </p>
-        </div>
-        <small>个人工作空间 · 企业身份与凭据独立关联</small>
-      </section>
-      <section className="login-panel">
-        <div className="login-card">
-          <span className="pill">外测体验 · 本地账户</span>
-          <h2>
-            {code
-              ? "请保存恢复码"
-              : initializing
-                ? "创建你的本地账户"
-                : recovery
-                  ? "恢复账户"
-                  : "登录你的工作台"}
-          </h2>
-          {code ? (
-            <>
-              <p>
-                恢复码只展示这一次。请保存到安全位置；遗失密码和恢复码后，无法通过在线邮件找回。本次恢复会使旧恢复码失效。
-              </p>
-              <pre
-                aria-label="账户恢复码"
-                style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}
-              >
-                {code}
-              </pre>
-              <button
-                className="primary full"
-                onClick={async () => {
-                  await refresh();
-                  setCode("");
-                  setRecovery(false);
-                }}
-              >
-                我已保存，返回登录
-              </button>
-            </>
-          ) : (
-            <>
-              {!connected && (
-                <div className="notice" role="alert">
-                  <div>
-                    <strong>尚未连接本地账户服务</strong>
-                    <p>
-                      请先在项目根目录启动后端，再点击“重新连接”。首次使用时，连接成功后会自动显示“创建你的本地账户”。
-                    </p>
-                    <code style={{ overflowWrap: "anywhere" }}>
-                      .venv/bin/python -m beivymate.application.web
-                    </code>
-                    {connectionError && (
-                      <details>
-                        <summary>连接诊断</summary>
-                        <p>{connectionError}</p>
-                      </details>
-                    )}
-                    <button
-                      className="text-button"
-                      onClick={() => void refresh()}
-                    >
-                      重新连接
-                    </button>
-                  </div>
-                </div>
-              )}
-              <form
-                noValidate
-                key={mode}
-                onSubmit={async (e) => {
-                  e.preventDefault();
-                  const form = e.currentTarget;
-                  const data = new FormData(form);
-                  setBusy(true);
-                  setError("");
-                  const username = String(data.get("username")).trim();
-                  const password = String(data.get("password"));
-                  try {
-                    if (!username || !password)
-                      throw new Error("请填写用户名和密码。");
-                    if (mode !== "login") validatePassword(password);
-                    if (
-                      mode === "initialize" &&
-                      (!String(data.get("name") || "").trim() ||
-                        !data.get("setupToken"))
-                    )
-                      throw new Error("请填写显示名称和初始化码。");
-                    if (mode === "recover" && !data.get("recoveryCode"))
-                      throw new Error("请填写恢复码。");
-                    if (
-                      mode !== "login" &&
-                      password !== data.get("confirmation")
-                    )
-                      throw new Error("两次输入的密码不一致。");
-                    if (mode === "initialize") {
-                      const result = await request<{ recoveryCode: string }>(
-                        "/account/initialize",
-                        {
-                          method: "POST",
-                          body: JSON.stringify({
-                            username,
-                            password,
-                            name: data.get("name"),
-                            setupToken: data.get("setupToken"),
-                            role: "tester",
-                          }),
-                        },
-                      );
-                      setCode(result.recoveryCode);
-                    } else if (mode === "recover") {
-                      const result = await request<{ recoveryCode: string }>(
-                        "/account/recover",
-                        {
-                          method: "POST",
-                          body: JSON.stringify({
-                            username,
-                            password,
-                            recoveryCode: data.get("recoveryCode"),
-                          }),
-                        },
-                      );
-                      setCode(result.recoveryCode);
-                    } else {
-                      const result = await api.login(username, password);
-                      if (!result.authenticated)
-                        throw new Error("登录未成功。");
-                      await loggedIn(result);
-                    }
-                  } catch (e) {
-                    setError((e as Error).message);
-                  } finally {
-                    form
-                      .querySelectorAll<HTMLInputElement>(
-                        'input[name="password"], input[name="confirmation"]',
-                      )
-                      .forEach((input) => {
-                        input.value = "";
-                      });
-                    setBusy(false);
-                  }
-                }}
-              >
-                <fieldset
+    <AuthLayout>
+      <header className="oa-section-head">
+        <h1>
+          {code
+            ? "请保存恢复码"
+            : initializing
+              ? "创建你的本地账户"
+              : recovery
+                ? "恢复账户"
+                : "登录"}
+        </h1>
+        <p>
+          {code
+            ? "为账户留一把备用钥匙。"
+            : initializing
+              ? "建立属于你的 Agent 工作空间。"
+              : recovery
+                ? "使用恢复码，为账户设置新密码。"
+                : "用邮箱地址或工号登录你的 Agent 工作空间"}
+        </p>
+      </header>
+      <div className="oa-card">
+        {code ? (
+          <>
+            <p>
+              恢复码只展示这一次。请保存到安全位置；遗失密码和恢复码后，无法通过在线邮件找回。本次恢复会使旧恢复码失效。
+            </p>
+            <pre aria-label="账户恢复码" className="oa-recovery-code">
+              {code}
+            </pre>
+            <button
+              className="oa-primary"
+              onClick={async () => {
+                await refresh();
+                setCode("");
+                setRecovery(false);
+              }}
+            >
+              我已保存，返回登录
+            </button>
+          </>
+        ) : (
+          <>
+            {!connected && (
+              <div className="oa-service-notice" role="alert">
+                <strong>暂时无法连接账户服务</strong>
+                <p>请检查本地服务是否启动，然后重新连接。</p>
+                {connectionError && <p>{connectionError}</p>}
+                <button onClick={() => void refresh()}>重新连接</button>
+              </div>
+            )}
+            {mode === "login" && (
+              <div className="oa-tabs" aria-label="登录方式">
+                <button
+                  type="button"
+                  aria-pressed={identityType === "email"}
                   disabled={busy}
-                  style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}
+                  onClick={() => setIdentityType("email")}
                 >
-                  {initializing && (
-                    <>
-                      <label>
-                        初始化码
-                        <input
-                          name="setupToken"
-                          type="password"
-                          required
-                          autoComplete="off"
-                        />
-                      </label>
-                      <p className="muted">从本机后端启动窗口复制初始化码。</p>
-                      <label>
-                        显示名称
-                        <input
-                          name="name"
-                          required
-                          maxLength={80}
-                          autoComplete="name"
-                        />
-                      </label>
-                    </>
-                  )}
-                  <label>
-                    用户名（邮箱或工号）
-                    <input
-                      name="username"
-                      aria-label="用户名"
-                      required
-                      autoComplete="username"
-                      maxLength={254}
-                    />
-                  </label>
-                  {mode === "recover" && (
+                  邮箱登录
+                </button>
+                <button
+                  type="button"
+                  aria-pressed={identityType === "employee"}
+                  disabled={busy}
+                  onClick={() => setIdentityType("employee")}
+                >
+                  工号登录
+                </button>
+              </div>
+            )}
+            <form
+              noValidate
+              key={mode}
+              onSubmit={async (e) => {
+                e.preventDefault();
+                const form = e.currentTarget;
+                const data = new FormData(form);
+                setBusy(true);
+                setError("");
+                const username = String(data.get("username")).trim();
+                const password = String(data.get("password"));
+                try {
+                  if (!username || !password)
+                    throw new Error("请填写用户名和密码。");
+                  if (mode !== "login") validatePassword(password);
+                  if (
+                    mode === "initialize" &&
+                    (!String(data.get("name") || "").trim() ||
+                      !data.get("setupToken"))
+                  )
+                    throw new Error("请填写显示名称和初始化码。");
+                  if (mode === "recover" && !data.get("recoveryCode"))
+                    throw new Error("请填写恢复码。");
+                  if (mode !== "login" && password !== data.get("confirmation"))
+                    throw new Error("两次输入的密码不一致。");
+                  if (mode === "initialize") {
+                    const result = await request<{ recoveryCode: string }>(
+                      "/account/initialize",
+                      {
+                        method: "POST",
+                        body: JSON.stringify({
+                          username,
+                          password,
+                          name: data.get("name"),
+                          setupToken: data.get("setupToken"),
+                          role: "tester",
+                        }),
+                      },
+                    );
+                    setCode(result.recoveryCode);
+                  } else if (mode === "recover") {
+                    const result = await request<{ recoveryCode: string }>(
+                      "/account/recover",
+                      {
+                        method: "POST",
+                        body: JSON.stringify({
+                          username,
+                          password,
+                          recoveryCode: data.get("recoveryCode"),
+                        }),
+                      },
+                    );
+                    setCode(result.recoveryCode);
+                  } else {
+                    const result = await api.login(username, password);
+                    if (!result.authenticated) throw new Error("登录未成功。");
+                    await loggedIn(result);
+                  }
+                } catch (e) {
+                  setError((e as Error).message);
+                } finally {
+                  form
+                    .querySelectorAll<HTMLInputElement>(
+                      'input[name="password"], input[name="confirmation"]',
+                    )
+                    .forEach((input) => {
+                      input.value = "";
+                    });
+                  setBusy(false);
+                }
+              }}
+            >
+              <fieldset
+                disabled={busy}
+                style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}
+              >
+                {initializing && (
+                  <>
                     <label>
-                      恢复码
+                      初始化码
                       <input
-                        name="recoveryCode"
-                        required
+                        name="setupToken"
                         type="password"
+                        required
                         autoComplete="off"
                       />
                     </label>
-                  )}
-                  <label>
-                    {mode === "recover" ? "新密码" : "密码"}
-                    <input
-                      name="password"
-                      type="password"
-                      required
-
-                      maxLength={256}
-                      autoComplete={
-                        mode === "login" ? "current-password" : "new-password"
-                      }
-                    />
-                  </label>
-                  {mode !== "login" && <p className="muted">{passwordRule}</p>}
-                  {mode !== "login" && (
+                    <p className="muted">从本机后端启动窗口复制初始化码。</p>
                     <label>
-                      确认密码
+                      显示名称
                       <input
-                        name="confirmation"
-                        type="password"
+                        name="name"
                         required
-
-                        maxLength={256}
-                        autoComplete="new-password"
+                        maxLength={80}
+                        autoComplete="name"
                       />
                     </label>
-                  )}
+                  </>
+                )}
+                <label>
+                  {mode === "login"
+                    ? identityType === "email"
+                      ? "邮箱地址"
+                      : "工号"
+                    : "用户名（邮箱或工号）"}
+                  <input
+                    key={mode === "login" ? identityType : mode}
+                    name="username"
+                    aria-label="用户名"
+                    inputMode={
+                      mode === "login" && identityType === "email"
+                        ? "email"
+                        : "text"
+                    }
+                    placeholder={
+                      mode === "login"
+                        ? identityType === "email"
+                          ? "name@company.com"
+                          : "E2024001"
+                        : "邮箱地址或工号"
+                    }
+                    required
+                    autoComplete="username"
+                    maxLength={254}
+                  />
+                </label>
+                {mode === "recover" && (
                   <label>
-                    工作角色
-                    <select name="role">
-                      <option value="tester">测试工程师</option>
-                      <option disabled>产品经理助手 · 规划中</option>
-                      <option disabled>开发助手 · 规划中</option>
-                    </select>
+                    恢复码
+                    <input
+                      name="recoveryCode"
+                      required
+                      type="password"
+                      autoComplete="off"
+                    />
                   </label>
-                  <button
-                    className="primary full"
-                    disabled={!connected || busy}
-                  >
-                    {busy
-                      ? "正在处理…"
-                      : initializing
-                        ? "创建账户"
-                        : recovery
-                          ? "重置密码"
-                          : "登录"}
-                  </button>
-                </fieldset>
-              </form>
-              {!initializing && (
-                <button
-                  className="text-button"
-                  disabled={busy}
-                  onClick={() => {
-                    setRecovery(!recovery);
-                    setError("");
-                  }}
-                >
-                  {recovery ? "返回登录" : "忘记密码？使用恢复码"}
+                )}
+                <label>
+                  {mode === "recover" ? "新密码" : "密码"}
+                  <input
+                    name="password"
+                    type="password"
+                    placeholder={
+                      mode === "recover" ? "设置新密码" : "请输入密码"
+                    }
+                    required
+                    maxLength={256}
+                    autoComplete={
+                      mode === "login" ? "current-password" : "new-password"
+                    }
+                  />
+                </label>
+                {mode !== "login" && <p className="muted">{passwordRule}</p>}
+                {mode !== "login" && (
+                  <label>
+                    确认密码
+                    <input
+                      name="confirmation"
+                      type="password"
+                      required
+                      maxLength={256}
+                      autoComplete="new-password"
+                    />
+                  </label>
+                )}
+                <button className="oa-primary" disabled={!connected || busy}>
+                  {busy
+                    ? "正在处理…"
+                    : initializing
+                      ? "创建账户"
+                      : recovery
+                        ? "重置密码"
+                        : "登录"}
                 </button>
-              )}
-              {error && (
-                <p className="notice error" role="alert">
-                  {error}
-                </p>
-              )}
-            </>
-          )}
-        </div>
-      </section>
-    </div>
+              </fieldset>
+            </form>
+            {!initializing && (
+              <button
+                className="oa-back"
+                disabled={busy}
+                onClick={() => {
+                  setRecovery(!recovery);
+                  setError("");
+                }}
+              >
+                {recovery ? "返回登录" : "忘记密码？使用恢复码"}
+              </button>
+            )}
+            {error && (
+              <p className="oa-error" role="alert">
+                {error}
+              </p>
+            )}
+          </>
+        )}
+      </div>
+      <p className="oa-account-note">个人账户 · 工作空间由你掌控</p>
+    </AuthLayout>
   );
 }
 

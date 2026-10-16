@@ -32,7 +32,7 @@ def portal_router(service, require):
     @router.get('/workbench')
     def workbench(request: Request):
         user = require(request, 'workbench.read')['user']['id']
-        return call(lambda: service.board(user))
+        return call(lambda: service.runs.project_board(user, service.board(user)))
 
     @router.post('/workspaces', status_code=201)
     async def create_workspace(request: Request):
@@ -72,12 +72,19 @@ def portal_router(service, require):
     async def update_task(id: str, request: Request):
         user = require(request, 'task.manage')['user']['id']
         data = await body(request)
+        if any(r['status'] == 'completed' for r in service.runs.list(user, id)):
+            raise IdentityError('已完成任务保留为历史记录，请复制后修改。', 409)
         return call(lambda: service.update_task(user, id, data))
 
     @router.post('/tasks/{id}/actions')
     async def action(id: str, request: Request):
         data = await body(request)
-        user = require(request, 'task.delete' if data.get('action') == 'delete' else 'task.manage')['user']['id']
+        user = require(request, 'task.manage')['user']['id']
+        if data.get('action') == 'delete':
+            raise IdentityError('任务及过程文档必须保留，不能删除。', 409)
+        from beivymate.scheduling.service import TERMINAL
+        if any(r['status'] not in TERMINAL for r in service.runs.list(user, id)):
+            raise IdentityError('请通过运行面板控制当前运行；结束后才能删除任务。', 409)
         return call(lambda: service.action(user, id, data, request.headers.get("idempotency-key")))
 
     @router.get('/tasks/{id}/attachments/{attachment}')

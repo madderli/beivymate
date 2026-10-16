@@ -69,7 +69,7 @@ def test_configuration_conflict_and_manual_edit(portal):
     assert c.patch('/api/v1/workspaces/HIS',json={'name':'旧页面','expectedRevision':ws['revision']}).status_code==409
 
 
-def test_pause_resume_delete_dependencies_and_unique_ids(portal):
+def test_pause_resume_preserves_tasks_and_unique_ids(portal):
     c, _, _ = portal
     create(c,related=['CIS'])
     main, child=c.get('/api/v1/workbench').json()['tasks']
@@ -82,9 +82,9 @@ def test_pause_resume_delete_dependencies_and_unique_ids(portal):
     assert action(c,main,'resume').status_code==409
     assert create(c,key='paused-new').status_code==409
     assert action(c,main,'delete').status_code==409
-    assert action(c,child,'delete').status_code==200
-    assert action(c,main,'delete').status_code==200
-    assert c.get('/api/v1/workbench').json()['tasks']==[]
+    assert action(c,child,'delete').status_code==409
+    assert action(c,main,'delete').status_code==409
+    assert len(c.get('/api/v1/workbench').json()['tasks'])==2
     assert c.delete('/api/v1/workspaces/HIS').status_code==405
     ws=c.get('/api/v1/workbench').json()['workspaces'][0]
     c.patch('/api/v1/workspaces/HIS',json={'paused':False,'expectedRevision':ws['revision']})
@@ -152,3 +152,21 @@ def test_configuration_api_readonly_copy_and_conflict(portal):
     item=created.json()
     Path(item['path']).write_text(content+'\n业务补充\n')
     assert c.put('/api/v1/configuration/skills/customer_skill',json={'content':content,'revision':item['revision']}).status_code==409
+
+
+def test_default_workspace_is_durable_and_uses_workspace_revision(portal):
+    c, service, owner = portal
+    before = c.get('/api/v1/workbench').json()
+    assert before['defaultWorkspace'] == 'HIS'
+    ws = next(w for w in before['workspaces'] if w['id'] == 'CIS')
+    response = c.patch('/api/v1/workspaces/CIS', json={
+        'isDefault': True, 'expectedRevision': ws['revision']})
+    assert response.status_code == 200, response.text
+    assert c.get('/api/v1/workbench').json()['defaultWorkspace'] == 'CIS'
+    assert c.patch('/api/v1/workspaces/CIS', json={
+        'isDefault': True, 'expectedRevision': ws['revision']}).status_code == 409
+    owner = c.get('/api/v1/session').json()['user']['id']
+    reopened = PortalService(service.root, ROOT)
+    assert reopened.board(owner)['defaultWorkspace'] == 'CIS'
+    assert reopened.board('another-user')['defaultWorkspace'] == ''
+    assert c.patch('/api/v1/workspaces/missing', json={'isDefault': True}).status_code == 404

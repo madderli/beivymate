@@ -245,7 +245,7 @@ strong {
   letter-spacing: -0.7px;
 }
 .brand-icon {
-  width: 34px;
+  width: 50px;
   height: 34px;
   flex-shrink: 0;
   display: block;
@@ -260,7 +260,8 @@ strong {
   width: 143px;
   flex-shrink: 0;
 }
-.brand-wordmark svg {
+.brand-wordmark svg,
+.brand-wordmark img {
   display: block;
   width: 100%;
   height: auto;
@@ -1826,6 +1827,9 @@ legend {
   .sidebar > .brand {
     padding: 0 8px;
   }
+  .sidebar:not(.mobile-open) .brand-icon {
+    width: 34px;
+  }
   .sidebar .brand .brand-wordmark,
   .agent-card,
   .nav-caption,
@@ -2552,4 +2556,56 @@ legend {
   .sidebar.mobile-open .sidebar-submenu {
     margin: 0;
   }
+}
+
+.run-panel {
+  margin: 18px 0;
+  padding: 20px;
+}
+.run-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin: 12px 0;
+}
+.run-actions label {
+  flex: 1;
+  min-width: 180px;
+}
+.run-subject {
+  max-height: 360px;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.run-notices {
+  position: fixed;
+  right: 20px;
+  bottom: 18px;
+  width: min(350px, calc(100vw - 40px));
+  z-index: 35;
+}
+.run-notices > div {
+  max-height: 65vh;
+  overflow-y: auto;
+}
+.run-notices .panel {
+  padding: 14px;
+  margin-top: 8px;
+  box-shadow: var(--shadow);
+}
+.run-notices .panel button {
+  margin: 8px 12px 0 0;
+  color: var(--accent);
+}
+.workflow-step-editor fieldset {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  margin: 12px 0;
+}
+.workflow-step-editor label {
+  display: block;
+  margin-top: 8px;
 }

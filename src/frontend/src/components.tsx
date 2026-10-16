@@ -34,9 +34,9 @@ export function Badge({ status }: { status: Status }) {
 }
 export function Brand({ compact = false }: { compact?: boolean }) {
   return (
-    <div className="brand" role="img" aria-label="BeIvyMate">
+    <div className="brand" role="img" aria-label="OmniAlba">
       <span className="brand-icon">
-        <img src="/ivy-icon.svg" alt="" width="34" height="34" />
+        <img src="/omnialba-mark.svg" alt="" width="50" height="34" />
       </span>
       {!compact && (
         <span className="brand-wordmark">

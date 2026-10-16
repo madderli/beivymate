@@ -10,7 +10,14 @@ const python = path.join(
 export default defineConfig({
   testDir: ".",
   outputDir: "./test-results",
-  testMatch: realAPI ? "portal.spec.ts" : "prototype.spec.ts",
+  testMatch:
+    process.env.BEIVYMATE_CONVERSATION_PREVIEW === "1"
+      ? "conversation-preview.spec.ts"
+      : process.env.BEIVYMATE_UI_MODEL_FIXTURE === "1"
+        ? "runs.spec.ts"
+        : realAPI
+          ? "agent-app-real.spec.ts"
+          : "agent-app.spec.ts",
   fullyParallel: true,
   reporter: "list",
   use: {
