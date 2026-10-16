@@ -1,0 +1,35 @@
+/* Keep the four landing pages aligned with the workspace typography. */
+.agent-demo .homepage-main {
+  padding-top: 30px;
+}
+.agent-demo .homepage-heading .ad-kicker {
+  display: block;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.6;
+  letter-spacing: 2px;
+  color: #7b9483;
+}
+.agent-demo .homepage-heading h1 {
+  margin: 12px 0;
+  font-size: 30px;
+  font-weight: 600;
+  line-height: 1.45;
+  letter-spacing: -1px;
+  color: var(--ad-ink);
+}
+.agent-demo .homepage-heading p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.75;
+  letter-spacing: normal;
+  color: #78847d;
+}
+.skill-center-embedded .sc-main.homepage-main {
+  padding-top: 0;
+}
+@media (max-width: 760px) {
+  .agent-demo .homepage-main {
+    padding-top: 20px;
+  }
+}

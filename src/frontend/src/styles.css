@@ -245,7 +245,7 @@ strong {
   letter-spacing: -0.7px;
 }
 .brand-icon {
-  width: 34px;
+  width: 50px;
   height: 34px;
   flex-shrink: 0;
   display: block;
@@ -260,7 +260,8 @@ strong {
   width: 143px;
   flex-shrink: 0;
 }
-.brand-wordmark svg {
+.brand-wordmark svg,
+.brand-wordmark img {
   display: block;
   width: 100%;
   height: auto;
@@ -1825,6 +1826,9 @@ legend {
   }
   .sidebar > .brand {
     padding: 0 8px;
+  }
+  .sidebar:not(.mobile-open) .brand-icon {
+    width: 34px;
   }
   .sidebar .brand .brand-wordmark,
   .agent-card,

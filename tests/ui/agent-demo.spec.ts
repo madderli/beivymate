@@ -47,9 +47,7 @@ test("deleted skills invalidate workflow and copied tasks, UI replacement repair
   page,
 }) => {
   await enter(page);
-  await page
-    .getByRole("button", { name: "技能（Skills）", exact: true })
-    .click();
+  await page.getByRole("button", { name: "技能中心", exact: true }).click();
   await page
     .locator("article")
     .filter({

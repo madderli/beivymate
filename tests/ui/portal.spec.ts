@@ -240,7 +240,7 @@ test("real local account initialization, refresh, logout and recovery", async ({
   await page.getByRole("button", { name: "个人空间", exact: true }).click();
   await page.getByRole("button", { name: /退出/ }).click();
   await expect(
-    page.getByRole("heading", { name: "登录你的工作台" }),
+    page.getByRole("heading", { name: "登录", exact: true }),
   ).toBeVisible();
   await page.getByRole("button", { name: "忘记密码？使用恢复码" }).click();
   await page.getByLabel("用户名", { exact: true }).fill("employee@example.com");
@@ -276,7 +276,7 @@ test("real local account initialization, refresh, logout and recovery", async ({
     .fill("Third-password-789!");
   await page.getByRole("button", { name: "修改密码并重新登录" }).click();
   await expect(
-    page.getByRole("heading", { name: "登录你的工作台" }),
+    page.getByRole("heading", { name: "登录", exact: true }),
   ).toBeVisible();
   await page.getByLabel("用户名", { exact: true }).fill("employee@example.com");
   await page.getByLabel("密码", { exact: true }).fill("Third-password-789!");

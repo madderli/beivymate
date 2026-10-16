@@ -510,9 +510,7 @@ export default function AgentDemo() {
               </>
             )}
           </div>
-          <span className="ad-entry-foot">
-            BeIvyMate / 与你一起，把工作做好
-          </span>
+          <span className="ad-entry-foot">OmniAlba / 与你一起，把工作做好</span>
         </div>
       ) : (
         <>
@@ -537,7 +535,7 @@ export default function AgentDemo() {
               {[
                 [ListTodo, "tasks", "我的任务"],
                 [Layers, "workspaces", "工作区"],
-                [Blocks, "skills", "技能（Skills）"],
+                [Blocks, "skills", "技能中心"],
                 [GitBranch, "flows", "工作流（Workflow）"],
               ].map(([Icon, p, label]) => {
                 const I = Icon as typeof ListTodo;
@@ -635,7 +633,7 @@ export default function AgentDemo() {
                         {
                           tasks: "我的任务",
                           workspaces: "工作区",
-                          skills: "技能（Skills）",
+                          skills: "技能中心",
                           flows: "工作流（Workflow）",
                         } as Record<string, string>
                       )[page]
@@ -649,7 +647,7 @@ export default function AgentDemo() {
                 className={
                   page === "chat"
                     ? `ad-chat-main ${!task ? "ad-chat-start" : ""}`
-                    : "ad-main"
+                    : "ad-main homepage-main"
                 }
               >
                 {page === "chat" && (
@@ -658,7 +656,7 @@ export default function AgentDemo() {
                       {!task ? (
                         <div className="ad-welcome">
                           <div className="ad-welcome-heading">
-                            <img src="/ivy-icon.svg" alt="Ivy" />
+                            <img src="/omnialba-mark.svg" alt="Ivy" />
                             <div>
                               <h1>
                                 {pending(ws).length
@@ -822,10 +820,10 @@ export default function AgentDemo() {
                 )}
                 {page === "tasks" && (
                   <>
-                    <div className="ad-page-title">
+                    <div className="ad-page-title homepage-heading">
                       <span className="ad-kicker">MY TASKS</span>
                       <h1>我的任务</h1>
-                      <p>把注意力留给需要你推进的工作。</p>
+                      <p>把注意力留给你需要推进的工作。</p>
                     </div>
                     <div className="ad-section-label">
                       需要继续处理 <span>按状态查看 · 不含已完成</span>
@@ -941,12 +939,10 @@ export default function AgentDemo() {
                 )}
                 {page === "workspaces" && (
                   <>
-                    <div className="ad-page-title">
+                    <div className="ad-page-title homepage-heading">
                       <span className="ad-kicker">WORKSPACES</span>
-                      <h1>工作区</h1>
-                      <p>
-                        每个工作区，都是一个专注的协作空间。双击卡片进入 Agent。
-                      </p>
+                      <h1>我的工作区</h1>
+                      <p>双击卡片进入您的工作区，与 Agent 一起推进任务。</p>
                       <button
                         className="ad-primary"
                         onClick={() => modal("workspace")}
@@ -997,15 +993,17 @@ export default function AgentDemo() {
                 )}
                 {(page === "skills" || page === "flows") && (
                   <>
-                    <div className="ad-page-title">
-                      <span className="ad-kicker">AGENT CAPABILITIES</span>
-                      <h1>
-                        {page === "skills" ? "Skill 技能库" : "Workflow 工作流"}
-                      </h1>
+                    <div className="ad-page-title homepage-heading">
+                      <span className="ad-kicker">
+                        {page === "skills"
+                          ? "SKILLS CENTER"
+                          : "AGENT CAPABILITIES"}
+                      </span>
+                      <h1>{page === "skills" ? "我的技能库" : "我的工作流"}</h1>
                       <p>
                         {page === "skills"
-                          ? "定义 Agent 的工作能力，让每一次执行有据可依。"
-                          : "把技能组织成流程。模板默认人工确认，任务可以独立覆盖。"}
+                          ? "让智能助手学会您的工作方法，把经验变成可复用的能力。"
+                          : "把技能串成工作流，让重复工作有序自动完成。"}
                       </p>
                       <button
                         className="ad-primary"

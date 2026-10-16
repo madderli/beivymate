@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ArrowUp,
-  Blocks,
   Check,
   ChevronRight,
   Copy,
@@ -9,7 +8,6 @@ import {
   GitBranch,
   Layers,
   ListTodo,
-  LogOut,
   Menu,
   Paperclip,
   Plus,
@@ -17,12 +15,16 @@ import {
   Sparkles,
   X,
 } from "lucide-react";
-import { api, ApiError, request } from "./api";
-import { Brand, Dialog, Badge } from "./components";
+import { api, ApiError } from "./api";
+import TaskReminder from "./TaskReminder";
+import ProductSidebar from "./ProductSidebar";
+import { Dialog, Badge } from "./components";
 import { PersonalLogin, AccountSettings } from "./Account";
 import { TaskForm, WorkspaceForm } from "./forms";
 import { TaskEdit } from "./TaskEdit";
 import { RunPanel, RunNotifications } from "./RunPanel";
+import { RoleSelection } from "./AuthLayout";
+import SkillCenter from "./features/skills/SkillCenter";
 import { ConfigurationLibrary } from "./ConfigurationLibrary";
 import { DocumentLibrary } from "./DocumentLibrary";
 import { OutputPreferences } from "./OutputPreferences";
@@ -285,6 +287,15 @@ export default function AgentApp() {
               {t.workspace} ·{" "}
               {board.workflows.find((f) => f.id === t.workflow)?.name ||
                 t.workflow}
+              {!t.main && (
+                <span className="task-relation-label">
+                  <GitBranch size={12} aria-hidden="true" />
+                  关联任务 · 主任务：
+                  {board.tasks.find(
+                    (main) => main.group === t.group && main.main,
+                  )?.workspace || t.group}
+                </span>
+              )}
             </small>
           </span>
           {t.configurationIssue ? (
@@ -321,163 +332,109 @@ export default function AgentApp() {
     );
   if (!roleChosen)
     return (
-      <div className="agent-demo production-agent">
-        <div className="ad-entry">
-          <Brand />
-          <div className="ad-entry-card">
-            <span className="ad-kicker">YOUR EVERYDAY WORK PARTNER</span>
-            <h1>今天，以什么角色开始？</h1>
-            <p>选择工作角色，进入你的 Agent 工作空间。</p>
-            <div className="ad-role-options">
-              <button className="active">
-                <Blocks size={20} />
-                测试工程师
-                <Check size={18} />
-              </button>
-              <button disabled>产品经理 · 后续开放</button>
-              <button disabled>开发工程师 · 后续开放</button>
-            </div>
-            <button className="ad-primary" onClick={() => setRoleChosen(true)}>
-              进入 Agent <ChevronRight size={17} />
-            </button>
-          </div>
-        </div>
-      </div>
+      <RoleSelection
+        busy={busy}
+        error={error}
+        enter={() => {
+          setRoleChosen(true);
+          go(defaultId ? "workspace" : "start", defaultId);
+        }}
+        back={() =>
+          void mutate(async () => {
+            await api.logout();
+            setSession(null);
+            setRoleChosen(false);
+            go("start");
+          })
+        }
+      />
     );
   return (
     <div className="agent-demo production-agent">
-      <aside className={`ad-sidebar ${mobile ? "open" : ""}`}>
-        <div className="ad-brand">
-          <Brand />
-        </div>
-        <div className="ad-role">
-          <span className="ad-role-avatar">
-            <Blocks size={18} />
-          </span>
-          <div>
-            <small>当前角色</small>
-            <strong>测试工程师</strong>
-          </div>
-          <span className="ad-live" />
-        </div>
-        <nav>
-          {[
-            [ListTodo, "home", "我的任务"],
-            [Layers, "workspaces", "工作区"],
-            [Blocks, "skills", "技能（Skills）"],
-            [GitBranch, "workflows", "工作流（Workflow）"],
-          ].map(([Icon, page, label]) => {
-            const I = Icon as typeof ListTodo;
-            return (
-              <button
-                key={String(page)}
-                className={route.page === page ? "active" : ""}
-                onClick={() => go(String(page))}
-              >
-                <I size={18} />
-                {String(label)}
-              </button>
-            );
-          })}
-        </nav>
-        <div className="ad-side-heading">
-          我的工作区
-          <button
-            aria-label="新增工作区"
-            disabled={!can("workspace.write")}
-            onClick={() => {
-              setEditingWorkspace(undefined);
-              setDialog("workspace");
-            }}
-          >
-            <Plus size={16} />
-          </button>
-        </div>
-        <div className="ad-workspaces">
-          {board.workspaces.map((w) => (
-            <div key={w.id} className={workspace?.id === w.id ? "active" : ""}>
-              <button
-                onClick={() => go("workspace", w.id)}
-                onDoubleClick={() => go("workspace", w.id)}
-              >
-                <span className="ad-folder">
-                  <Layers size={15} />
-                </span>
-                <span>
-                  {w.id} <small>({tasksIn(w.id).length})</small>
-                  {defaultId === w.id && <em>默认</em>}
-                </span>
-              </button>
-              <button
-                aria-label={`设置 ${w.name}`}
-                disabled={!can("workspace.write")}
-                onClick={() => {
-                  setEditingWorkspace(w);
-                  setDialog("workspace");
-                }}
-              >
-                <Settings2 size={14} />
-              </button>
-            </div>
-          ))}
-        </div>
-        <div className="ad-side-bottom">
-          <button onClick={() => setDialog("settings")}>
-            <Settings2 size={17} />
-            设置
-          </button>
-          <button onClick={() => setDialog("account")}>
-            <span className="ad-user-avatar">
-              {session.user?.name.slice(0, 1)}
-            </span>
-            <span>
-              {session.user?.name}
-              <small>个人账户</small>
-            </span>
-          </button>
-          <button
-            disabled={busy}
-            onClick={() =>
-              void mutate(async () => {
-                await api.logout();
-                generation.current++;
-                flight.current = null;
-                setSession(null);
-                setBoard(emptyBoard());
-                setRoleChosen(false);
-                setFiles([]);
-                setMessages([]);
-                go("start");
-              })
-            }
-          >
-            <LogOut size={16} />
-            退出登录
-          </button>
-        </div>
-      </aside>
+      <ProductSidebar
+        activePage={route.page}
+        workspaceId={workspace?.id}
+        workspaces={board.workspaces.map((w) => ({
+          id: w.id,
+          name: w.name,
+          count: tasksIn(w.id).length,
+          isDefault: defaultId === w.id,
+        }))}
+        taskCount={board.tasks.filter(unfinished).length}
+        userName={session.user?.name || "用户"}
+        mobile={mobile}
+        close={() => setMobile(false)}
+        navigate={go}
+        openWorkspace={(id) => go("workspace", id)}
+        canCreate={can("workspace.write")}
+        newWorkspace={() => {
+          setEditingWorkspace(undefined);
+          setDialog("workspace");
+        }}
+        settings={() => {
+          setMobile(false);
+          setDialog("settings");
+        }}
+        account={() => {
+          setMobile(false);
+          setDialog("account");
+        }}
+        busy={busy}
+        logout={() =>
+          void mutate(async () => {
+            await api.logout();
+            generation.current++;
+            flight.current = null;
+            setSession(null);
+            setBoard(emptyBoard());
+            setRoleChosen(false);
+            setFiles([]);
+            setMessages([]);
+            go("start");
+          })
+        }
+      />
       <div className={`ad-shell ${isChat ? "ad-workspace-shell" : ""}`}>
-        <header className="ad-header">
+        <header
+          className={`ad-header ${["home", "workspaces"].includes(route.page) ? "ad-header-compact" : ""}`}
+        >
           <button
             className="ad-mobile"
             aria-label="打开导航"
+            aria-expanded={mobile}
+            aria-controls="product-sidebar"
             onClick={() => setMobile(!mobile)}
           >
             <Menu size={20} />
           </button>
-          <div>
+          <div
+            className={
+              ["home", "workspaces"].includes(route.page)
+                ? "header-title-hidden"
+                : ""
+            }
+          >
             {isChat ? (
               <>
                 <Layers size={16} />
-                {workspace?.name || "欢迎使用"}
+                {workspace ? (
+                  <>
+                    <b className="workspace-header-id">{workspace.id}</b>
+                    {workspace.name}
+                  </>
+                ) : (
+                  "欢迎使用"
+                )}
               </>
             ) : (
               (
                 {
                   home: "我的任务",
                   workspaces: "工作区",
-                  skills: "技能（Skills）",
-                  workflows: "工作流（Workflow）",
+                  skills: "技能中心",
+                  models: "模型配置",
+                  workflows: "工作流",
+                  analytics: "分析统计",
                 } as Record<string, string>
               )[route.page]
             )}
@@ -497,7 +454,7 @@ export default function AgentApp() {
             className={
               isChat
                 ? `ad-chat-main ${!task && !messages.length ? "ad-chat-start" : ""}`
-                : "ad-main"
+                : `ad-main ${["home", "workspaces", "skills", "workflows"].includes(route.page) ? "homepage-main" : ""}`
             }
           >
             {isChat && (
@@ -527,44 +484,30 @@ export default function AgentApp() {
                       </button>
                     </div>
                   ) : !task ? (
-                    <div className="ad-welcome">
-                      <div className="ad-welcome-heading">
-                        <img src="/ivy-icon.svg" alt="Ivy" />
-                        <div>
-                          <h1>
-                            {tasksIn(workspace.id).length
-                              ? "欢迎回来，我们继续吧。"
-                              : "今天，有什么需要我协助？"}
-                          </h1>
-                          <p>继续未完成的任务，或开始一项新任务。</p>
-                        </div>
-                      </div>
-                      {tasksIn(workspace.id).length > 0 && (
-                        <div className="ad-resume">
-                          <div className="ad-section-label">
-                            继续工作
-                            <span>
-                              {Object.entries(statusLabels)
-                                .map(([state, label]) => {
-                                  const n = tasksIn(workspace.id).filter(
-                                    (t) => t.status === state,
-                                  ).length;
-                                  return n ? `${label} ${n}` : "";
-                                })
-                                .filter(Boolean)
-                                .join(" · ")}
-                            </span>
-                          </div>
+                    <div className="workspace-conversation-intro">
+                      <TaskReminder
+                        tasks={tasksIn(workspace.id)}
+                        workspaceName={workspace.name}
+                      >
+                        {tasksIn(workspace.id).length > 0 ? (
                           <div
-                            className="ad-resume-scroll"
-                            tabIndex={0}
+                            className="workspace-reminder-tasks"
                             role="region"
                             aria-label="继续工作任务列表"
                           >
                             {rows(tasksIn(workspace.id))}
                           </div>
-                        </div>
-                      )}
+                        ) : (
+                          <p className="task-reminder-hint">
+                            告诉我你想推进的目标，我们一起开始一项新任务。
+                          </p>
+                        )}
+                        {tasksIn(workspace.id).length > 0 && (
+                          <p className="workspace-conversation-invitation">
+                            你可以点击任务继续处理，也可以在下面告诉我新的工作目标。
+                          </p>
+                        )}
+                      </TaskReminder>
                     </div>
                   ) : (
                     <div className="ad-thread">
@@ -602,7 +545,12 @@ export default function AgentApp() {
                       <span className="ad-message-avatar">
                         {m.role === "user" ? "你" : <Sparkles size={17} />}
                       </span>
-                      <div>
+                      <div className="workspace-message-bubble">
+                        <span className="workspace-message-author">
+                          {m.role === "user"
+                            ? session.user?.name || "你"
+                            : "OmniAlba"}
+                        </span>
                         <p>{m.text}</p>
                       </div>
                     </div>
@@ -640,12 +588,9 @@ export default function AgentApp() {
                         ))}
                       </div>
                       <textarea
+                        id="workspace-message-input"
                         aria-label="发送给 Ivy"
-                        placeholder={
-                          can("chat")
-                            ? "告诉 Ivy，你想完成什么任务…"
-                            : "描述任务目标，再点击「新任务」配置工作流…"
-                        }
+                        placeholder="告诉 OmniAlba 你想完成什么？你也可以从点击「新任务」开始…"
                         value={prompt}
                         disabled={busy || !connected}
                         onChange={(e) => setPrompt(e.target.value)}
@@ -717,125 +662,162 @@ export default function AgentApp() {
                         {chatError}
                       </p>
                     )}
-                    <div className="ad-composer-foot">
-                      Ivy 与你协作，每一步由你掌握。
-                      <span>
-                        {!can("chat")
-                          ? "AI 对话暂未接通 · 可通过新任务提交目标和附件"
-                          : "附件通过新任务提交"}
-                      </span>
-                    </div>
                   </>
                 )}
               </>
             )}
             {route.page === "home" && (
               <>
-                <div className="ad-page-title">
-                  <span className="ad-kicker">MY TASKS</span>
-                  <h1>我的任务</h1>
-                  <p>把注意力留给需要你推进的工作。</p>
-                </div>
-                <div className="ad-section-label">需要继续处理</div>
-                <div className="ad-status-grid">
-                  {Object.entries(statusLabels)
-                    .filter(
-                      ([s]) =>
-                        s !== "completed" &&
-                        (["pending", "running", "review", "paused"].includes(
-                          s,
-                        ) ||
-                          board.tasks.some((t) => t.status === s)),
-                    )
-                    .map(([s, label]) => (
-                      <div key={s}>
-                        <span>{label}</span>
-                        <strong>
-                          {board.tasks.filter((t) => t.status === s).length}
-                        </strong>
-                        <div>
-                          {board.workspaces.map((w) => {
-                            const n = tasksIn(w.id).filter(
-                              (t) => t.status === s,
-                            ).length;
-                            return (
-                              n > 0 && (
-                                <button
-                                  key={w.id}
-                                  onClick={() => go("workspace", w.id)}
-                                >
-                                  {w.id} <b>{n}</b>
-                                </button>
-                              )
-                            );
-                          })}
-                        </div>
-                      </div>
-                    ))}
-                </div>
-                <div className="ad-section-label">
-                  任务统计
-                  <div className="ad-filters">
-                    <select
-                      aria-label="统计时间"
-                      value={period}
-                      onChange={(e) => setPeriod(e.target.value)}
+                <div className="task-home-top">
+                  <div className="ad-page-title homepage-heading">
+                    <span className="ad-kicker">MY TASKS</span>
+                    <h1>我的任务</h1>
+                    <p>把注意力留给你需要推进的工作。</p>
+                  </div>
+                  <section
+                    className="task-pending-statistics"
+                    aria-labelledby="task-pending-statistics-title"
+                  >
+                    <h2
+                      id="task-pending-statistics-title"
+                      className="ad-section-label task-home-section-heading"
                     >
-                      <option value="all">全部时间</option>
-                      <option value="7">近7天</option>
-                      <option value="30">近30天</option>
-                    </select>
-                    <select
-                      aria-label="统计工作区"
-                      value={metricWs}
-                      onChange={(e) => setMetricWs(e.target.value)}
+                      待完成任务统计
+                    </h2>
+                    <div
+                      className="ad-status-grid task-status-grid"
+                      aria-label="待完成任务状态"
                     >
-                      <option value="all">全部工作区</option>
-                      {board.workspaces.map((w) => (
-                        <option value={w.id} key={w.id}>
-                          {w.name}
-                        </option>
+                      {Object.entries(statusLabels)
+                        .filter(
+                          ([s]) =>
+                            s !== "completed" &&
+                            ([
+                              "pending",
+                              "running",
+                              "review",
+                              "paused",
+                            ].includes(s) ||
+                              board.tasks.some((t) => t.status === s)),
+                        )
+                        .map(([s, label]) => (
+                          <div
+                            key={s}
+                            className={
+                              board.tasks.some((t) => t.status === s)
+                                ? ""
+                                : "task-status-empty"
+                            }
+                          >
+                            <div className="task-status-head">
+                              <span>{label}</span>
+                              <strong>
+                                {
+                                  board.tasks.filter((t) => t.status === s)
+                                    .length
+                                }
+                              </strong>
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  </section>
+                </div>
+                <TaskReminder tasks={board.tasks}>
+                  <section
+                    className="task-pending-section"
+                    aria-label="待完成任务"
+                  >
+                    {board.workspaces
+                      .filter((w) => tasksIn(w.id).length)
+                      .map((w) => (
+                        <details open className="ad-group" key={w.id}>
+                          <summary className="task-workspace-heading">
+                            <ChevronRight
+                              size={14}
+                              className="task-workspace-chevron"
+                            />
+                            <span className="task-workspace-identity">
+                              <b className="task-workspace-id">{w.id}</b>
+                              <span className="task-workspace-name">
+                                {w.name}
+                              </span>
+                            </span>
+                            <span className="task-workspace-count">
+                              <b>{tasksIn(w.id).length}</b> 个未完成
+                            </span>
+                          </summary>
+                          {rows(tasksIn(w.id))}
+                        </details>
                       ))}
-                    </select>
-                  </div>
+                    {!board.tasks.some(unfinished) && (
+                      <div className="task-empty-list">
+                        当前没有待完成任务，新的目标随时可以开始。
+                      </div>
+                    )}
+                  </section>
+                </TaskReminder>
+              </>
+            )}
+            {route.page === "analytics" && (
+              <>
+                <div className="ad-page-title homepage-heading">
+                  <span className="ad-kicker">ANALYTICS</span>
+                  <h1>分析统计</h1>
+                  <p>查看任务完成情况，了解各工作区的进展。</p>
                 </div>
-                <div className="ad-metrics">
-                  <div>
-                    <strong>{filtered.length}</strong>
-                    <span>任务总数</span>
+                <section className="task-statistics" aria-label="任务统计">
+                  <div className="ad-section-label">
+                    任务统计
+                    <div className="ad-filters">
+                      <select
+                        aria-label="统计时间"
+                        value={period}
+                        onChange={(e) => setPeriod(e.target.value)}
+                      >
+                        <option value="all">全部时间</option>
+                        <option value="7">近7天</option>
+                        <option value="30">近30天</option>
+                      </select>
+                      <select
+                        aria-label="统计工作区"
+                        value={metricWs}
+                        onChange={(e) => setMetricWs(e.target.value)}
+                      >
+                        <option value="all">全部工作区</option>
+                        {board.workspaces.map((w) => (
+                          <option value={w.id} key={w.id}>
+                            {w.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
-                  <div>
-                    <strong>
-                      {filtered.filter((t) => !unfinished(t)).length}
-                    </strong>
-                    <span>已完成</span>
+                  <div className="ad-metrics">
+                    <div>
+                      <strong>{filtered.length}</strong>
+                      <span>任务总数</span>
+                    </div>
+                    <div>
+                      <strong>
+                        {filtered.filter((t) => !unfinished(t)).length}
+                      </strong>
+                      <span>已完成</span>
+                    </div>
+                    <div>
+                      <strong>{filtered.filter(unfinished).length}</strong>
+                      <span>未完成</span>
+                    </div>
                   </div>
-                  <div>
-                    <strong>{filtered.filter(unfinished).length}</strong>
-                    <span>未完成</span>
-                  </div>
-                </div>
-                <div className="ad-section-label">仍有未完成任务的工作区</div>
-                {board.workspaces
-                  .filter((w) => tasksIn(w.id).length)
-                  .map((w) => (
-                    <details open className="ad-group" key={w.id}>
-                      <summary>
-                        {w.name}
-                        <span>{tasksIn(w.id).length} 个未完成</span>
-                      </summary>
-                      {rows(tasksIn(w.id))}
-                    </details>
-                  ))}
-                {!board.tasks.some(unfinished) && <p>当前没有未完成任务。</p>}
+                </section>
               </>
             )}
             {route.page === "workspaces" && (
               <>
-                <div className="ad-page-title">
+                <div className="ad-page-title homepage-heading">
                   <span className="ad-kicker">WORKSPACES</span>
-                  <h1>工作区</h1>
-                  <p>双击卡片打开工作区，与 Agent 一起推进任务。</p>
+                  <h1>我的工作区</h1>
+                  <p>双击卡片进入您的工作区，与 Agent 一起推进任务。</p>
                   <button
                     className="ad-primary"
                     disabled={!can("workspace.write")}
@@ -894,54 +876,8 @@ export default function AgentApp() {
                 </details>
               </>
             )}
-            {["skills", "workflows"].includes(route.page) && (
-              <>
-                <div className="ad-page-title">
-                  <span className="ad-kicker">AGENT CAPABILITIES</span>
-                  <h1>
-                    {route.page === "skills"
-                      ? "技能（Skills）"
-                      : "工作流（Workflow）"}
-                  </h1>
-                  <p>通过配置编辑器管理能力、步骤与确认方式。</p>
-                  <button
-                    className="ad-primary"
-                    disabled={!can("configuration.manage")}
-                    onClick={() => setDialog(route.page)}
-                  >
-                    打开{route.page === "skills" ? "技能" : "工作流"}管理
-                  </button>
-                </div>
-                <p>
-                  系统默认配置只读。可创建自定义配置，并通过 UI
-                  编辑技能内容和工作流步骤。
-                </p>
-                {route.page === "skills" && can("configuration.manage") && (
-                  <SkillCards
-                    edit={() => setDialog("skills")}
-                    refreshKey={dialog}
-                  />
-                )}
-                {route.page === "workflows" && (
-                  <div className="ad-card-grid">
-                    {board.workflows.map((f) => (
-                      <article key={f.id}>
-                        <span className="ad-card-icon">
-                          <GitBranch />
-                        </span>
-                        <h2>{f.name}</h2>
-                        <p>{f.steps.map((s) => s.name).join(" → ")}</p>
-                        <button
-                          disabled={!can("configuration.manage")}
-                          onClick={() => setDialog("workflows")}
-                        >
-                          编辑工作流
-                        </button>
-                      </article>
-                    ))}
-                  </div>
-                )}
-              </>
+            {["skills", "models", "workflows"].includes(route.page) && (
+              <SkillCenter embedded page={route.page} navigate={go} />
             )}
           </main>
           {task && (
@@ -1135,6 +1071,14 @@ export default function AgentApp() {
         <Dialog title="设置" close={() => setDialog("")}>
           <div className="ad-form">
             <button
+              onClick={() => {
+                setDialog("");
+                go("models");
+              }}
+            >
+              模型配置
+            </button>
+            <button
               disabled={!can("documents.manage")}
               onClick={() => setDialog("documents")}
             >
@@ -1189,56 +1133,5 @@ function FilePreview({ file, close }: { file: File; close: () => void }) {
         附件将在创建任务时保存。图片可作为参考材料保存，当前运行服务尚不解析图片内容。
       </p>
     </Dialog>
-  );
-}
-
-function SkillCards({
-  edit,
-  refreshKey,
-}: {
-  edit: () => void;
-  refreshKey: string;
-}) {
-  const [items, setItems] = useState<
-    { id: string; name: string; builtin: boolean }[]
-  >([]);
-  const [error, setError] = useState("");
-  useEffect(() => {
-    let active = true;
-    request<{ items: typeof items }>("/configuration/skills")
-      .then((r) => {
-        if (active) {
-          setItems(r.items);
-          setError("");
-        }
-      })
-      .catch((e) => {
-        if (active) setError(e.message);
-      });
-    return () => {
-      active = false;
-    };
-  }, [refreshKey]);
-  return (
-    <>
-      {error && <p role="alert">{error}</p>}
-      <div className="ad-card-grid">
-        {items.map((s) => (
-          <article key={s.id}>
-            <span className="ad-card-icon">
-              <Blocks />
-            </span>
-            <h2>{s.name}</h2>
-            <p>{s.id}</p>
-            <footer>
-              <span>
-                {s.builtin ? "系统技能 · 可创建自定义副本" : "自定义技能"}
-              </span>
-              <button onClick={edit}>管理</button>
-            </footer>
-          </article>
-        ))}
-      </div>
-    </>
   );
 }

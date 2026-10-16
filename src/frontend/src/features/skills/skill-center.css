@@ -1,0 +1,23 @@
+/* Use the application's navigation when mounted in its content area. */
+.skill-center-embedded {
+  min-height: 0;
+  height: auto;
+  display: block;
+}
+.skill-center-embedded > .ad-shell {
+  margin-left: 0;
+  width: 100%;
+  min-width: 0;
+  height: auto;
+  overflow: visible;
+}
+.skill-center-embedded .sc-main {
+  padding: 12px 0;
+}
+.skill-center-embedded .ms-page {
+  padding: 12px 0;
+}
+.skill-center-embedded .wf-main.homepage-main {
+  padding: 0;
+  max-width: none;
+}

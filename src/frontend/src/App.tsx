@@ -8,7 +8,6 @@ import { PersonalLogin, AccountSettings } from "./Account";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   LogOut,
-  Activity,
   ArrowDown,
   ArrowRight,
   Bell,
@@ -17,26 +16,17 @@ import {
   Check,
   ChevronDown,
   ChevronRight,
-  CircleHelp,
-  FileText,
   FolderKanban,
   GitBranch,
   LayoutDashboard,
-  Link2,
-  ListChecks,
   Menu,
   MessageSquare,
   Moon,
-  Pause,
-  Play,
-  Plus,
   RefreshCw,
-  Search,
   Send,
   Settings,
   ShieldCheck,
   Sun,
-  TriangleAlert,
   X,
 } from "lucide-react";
 import { api, ApiError } from "./api";
@@ -44,7 +34,6 @@ import { Badge, Brand, Dialog, PageHead } from "./components";
 import { TaskForm, WorkspaceForm } from "./forms";
 import {
   emptyBoard,
-  statusLabels,
   type Artifact,
   type Board,
   type Message,
@@ -421,7 +410,7 @@ export default function App() {
                     <p>
                       {board.workspaces.length
                         ? "目前没有未完成任务。可以创建一个新任务，选择工作流，开始下一项工作。"
-                        : "欢迎使用 BeIvyMate。先创建产品或项目工作区，再创建任务，让助手协助你完成工作。"}
+                        : "欢迎使用 OmniAlba。先创建产品或项目工作区，再创建任务，让助手协助你完成工作。"}
                     </p>
                   </>
                 )}
@@ -1392,7 +1381,7 @@ export default function App() {
               </div>
             )}
           <footer className="page-footer">
-            <span>BeIvyMate · 个人工作助手</span>
+            <span>OmniAlba · 个人工作助手</span>
           </footer>
         </main>
       </div>

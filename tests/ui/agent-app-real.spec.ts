@@ -59,13 +59,10 @@ test("real Agent app: account, default workspace, attachments, copy, configurati
   await form.getByLabel("工作区名称", { exact: true }).fill("临床信息系统");
   await form.getByLabel("设为默认工作区").check();
   await form.getByRole("button", { name: "保存工作区", exact: true }).click();
-  await page
-    .getByRole("button", { name: "技能（Skills）", exact: true })
-    .click();
-  await page.getByRole("button", { name: "打开技能管理" }).click();
-  await expect(form.getByLabel("配置类型", { exact: true })).toHaveValue(
-    "skills",
-  );
+  await page.getByRole("button", { name: "技能中心", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "我的技能库" })).toBeVisible();
+  await page.getByRole("button", { name: "新建技能", exact: true }).click();
+  await expect(form.getByLabel("技能名称", { exact: true })).toBeVisible();
   await form.getByRole("button", { name: "关闭弹窗" }).click();
   await page.goto("/");
   await page.getByRole("button", { name: "进入 Agent" }).click();
