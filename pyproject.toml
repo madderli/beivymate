@@ -34,3 +34,6 @@ include = ["beivymate*"]
 testpaths = ["tests"]
 pythonpath = ["src"]
 markers = ["llm: integration tests requiring a real LLM service (opt in with --run-llm)"]
+
+[tool.setuptools.package-data]
+beivymate = ["builtin/skills/**/*"]

@@ -1,3 +1,4 @@
+import { RequiredMark } from "../../RequiredMark";
 import { useEffect, useRef, useState } from "react";
 import { Dialog } from "../../components";
 import { type ModelService } from "./skill-state";
@@ -29,10 +30,8 @@ export const createService = (): ModelService => ({
 export function RequiredLabel({ children }: { children: React.ReactNode }) {
   return (
     <span className="mr-field-label">
-      <span className="mr-required" aria-hidden="true">
-        *
-      </span>
       {children}
+      <RequiredMark />
     </span>
   );
 }

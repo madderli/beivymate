@@ -44,7 +44,7 @@ class Observe(Skill):
 
 
 def test_supported_strategy_inheritance_and_rejection():
-    catalog=SkillCatalog(ROOT/'skills')
+    catalog=SkillCatalog(ROOT.parent/'src/beivymate/builtin/skills')
     spec=catalog.get('test_analysis')
     skill=ConfiguredSkill(Observe(),spec,catalog.snapshot(spec.id))
     context=AgentContext();context.set('default_analysis_strategy','deep')
@@ -89,7 +89,7 @@ def test_checkpoint_freezes_instructions_without_mutating_new_runs(tmp_path):
         def execute(self, context): 
             context.set('result',context.get('skill_instructions'))
             context.set(f"steps.{context.get('step_id')}.test_analysis", context.get('skill_instructions'))
-    catalog=SkillCatalog(ROOT/'skills')
+    catalog=SkillCatalog(ROOT.parent/'src/beivymate/builtin/skills')
     spec=catalog.get('test_analysis')
     old=spec.model_copy(update={'instructions':'original instructions'})
     snapshot={'definition':old.model_dump(), 'resolved_model':'fake'}

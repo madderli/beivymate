@@ -90,6 +90,10 @@ export type Task = {
   allowedActions: string[];
 };
 export type Workspace = {
+  description?: string;
+  products?: string[];
+  projects?: string[];
+  knowledgeDirectories?: string[];
   outputDirectory?: string;
   product?: string;
   project?: string;

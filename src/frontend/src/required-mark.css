@@ -1,0 +1,13 @@
+.required-mark {
+  color: #9caa87;
+  font-size: inherit;
+  line-height: inherit;
+  font-style: normal;
+  font-weight: 400;
+  margin-left: 4px;
+  display: inline;
+}
+
+.skill-center-demo .mr-field-label {
+  gap: 0;
+}

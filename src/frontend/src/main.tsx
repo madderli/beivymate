@@ -1,9 +1,10 @@
+import WorkspaceCardsDemo from "./preview/WorkspaceCardsDemo";
 import React from "react";
 import { createRoot } from "react-dom/client";
 import App from "./AgentApp";
 import SkillCenter from "./features/skills/SkillCenter";
-import SkillCenterDemo from "./preview/SkillCenterDemo";
 import AgentDemo from "./preview/AgentDemo";
+import WorkspaceDesignDemo from "./preview/WorkspaceDesignDemo";
 import ConversationPreview from "./preview/ConversationPreview";
 import "./styles.css";
 import "./homepage-heading.css";
@@ -12,11 +13,17 @@ createRoot(document.getElementById("root")!).render(
     {new URLSearchParams(window.location.search).get("ui") === "skills" ? (
       <SkillCenter page={location.hash === "#models" ? "models" : "skills"} />
     ) : new URLSearchParams(window.location.search).get("preview") ===
+      "workspace-cards" ? (
+      <WorkspaceCardsDemo />
+    ) : new URLSearchParams(window.location.search).get("preview") ===
+      "workspace" ? (
+      <WorkspaceDesignDemo />
+    ) : new URLSearchParams(window.location.search).get("preview") ===
       "workflows" ? (
-      <SkillCenterDemo workflowDesign />
+      <SkillCenter page="workflows" />
     ) : new URLSearchParams(window.location.search).get("preview") ===
       "skills" ? (
-      <SkillCenterDemo />
+      <SkillCenter />
     ) : new URLSearchParams(window.location.search).get("preview") ===
       "agent" ? (
       <AgentDemo />

@@ -365,16 +365,30 @@ test("registry wizard follows attachment and required labels stay inline", async
     .fill("https://gateway.example.invalid/v1");
   await page.getByLabel("鉴权方式", { exact: true }).selectOption("AK-SK 签名");
   for (const label of await page
-    .locator(".mr-field-label:has(.mr-required)")
+    .locator(".mr-field-label:has(.mr-required, .required-mark)")
     .all()) {
     const boxes = await label.evaluate((el) => {
-      const star = el.firstElementChild!.getBoundingClientRect();
+      const marker = el.querySelector(".required-mark, .mr-required")!;
+      const star = marker.getBoundingClientRect();
       const range = document.createRange();
-      range.selectNodeContents(el.lastChild!);
+      range.selectNodeContents(
+        el.querySelector(".required-mark") ? el.firstChild! : el.lastChild!,
+      );
       const text = range.getBoundingClientRect();
-      return { starX: star.x, textX: text.x, starY: star.y, textY: text.y };
+      return {
+        trailing: marker.classList.contains("required-mark"),
+        starX: star.x,
+        textX: text.x,
+        textRight: text.right,
+        starY: star.y,
+        textY: text.y,
+        color: getComputedStyle(marker).color,
+      };
     });
-    expect(boxes.starX).toBeLessThan(boxes.textX);
+    if (boxes.trailing) {
+      expect(boxes.starX).toBeGreaterThanOrEqual(boxes.textRight);
+      expect(boxes.color).toBe("rgb(156, 170, 135)");
+    } else expect(boxes.starX).toBeLessThan(boxes.textX);
     expect(Math.abs(boxes.starY - boxes.textY)).toBeLessThan(3);
   }
   await page.getByRole("button", { name: "下一步", exact: true }).click();

@@ -1,7 +1,4 @@
-"""Persistent customer data, independent of source and installation directories."""
-import os
-from pathlib import Path
+"""Compatibility import; all modules share the client data root resolver."""
+from beivymate.foundation.paths import data_directory
 
-
-def data_directory() -> Path:
-    return Path(os.environ.get('BEIVYMATE_DATA_DIR', str(Path.home() / '.beivymate'))).expanduser().resolve()
+__all__ = ['data_directory']

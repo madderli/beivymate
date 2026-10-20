@@ -25,7 +25,7 @@ def test_report_after_three_rounds(tmp_path):
     def read(cls,name):return cls.model_validate_json((tmp_path/name).read_text())
     u=read(UnderstandingArtifact,'requirement_understand.json');a=read(AnalysisArtifact,'analysis.json');d=read(DesignArtifact,'design.json')
     rounds=[read(ExecutionArtifact,f'execution-round-{n}.json') for n in (1,2,3)]
-    service=ReportService(LLMGateway(Provider()),'synthetic',ROOT/'resources/skills/tester/test_report/templates/zh-CN/DefaultBriefTestReportTemplate.docx')
+    service=ReportService(LLMGateway(Provider()),'synthetic',ROOT/'src/beivymate/builtin/skills/tester/test_report/templates/zh-CN/DefaultBriefTestReportTemplate.docx')
     report=service.generate(u,a,d,rounds,simulation=True)
     assert report.facts['counts']=={'pass':3,'failed':0,'blocked':0,'not_run':0}
     assert len(report.facts['attempt_history'])==9

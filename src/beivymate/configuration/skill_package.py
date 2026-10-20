@@ -47,6 +47,9 @@ def load_skill(path: Path):
     from beivymate.configuration.integrity import verify_bundled
     verify_bundled(path)
     metadata, instructions = read_markdown(path)
+    metadata.pop('state', None)  # Publication authority is installation-local, not package metadata.
+    for field in ('roles', 'icon', 'model_preference'):
+        metadata.pop(field, None)
     sections = re.split(r'^## 产物：([^\n]+)\s*$', instructions, flags=re.M)
     policies = []
     names={'文件名':'filename','必需':'required','归属':'scope','工作资产':'asset','允许编辑':'editable','知识沉淀':'knowledge'}
@@ -66,15 +69,21 @@ def load_skill(path: Path):
 
 
 class SkillCatalog:
-    def __init__(self, builtin: Path, custom: Path | None = None):
+    def __init__(self, builtin: Path, custom: Path | None = None, *, publication_policy=None):
         self.entries = {}
+        self.states = {}
+        self.publication_policy = publication_policy
         for root in (builtin, custom):
             if root is None or not root.exists():
                 continue
             for path in sorted(root.rglob('SKILL.md')):
                 if not path.resolve().is_relative_to(root.resolve()):
                     raise ValueError('Skill 引用超出配置目录')
+                metadata, _ = read_markdown(path)
+                if not metadata.get('executor'):
+                    continue  # General instruction packages are visible; they need a registered executor to run.
                 definition = load_skill(path)
+                self.states[definition.id] = metadata.get('state', 'published')
                 if definition.id in self.entries:
                     raise ValueError(f'Skill 标识重复：{definition.id}；客户副本必须有独立标识')
                 self.entries[definition.id] = (definition, path)
@@ -82,6 +91,10 @@ class SkillCatalog:
     def get(self, identity):
         if identity not in self.entries:
             raise ValueError(f'未找到 Skill：{identity}')
+        if self.publication_policy:
+            self.publication_policy(identity)
+        elif self.states.get(identity) != 'published':
+            raise ValueError('Skill 尚未发布或已停用：' + identity)
         return self.entries[identity][0]
 
     def snapshot(self, identity):

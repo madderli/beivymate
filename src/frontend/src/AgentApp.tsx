@@ -1,3 +1,4 @@
+import { WorkspaceCard } from "./WorkspaceCard";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ArrowUp,
@@ -10,6 +11,7 @@ import {
   ListTodo,
   Menu,
   Paperclip,
+  Pause,
   Plus,
   Settings2,
   Sparkles,
@@ -52,6 +54,7 @@ function readRoute(): Route {
     return { page: "start" };
   }
 }
+const landingPages = ["home", "workspaces", "skills", "workflows", "analytics"];
 const unfinished = (t: Task) => t.status !== "completed";
 export default function AgentApp() {
   const [route, setRoute] = useState(readRoute);
@@ -63,6 +66,8 @@ export default function AgentApp() {
   const [mobile, setMobile] = useState(false);
   const [busy, setBusy] = useState(false);
   const [dialog, setDialog] = useState("");
+  const [disableWorkspaceId, setDisableWorkspaceId] = useState("");
+  const [disableError, setDisableError] = useState("");
   const [editingWorkspace, setEditingWorkspace] = useState<Workspace>();
   const [draft, setDraft] = useState<Partial<Task>>();
   const [prompt, setPrompt] = useState("");
@@ -151,6 +156,7 @@ export default function AgentApp() {
     : workspace
       ? `workspace:${workspace.id}`
       : "global";
+  const isLanding = landingPages.includes(route.page);
   const isChat = ["workspace", "task", "start"].includes(route.page);
   const defaultId = board.defaultWorkspace || board.workspaces[0]?.id;
   useEffect(() => {
@@ -227,7 +233,7 @@ export default function AgentApp() {
     setDialog("task");
   }
   async function send() {
-    if (busy || !prompt.trim()) return;
+    if (busy || !prompt.trim() || workspace?.paused) return;
     if (!can("chat") || files.length) {
       newTask();
       return;
@@ -395,9 +401,7 @@ export default function AgentApp() {
         }
       />
       <div className={`ad-shell ${isChat ? "ad-workspace-shell" : ""}`}>
-        <header
-          className={`ad-header ${["home", "workspaces"].includes(route.page) ? "ad-header-compact" : ""}`}
-        >
+        <header className={`ad-header ${isLanding ? "landing-header" : ""}`}>
           <button
             className="ad-mobile"
             aria-label="打开导航"
@@ -407,13 +411,7 @@ export default function AgentApp() {
           >
             <Menu size={20} />
           </button>
-          <div
-            className={
-              ["home", "workspaces"].includes(route.page)
-                ? "header-title-hidden"
-                : ""
-            }
-          >
+          <div className={isLanding ? "header-title-hidden" : ""}>
             {isChat ? (
               <>
                 <Layers size={16} />
@@ -439,9 +437,11 @@ export default function AgentApp() {
               )[route.page]
             )}
           </div>
-          <button onClick={() => void refresh()} disabled={busy}>
-            刷新
-          </button>
+          {!isLanding && !isChat && (
+            <button onClick={() => void refresh()} disabled={busy}>
+              刷新
+            </button>
+          )}
         </header>
         {error && (
           <div className="production-notice" role="alert">
@@ -454,7 +454,7 @@ export default function AgentApp() {
             className={
               isChat
                 ? `ad-chat-main ${!task && !messages.length ? "ad-chat-start" : ""}`
-                : `ad-main ${["home", "workspaces", "skills", "workflows"].includes(route.page) ? "homepage-main" : ""}`
+                : `ad-main ${isLanding ? "homepage-main" : ""}`
             }
           >
             {isChat && (
@@ -485,11 +485,33 @@ export default function AgentApp() {
                     </div>
                   ) : !task ? (
                     <div className="workspace-conversation-intro">
+                      {workspace.paused && (
+                        <div className="workspace-state-notice">
+                          <Pause size={15} />
+                          <span>工作区已停用，启用后可继续开展任务。</span>
+                          <button
+                            disabled={busy || !can("workspace.write")}
+                            onClick={() =>
+                              void mutate(() =>
+                                api.saveWorkspace(
+                                  {
+                                    paused: false,
+                                    expectedRevision: workspace.revision,
+                                  },
+                                  workspace.id,
+                                ),
+                              )
+                            }
+                          >
+                            启用工作区
+                          </button>
+                        </div>
+                      )}
                       <TaskReminder
                         tasks={tasksIn(workspace.id)}
                         workspaceName={workspace.name}
                       >
-                        {tasksIn(workspace.id).length > 0 ? (
+                        {tasksIn(workspace.id).length > 0 && (
                           <div
                             className="workspace-reminder-tasks"
                             role="region"
@@ -497,15 +519,6 @@ export default function AgentApp() {
                           >
                             {rows(tasksIn(workspace.id))}
                           </div>
-                        ) : (
-                          <p className="task-reminder-hint">
-                            告诉我你想推进的目标，我们一起开始一项新任务。
-                          </p>
-                        )}
-                        {tasksIn(workspace.id).length > 0 && (
-                          <p className="workspace-conversation-invitation">
-                            你可以点击任务继续处理，也可以在下面告诉我新的工作目标。
-                          </p>
                         )}
                       </TaskReminder>
                     </div>
@@ -592,7 +605,7 @@ export default function AgentApp() {
                         aria-label="发送给 Ivy"
                         placeholder="告诉 OmniAlba 你想完成什么？你也可以从点击「新任务」开始…"
                         value={prompt}
-                        disabled={busy || !connected}
+                        disabled={busy || !connected || workspace.paused}
                         onChange={(e) => setPrompt(e.target.value)}
                         onKeyDown={(e) => {
                           if (
@@ -610,7 +623,9 @@ export default function AgentApp() {
                       <div className="ad-composer-tools">
                         <button
                           type="button"
-                          disabled={busy || !can("task.create")}
+                          disabled={
+                            busy || !can("task.create") || workspace.paused
+                          }
                           onClick={() => fileInput.current?.click()}
                         >
                           <Paperclip size={16} />
@@ -632,6 +647,7 @@ export default function AgentApp() {
                           type="button"
                           disabled={
                             busy ||
+                            workspace.paused ||
                             !can("task.create") ||
                             !board.workflows.length
                           }
@@ -650,6 +666,7 @@ export default function AgentApp() {
                           disabled={
                             busy ||
                             !prompt.trim() ||
+                            workspace.paused ||
                             (!can("chat") && !can("task.create"))
                           }
                         >
@@ -682,7 +699,7 @@ export default function AgentApp() {
                       id="task-pending-statistics-title"
                       className="ad-section-label task-home-section-heading"
                     >
-                      待完成任务统计
+                      待完成任务
                     </h2>
                     <div
                       className="ad-status-grid task-status-grid"
@@ -717,6 +734,33 @@ export default function AgentApp() {
                                     .length
                                 }
                               </strong>
+                            </div>
+                            <div className="task-status-workspaces">
+                              {board.workspaces
+                                .filter((w) =>
+                                  tasksIn(w.id).some((t) => t.status === s),
+                                )
+                                .map((w) => (
+                                  <button
+                                    key={w.id}
+                                    onClick={() => go("workspace", w.id)}
+                                    title={w.name}
+                                  >
+                                    {w.id}{" "}
+                                    <b>
+                                      {
+                                        tasksIn(w.id).filter(
+                                          (t) => t.status === s,
+                                        ).length
+                                      }
+                                    </b>
+                                  </button>
+                                ))}
+                              {!board.tasks.some((t) => t.status === s) && (
+                                <span className="task-status-none">
+                                  暂无任务
+                                </span>
+                              )}
                             </div>
                           </div>
                         ))}
@@ -819,7 +863,7 @@ export default function AgentApp() {
                   <h1>我的工作区</h1>
                   <p>双击卡片进入您的工作区，与 Agent 一起推进任务。</p>
                   <button
-                    className="ad-primary"
+                    className="ad-primary homepage-heading-action"
                     disabled={!can("workspace.write")}
                     onClick={() => {
                       setEditingWorkspace(undefined);
@@ -830,50 +874,50 @@ export default function AgentApp() {
                     新建工作区
                   </button>
                 </div>
-                <div className="ad-card-grid">
+                <div className="wcd-grid">
                   {board.workspaces.map((w) => (
-                    <article
+                    <WorkspaceCard
                       key={w.id}
-                      onDoubleClick={() => go("workspace", w.id)}
-                    >
-                      <div className="ad-card-top">
-                        <span className="ad-card-icon">
-                          <Layers />
-                        </span>
-                        <button
-                          aria-label={`配置 ${w.name}`}
-                          disabled={!can("workspace.write")}
-                          onClick={() => {
-                            setEditingWorkspace(w);
-                            setDialog("workspace");
-                          }}
-                        >
-                          <Settings2 size={17} />
-                        </button>
-                      </div>
-                      <h2>
-                        {w.name} ({tasksIn(w.id).length})
-                      </h2>
-                      <p>{w.subtitle}</p>
-                      <footer>
-                        <span>
-                          {defaultId === w.id
-                            ? "默认工作区"
-                            : w.paused
-                              ? "已暂停"
-                              : "工作区"}
-                        </span>
-                        <button onClick={() => go("workspace", w.id)}>
-                          打开 <ChevronRight size={16} />
-                        </button>
-                      </footer>
-                    </article>
+                      workspace={{
+                        id: w.id,
+                        name: w.name,
+                        description: w.description ?? w.subtitle,
+                        products: w.products ?? (w.product ? [w.product] : []),
+                        projects: w.projects ?? (w.project ? [w.project] : []),
+                        directories:
+                          w.knowledgeDirectories ??
+                          (w.knowledge ? [w.knowledge] : []),
+                        isDefault: defaultId === w.id,
+                        enabled: !w.paused,
+                        pending: tasksIn(w.id).map((t) => ({
+                          related: !t.main,
+                        })),
+                      }}
+                      canManage={can("workspace.write")}
+                      busy={busy}
+                      editLabel={`配置 ${w.name}`}
+                      edit={() => {
+                        if (tasksIn(w.id).length) return;
+                        setEditingWorkspace(w);
+                        setDialog("workspace");
+                      }}
+                      toggle={() => {
+                        if (w.paused)
+                          void mutate(() =>
+                            api.saveWorkspace(
+                              { paused: false, expectedRevision: w.revision },
+                              w.id,
+                            ),
+                          );
+                        else if (!tasksIn(w.id).length) {
+                          setDisableError("");
+                          setDisableWorkspaceId(w.id);
+                        }
+                      }}
+                      open={() => go("workspace", w.id)}
+                    />
                   ))}
                 </div>
-                <details className="ad-history">
-                  <summary>已完成任务 · 查看历史或复制</summary>
-                  {rows(board.tasks.filter((t) => !unfinished(t)))}
-                </details>
               </>
             )}
             {["skills", "models", "workflows"].includes(route.page) && (
@@ -1028,9 +1072,81 @@ export default function AgentApp() {
           }}
         />
       )}
+      {disableWorkspaceId &&
+        (() => {
+          const target = board.workspaces.find(
+            (w) => w.id === disableWorkspaceId,
+          );
+          if (!target) return null;
+          const pending = tasksIn(target.id).length;
+          return (
+            <Dialog
+              title="停用工作区"
+              className="wcd-confirm"
+              close={() => {
+                if (!busy) setDisableWorkspaceId("");
+              }}
+            >
+              <div className="wcd-confirm-body">
+                <div className="wcd-confirm-intro">
+                  <span className="wcd-icon">
+                    <Pause size={22} />
+                  </span>
+                  <section>
+                    <h3>暂时停用 {target.id}？</h3>
+                    <p>停用后保留工作区配置和历史资料，可随时重新启用。</p>
+                  </section>
+                </div>
+                <div>
+                  <span>{target.name}</span>
+                  <b>{pending} 项未完成任务</b>
+                </div>
+                {pending > 0 && (
+                  <p role="alert">
+                    出现了未关闭任务，请先处理全部任务后再停用。
+                  </p>
+                )}
+                {disableError && <p role="alert">{disableError}</p>}
+              </div>
+              <footer>
+                <button
+                  className="secondary"
+                  disabled={busy}
+                  onClick={() => setDisableWorkspaceId("")}
+                >
+                  取消
+                </button>
+                <button
+                  className="primary"
+                  disabled={busy || pending > 0 || !can("workspace.write")}
+                  onClick={async () => {
+                    setBusy(true);
+                    setDisableError("");
+                    try {
+                      await api.saveWorkspace(
+                        { paused: true, expectedRevision: target.revision },
+                        target.id,
+                      );
+                      await refresh();
+                      setDisableWorkspaceId("");
+                    } catch (e) {
+                      setDisableError((e as Error).message);
+                    } finally {
+                      setBusy(false);
+                    }
+                  }}
+                >
+                  {busy ? "停用中…" : "确认停用"}
+                </button>
+              </footer>
+            </Dialog>
+          );
+        })()}
       {dialog === "workspace" && can("workspace.write") && (
         <WorkspaceForm
           workspace={editingWorkspace}
+          workspaces={board.workspaces}
+          tasks={board.tasks}
           isDefault={
             !board.workspaces.length || defaultId === editingWorkspace?.id
           }

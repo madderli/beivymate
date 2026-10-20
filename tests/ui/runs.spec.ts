@@ -53,9 +53,9 @@ test("offline browser to real Worker: frozen run, review, artifacts and durable 
   await configuration.getByRole("button", { name: "关闭弹窗" }).click();
   await page.getByRole("button", { name: "工作区", exact: true }).click();
   await page.getByRole("button", { name: "新增工作区", exact: true }).click();
-  await page.getByLabel("工作区标识", { exact: true }).fill("PAY");
+  await page.getByLabel("工作区标识（简称）", { exact: true }).fill("PAY");
   await page.getByLabel("工作区名称", { exact: true }).fill("支付产品");
-  await page.getByRole("button", { name: "保存工作区" }).click();
+  await page.getByRole("button", { name: "创建工作区" }).click();
   await page.getByRole("button", { name: "新任务", exact: true }).click();
   await page.getByLabel("任务名称", { exact: true }).fill("支付离线运行验收");
   await page

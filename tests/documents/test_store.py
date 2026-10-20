@@ -119,7 +119,7 @@ def test_invalid_format_cannot_enter_revision_history(tmp_path,suffix,method):
     elif suffix=='xlsx':
         output=BytesIO();book=Workbook();book.save(output);book.close();content=output.getvalue()
     else:
-        content=(Path(__file__).resolve().parents[2]/'resources/skills/tester/test_report/templates/zh-CN/DefaultBriefTestReportTemplate.docx').read_bytes()
+        content=(Path(__file__).resolve().parents[2]/'src/beivymate/builtin/skills/tester/test_report/templates/zh-CN/DefaultBriefTestReportTemplate.docx').read_bytes()
     store=DocumentStore(tmp_path/'data')
     origin=DocumentOrigin(workspace='w',task='t',run='r',step='s',skill='skill',responsible='human',executor='agent')
     policy=OutputPolicy(id='out',filename='document.'+suffix,asset=True)

@@ -1,6 +1,6 @@
 /* Keep the four landing pages aligned with the workspace typography. */
 .agent-demo .homepage-main {
-  padding-top: 30px;
+  padding-top: 18px;
 }
 .agent-demo .homepage-heading .ad-kicker {
   display: block;
@@ -28,8 +28,21 @@
 .skill-center-embedded .sc-main.homepage-main {
   padding-top: 0;
 }
+.agent-demo .homepage-heading .homepage-heading-action {
+  height: 38px;
+  padding: 10px 14px;
+  gap: 8px;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 16px;
+  letter-spacing: normal;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
 @media (max-width: 760px) {
   .agent-demo .homepage-main {
-    padding-top: 20px;
+    padding-top: 10px;
   }
 }

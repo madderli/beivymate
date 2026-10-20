@@ -1,0 +1,540 @@
+.wsd-demo {
+  min-height: 100dvh;
+  background: #fafbf8;
+  color: #293c34;
+  font:
+    14px/1.6 "Nunito",
+    "PingFang SC",
+    "Microsoft YaHei",
+    sans-serif;
+}
+.wsd-demo *,
+.wsd-dialog * {
+  box-sizing: border-box;
+}
+.wsd-demo button,
+.wsd-dialog button {
+  font: inherit;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.wsd-demo button:focus-visible,
+.wsd-dialog button:focus-visible,
+.wsd-dialog input:focus-visible,
+.wsd-dialog textarea:focus-visible {
+  outline: 2px solid #428265;
+  outline-offset: 3px;
+}
+.wsd-demo-header {
+  height: 72px;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 0 40px;
+  background: white;
+  border-bottom: 1px solid #e6ebe2;
+}
+.wsd-demo-header > span {
+  color: #8b998c;
+  font-size: 12px;
+}
+.wsd-demo-header a {
+  margin-left: auto;
+  color: #46705a;
+  text-decoration: none;
+  font-size: 12px;
+}
+.wsd-demo-main {
+  max-width: 1120px;
+  margin: auto;
+  padding: 32px 36px;
+}
+.wsd-page-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.wsd-page-heading > div > span {
+  color: #78907d;
+  font-size: 10px;
+  letter-spacing: 2px;
+}
+.wsd-page-heading h1 {
+  font-size: 28px;
+  margin: 9px 0;
+  font-weight: 600;
+}
+.wsd-page-heading p,
+.wsd-preview-note {
+  color: #879180;
+  font-size: 12px;
+}
+.wsd-preview-note {
+  margin: 24px 0 18px;
+}
+.wsd-workspace-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+.wsd-workspace-grid article {
+  padding: 24px;
+  border-radius: 16px;
+  background: white;
+  border: 1px solid #e2e9dc;
+}
+.wsd-workspace-card-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.wsd-workspace-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  color: #44775c;
+  background: #edf3e8;
+}
+.wsd-default-badge {
+  font-size: 10px;
+  color: #557b57;
+  padding: 2px 7px;
+  border-radius: 5px;
+  background: #f0f5ea;
+}
+.wsd-workspace-grid h2 {
+  font-size: 17px;
+  font-weight: 600;
+  margin: 18px 0 8px;
+}
+.wsd-workspace-grid article > p {
+  color: #899285;
+  font-size: 12px;
+  min-height: 40px;
+}
+.wsd-workspace-meta {
+  display: flex;
+  gap: 18px;
+  color: #7e8d79;
+  font-size: 11px;
+  padding: 16px 0;
+}
+.wsd-workspace-grid article > footer {
+  border-top: 1px solid #edf0e8;
+  padding-top: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: #8b9585;
+  font-size: 11px;
+}
+.wsd-dialog {
+  width: min(800px, calc(100vw - 32px));
+  max-height: calc(100dvh - 48px);
+  padding: 0;
+  border: 1px solid #e1e8d9;
+  border-radius: 20px;
+  box-shadow: 0 28px 100px #243c2c24;
+  color: #2c4035;
+  background: #fff;
+  font:
+    13px/1.6 "Nunito",
+    "PingFang SC",
+    "Microsoft YaHei",
+    sans-serif;
+  overflow: hidden;
+}
+.wsd-dialog::backdrop {
+  background: #283c3252;
+  backdrop-filter: blur(3px);
+}
+.wsd-dialog .dialog-head {
+  padding: 22px 30px 17px;
+  border-bottom: 1px solid #edf0e8;
+}
+.wsd-dialog .dialog-head h2 {
+  font-size: 20px;
+  font-weight: 600;
+  color: #2c4435;
+}
+.wsd-dialog > form {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100dvh - 126px);
+}
+.wsd-form-scroll {
+  padding: 0 30px 24px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+.wsd-intro {
+  font-size: 12px;
+  color: #8b9684;
+  margin: 14px 0 22px;
+}
+.wsd-fields {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+.wsd-section {
+  margin-bottom: 24px;
+}
+.wsd-section h3 {
+  font-size: 13px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 0 0 14px;
+}
+.wsd-section h3 > span {
+  background: #edf3e8;
+  color: #719066;
+  font-size: 10px;
+  border-radius: 5px;
+  width: 24px;
+  height: 23px;
+  display: grid;
+  place-items: center;
+}
+.wsd-section-description {
+  margin: -5px 0 12px;
+  color: #909a88;
+  font-size: 11px;
+}
+.wsd-basics {
+  display: grid;
+  grid-template-columns: 1fr 1.8fr;
+  gap: 16px;
+}
+.wsd-dialog label {
+  font-size: 12px;
+  color: #52664f;
+  display: block;
+  margin: 0 0 13px;
+}
+
+.wsd-dialog input:not([type="checkbox"]),
+.wsd-dialog textarea {
+  font: inherit;
+  color: #344b3d;
+  border: 1px solid #dfe6d8;
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: #fcfdfb;
+  width: 100%;
+  display: block;
+  margin-top: 7px;
+  box-shadow: none;
+}
+.wsd-dialog input::placeholder,
+.wsd-dialog textarea::placeholder {
+  color: #a2ab98;
+  font-size: 12px;
+}
+.wsd-dialog textarea {
+  resize: vertical;
+  min-height: 76px;
+}
+.wsd-dialog small {
+  font-size: 10px;
+  display: block;
+  color: #939e89;
+  margin-top: 5px;
+  font-weight: 400;
+}
+.wsd-field-label {
+  display: flex;
+  gap: 8px;
+  color: #52664f;
+  margin-bottom: 7px;
+  font-size: 12px;
+}
+.wsd-field-label > span {
+  color: #9aa58e;
+  font-size: 10px;
+}
+.wsd-multi {
+  margin-top: 12px;
+}
+.wsd-tag-input-box {
+  border: 1px solid #dfe6d8;
+  border-radius: 8px;
+  padding: 7px;
+  background: #fcfdfb;
+}
+.wsd-selected {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-height: 27px;
+}
+.wsd-tag {
+  padding: 3px 7px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border-radius: 5px;
+  color: #55754f;
+  background: #edf3e7;
+  font-size: 11px;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+.wsd-tag button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #829976;
+}
+.wsd-dialog input[type="checkbox"] {
+  accent-color: #34745b;
+  width: 15px;
+  height: 15px;
+  min-height: 0;
+  padding: 0;
+  box-shadow: none;
+  flex-shrink: 0;
+  margin: 0;
+}
+.wsd-tag-entry {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.wsd-tag-input-box .wsd-selected {
+  margin-bottom: 5px;
+}
+.wsd-dialog .wsd-tag-entry input {
+  margin: 0;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  padding: 5px 4px;
+}
+.wsd-add-tag {
+  border: 0;
+  border-radius: 5px;
+  background: #edf3e7;
+  color: #55764f;
+  padding: 5px 9px;
+  white-space: nowrap;
+  font-size: 11px !important;
+}
+.wsd-add-tag:disabled {
+  opacity: 0.45;
+}
+.wsd-directory {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+  padding-left: 12px;
+  border: 1px solid #dfe6d8;
+  border-radius: 8px;
+  background: #fcfdfb;
+  color: #8a9c7c;
+}
+.wsd-directory > svg {
+  flex-shrink: 0;
+}
+.wsd-dialog .wsd-directory input {
+  margin: 0;
+  border: 0;
+  padding-left: 0;
+  min-width: 0;
+  font-size: 12px;
+  background: transparent;
+}
+.wsd-directory button {
+  border: 0;
+  background: transparent;
+  color: #9aa58d;
+  padding: 10px;
+}
+.wsd-add-directory {
+  border: 1px dashed #dce5d3;
+  background: #fafcf6;
+  color: #6f8b61;
+  padding: 7px 12px;
+  border-radius: 7px;
+  font-size: 11px !important;
+}
+.wsd-dialog .wsd-default {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 16px;
+  background: #f4f7ef;
+  border: 1px solid #e5ebdd;
+  border-radius: 10px;
+  margin: 4px 0 0;
+}
+.wsd-default > input {
+  margin-top: 3px !important;
+}
+.wsd-default strong {
+  font-size: 12px;
+  font-weight: 500;
+}
+.wsd-default small {
+  margin-top: 3px;
+  font-size: 11px;
+}
+.wsd-form-footer {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 30px;
+  border-top: 1px solid #edf0e8;
+  background: #fff;
+}
+.wsd-form-footer > span {
+  flex: 1;
+  font-size: 10px;
+  color: #9aa48e;
+}
+.wsd-primary {
+  border: 1px solid #34745b;
+  border-radius: 8px;
+  color: white;
+  background: #34745b;
+  padding: 9px 18px;
+  font-size: 12px !important;
+}
+.wsd-secondary {
+  border: 1px solid #dfe6d8;
+  border-radius: 8px;
+  color: #7a8c70;
+  background: white;
+  padding: 9px 16px;
+  font-size: 12px !important;
+}
+.wsd-primary:hover {
+  background: #285c47;
+}
+.wsd-lock-notice {
+  display: flex;
+  gap: 10px;
+  background: #f7f5ed;
+  color: #8c794b;
+  border: 1px solid #e9e3d1;
+  border-radius: 10px;
+  padding: 14px;
+  margin-bottom: 22px;
+}
+.wsd-lock-notice > svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.wsd-lock-notice strong {
+  font-size: 12px;
+  font-weight: 500;
+}
+.wsd-lock-notice p {
+  font-size: 11px;
+  margin: 4px 0 8px;
+  color: #9c8f70;
+}
+.wsd-lock-notice ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.wsd-lock-notice li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 5px 0;
+  font-size: 11px;
+}
+.wsd-lock-notice li span {
+  white-space: nowrap;
+  color: #a29678;
+}
+.wsd-edit-note,
+.wsd-success {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 12px;
+  background: #f0f5e9;
+  border: 1px solid #e3ebd9;
+  border-radius: 8px;
+  color: #638453;
+  font-size: 11px;
+  margin-bottom: 18px;
+}
+.wsd-dialog fieldset:disabled {
+  opacity: 0.65;
+}
+.wsd-dialog button:disabled {
+  cursor: default;
+}
+.wsd-error {
+  color: #a25949;
+  background: #fbf1ed;
+  border-radius: 6px;
+  padding: 9px 12px;
+  font-size: 12px;
+}
+@media (max-width: 600px) {
+  .wsd-demo-header {
+    padding: 0 16px;
+    gap: 12px;
+  }
+  .wsd-demo-header > span {
+    display: none;
+  }
+  .wsd-demo-main {
+    padding: 24px 18px;
+  }
+  .wsd-workspace-grid {
+    grid-template-columns: 1fr;
+  }
+  .wsd-page-heading h1 {
+    font-size: 24px;
+  }
+  .wsd-dialog {
+    width: calc(100vw - 20px);
+    max-height: calc(100dvh - 24px);
+    border-radius: 14px;
+  }
+  .wsd-dialog > form {
+    max-height: calc(100dvh - 98px);
+  }
+  .wsd-dialog .dialog-head {
+    padding: 18px 20px 14px;
+  }
+  .wsd-form-scroll {
+    padding: 0 20px 20px;
+  }
+  .wsd-basics {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+  .wsd-form-footer {
+    padding: 14px 20px;
+  }
+  .wsd-form-footer > span {
+    display: none;
+  }
+  .wsd-form-footer > button:first-of-type {
+    margin-left: auto;
+  }
+  .wsd-lock-notice li {
+    flex-wrap: wrap;
+    gap: 2px;
+  }
+}
+

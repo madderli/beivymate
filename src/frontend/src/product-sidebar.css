@@ -6,7 +6,10 @@
   display: flex;
   flex-direction: column;
   background: #fff;
-  border-right: 1px solid #e2e6de;
+  border-right: 1px solid #e0e6dc;
+  box-shadow:
+    inset -1px 0 0 #ffffff,
+    2px 0 5px #293c3205;
   padding: 0;
   flex-shrink: 0;
 }
@@ -18,7 +21,10 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  border-bottom: 1px solid #edf0e9;
+  border-bottom: 1px solid #dfe6da;
+  box-shadow:
+    0 1px 0 #ffffff,
+    0 2px 3px #293c3206;
 }
 .product-sidebar .brand {
   gap: 6px;
@@ -123,7 +129,7 @@
   border-radius: 11px;
   background: transparent;
   color: #243732;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
   text-align: left;
 }
@@ -149,7 +155,7 @@
   background: #2437320f;
   color: #849089;
   border-radius: 11px;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
 }
 .ps-workspace-heading {
@@ -197,7 +203,7 @@
   border-radius: 9px;
   justify-content: flex-start;
   background: transparent;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 400;
   text-align: left;
 }
@@ -238,7 +244,7 @@
   height: 34px;
   padding: 0 8px;
   color: #849089;
-  font-size: 12px;
+  font-size: 11px;
   justify-content: flex-start;
 }
 .ps-workspace-empty {
@@ -249,7 +255,10 @@
 .ps-tools {
   margin-top: 12px;
   padding-top: 10px;
-  border-top: 1px solid #e2e6deb3;
+  border-top: 1px solid #dce4d6;
+  box-shadow:
+    inset 0 1px 0 #ffffff,
+    0 -1px 2px #293c3205;
 }
 .agent-demo .product-sidebar .ps-tool-item {
   width: 100%;
@@ -260,7 +269,7 @@
   align-items: center;
   gap: 11px;
   color: #849089;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
   border-radius: 10px;
   background: transparent;
@@ -278,7 +287,10 @@
   align-items: center;
   gap: 10px;
   background: white;
-  border-top: 1px solid #e2e6de;
+  border-top: 1px solid #dfe6da;
+  box-shadow:
+    inset 0 1px 0 #ffffff,
+    0 -2px 4px #293c3205;
 }
 .agent-demo .ps-account {
   display: flex;

@@ -4,6 +4,7 @@ import {
   migrateWorkflows,
   isWorkflowLibrary,
 } from "../workflows/workflow-state";
+import { api, request } from "../../api";
 import { useLocalState, persistModels, readLocal } from "./local-state";
 import SkillModelPicker from "./SkillModelPicker";
 import ModelSettings from "./ModelSettings";
@@ -38,8 +39,6 @@ import {
   parseMarkdown,
   readPackage,
   roleNames,
-  seedSkills,
-  seedWorkflows,
   stateNames,
   validateSkill,
   type Skill,
@@ -62,12 +61,53 @@ export default function SkillCenter({
   page?: string;
   navigate?: (page: string) => void;
 }) {
-  const [skills, setSkills] = useLocalState("skills", seedSkills);
+  const [skills, setSkills] = useState<Skill[]>([]);
+  const [loadingSkills, setLoadingSkills] = useState(true);
+  const [packageErrors, setPackageErrors] = useState("");
+  const loadSkills = async () => {
+    const result = await request<{
+      items: Skill[];
+      errors: { path: string; message: string }[];
+      migrationReports?: string[];
+    }>("/skill-center");
+    setSkills(result.items);
+    setPackageErrors(
+      [
+        ...result.errors.map((e) => `${e.path}：${e.message}`),
+        ...(result.migrationReports || []).filter((s) => /冲突|未迁移/.test(s)),
+      ].join("\n"),
+    );
+  };
+  useEffect(() => {
+    let active = true;
+    let flight = false;
+    const reload = async () => {
+      if (flight) return;
+      flight = true;
+      try {
+        await api.session();
+        if (active) await loadSkills();
+      } catch (e) {
+        if (active) setPackageErrors((e as Error).message);
+      } finally {
+        flight = false;
+        if (active) setLoadingSkills(false);
+      }
+    };
+    void reload();
+    const timer = setInterval(() => void reload(), 10000);
+    window.addEventListener("focus", reload);
+    return () => {
+      active = false;
+      clearInterval(timer);
+      window.removeEventListener("focus", reload);
+    };
+  }, []);
   const [role, setRole] = useLocalState<SkillRole>("role", () => "tester");
   const [status, setStatus] = useState("all");
   const [workflows, setWorkflows] = useLocalState(
     "workflow-library",
-    () => migrateWorkflows(readLocal("workflows", seedWorkflows)),
+    () => migrateWorkflows(readLocal("workflows", () => [])),
     isWorkflowLibrary,
   );
   const [references, setReferences] = useState<Skill>();
@@ -75,9 +115,11 @@ export default function SkillCenter({
   const refs = (s: Skill) =>
     workflows.filter((w) => w.steps.some((step) => step.skill === s.id));
   const pending = (s: Skill) =>
-    refs(s)
-      .flatMap((w) => w.tasks)
-      .filter((t) => t.status !== "已完成");
+    s.lockedTasks
+      ? s.lockedTasks.map((id) => ({ name: id, status: "未关闭" }))
+      : refs(s)
+          .flatMap((w) => w.tasks)
+          .filter((t) => t.status !== "已完成");
   const open = (s: Skill, view = false) => {
     setViewing(view);
     setEditing(structuredClone(s));
@@ -128,26 +170,39 @@ export default function SkillCenter({
         .toLowerCase()
         .includes(search.toLowerCase()),
   );
-  const save = (skill: Skill) => {
+  const save = async (skill: Skill) => {
     const original = skills.find((s) => s.key === skill.key);
     if (
-      original &&
-      (original.source === "builtin" || pending(original).length)
-    ) {
-      setNotice("引用任务尚未全部完成，无法修改此技能。");
-      return;
-    }
-    skill = {
-      ...skill,
-      updated: new Date().toLocaleString("zh-CN", { hour12: false }),
-    };
-    setSkills((xs) => [...xs.filter((s) => s.key !== skill.key), skill]);
+      original?.source === "builtin" ||
+      (original && pending(original).length)
+    )
+      throw new Error("内置技能只读，或引用任务尚未全部完成，无法修改此技能。");
+    await request(`/skill-center/${encodeURIComponent(skill.id)}`, {
+      method: "PUT",
+      body: JSON.stringify({
+        content: markdown(skill),
+        files: skill.files,
+        state: skill.state,
+        revision: original?.revision,
+        imported: !original && !!skill.imported,
+      }),
+    });
+    await loadSkills();
     setEditing(undefined);
     setNotice(
-      skill.state === "published"
-        ? "启用，在当前角色的工作流中可选。"
-        : "草稿已保存，启用后才可被工作流引用。",
+      skill.state === "published" ? "技能包已保存并发布。" : "技能包已保存。",
     );
+  };
+  const transition = async (skill: Skill, action: string) => {
+    try {
+      await request(`/skill-center/${encodeURIComponent(skill.id)}/state`, {
+        method: "POST",
+        body: JSON.stringify({ action, revision: skill.revision }),
+      });
+      await loadSkills();
+    } catch (e) {
+      setNotice((e as Error).message);
+    }
   };
   const fork = (s: Skill) => {
     let id = `${s.id}_custom`;
@@ -223,7 +278,9 @@ export default function SkillCenter({
       )}
       <div className="ad-shell">
         {!embedded && (
-          <header className="ad-header">
+          <header
+            className={`ad-header ${settingsOpen ? "" : "landing-header"}`}
+          >
             <button
               className="ad-mobile"
               aria-label="打开导航"
@@ -272,14 +329,14 @@ export default function SkillCenter({
             </div>
             <div className="sc-heading-actions">
               <button
-                className="sc-secondary"
+                className="sc-secondary homepage-heading-action"
                 onClick={() => setImportOpen(true)}
               >
                 <Upload size={16} />
                 导入技能
               </button>
               <button
-                className="ad-primary"
+                className="ad-primary homepage-heading-action"
                 onClick={() => open(blankSkill(role))}
               >
                 <Plus size={16} />
@@ -287,6 +344,16 @@ export default function SkillCenter({
               </button>
             </div>
           </div>
+          {loadingSkills && <p role="status">正在读取技能包…</p>}
+          {packageErrors && (
+            <div
+              className="sc-warning"
+              role="alert"
+              style={{ whiteSpace: "pre-wrap" }}
+            >
+              {packageErrors}
+            </div>
+          )}
           <div className="sc-toolbar">
             <label className="sc-search">
               <Search size={16} />
@@ -300,6 +367,8 @@ export default function SkillCenter({
             <div className="sc-source-filter" aria-label="技能状态筛选">
               {[
                 ["all", "全部"],
+                ["discovered", "待验证"],
+                ["validated", "已验证"],
                 ["published", "启用"],
                 ["draft", "草稿"],
                 ["paused", "停用"],
@@ -353,6 +422,11 @@ export default function SkillCenter({
                       : `${stateNames[s.state]}·工作流不可用`}
                   </span>
                   <p>{s.description}</p>
+                  {!!s.validationErrors?.length && (
+                    <p role="alert" className="sc-warning">
+                      {s.validationErrors.join("；")}
+                    </p>
+                  )}
                   <div className="sc-card-tags">
                     <span
                       className={s.source === "builtin" ? "sc-builtin-tag" : ""}
@@ -377,7 +451,9 @@ export default function SkillCenter({
                   </div>
                   <div className="sc-card-updated">
                     <span>
-                      调用 {(s.calls || 0).toLocaleString("zh-CN")} 次
+                      {s.calls === undefined
+                        ? ""
+                        : `调用 ${s.calls.toLocaleString("zh-CN")} 次`}
                     </span>
                     <span>最后修改：{s.updated || "刚刚"}</span>
                   </div>
@@ -423,6 +499,21 @@ export default function SkillCenter({
                         >
                           编辑技能
                         </button>
+                        {s.state !== "published" && (
+                          <button
+                            disabled={blocked}
+                            onClick={() =>
+                              void transition(
+                                s,
+                                s.state === "validated"
+                                  ? "publish"
+                                  : "validate",
+                              )
+                            }
+                          >
+                            {s.state === "validated" ? "确认发布" : "验证技能"}
+                          </button>
+                        )}
                         {s.state === "published" && (
                           <button
                             disabled={blocked}
@@ -433,22 +524,8 @@ export default function SkillCenter({
                             }
                             onClick={() => {
                               if (pending(s).length) return;
-                              setSkills((xs) =>
-                                xs.map((k) =>
-                                  k.key === s.key
-                                    ? {
-                                        ...k,
-                                        state: "paused",
-                                        updated: new Date().toLocaleString(
-                                          "zh-CN",
-                                          { hour12: false },
-                                        ),
-                                      }
-                                    : k,
-                                ),
-                              );
-                              setNotice(
-                                "技能已停用，工作流执行前需要替换该技能或重新启用。",
+                              void save({ ...s, state: "paused" }).catch((e) =>
+                                setNotice((e as Error).message),
                               );
                             }}
                           >
@@ -463,7 +540,7 @@ export default function SkillCenter({
               );
             })}
           </div>
-          {!matches.length && (
+          {!loadingSkills && !packageErrors && !matches.length && (
             <div className="sc-empty">
               <Blocks size={32} />
               <h2>还没有匹配的技能</h2>
@@ -495,8 +572,8 @@ export default function SkillCenter({
           role={role}
           existing={skills}
           close={() => setImportOpen(false)}
-          imported={(s) => {
-            save(s);
+          imported={async (s) => {
+            await save(s);
             setImportOpen(false);
           }}
         />
@@ -581,7 +658,7 @@ function SkillEditor({
   role: SkillRole;
   existing: Skill[];
   close: () => void;
-  save: (s: Skill) => void;
+  save: (s: Skill) => Promise<void>;
   fork: () => void;
 }) {
   const [draft, setDraft] = useState(initial);
@@ -589,6 +666,7 @@ function SkillEditor({
   const [advanced, setAdvanced] = useState(false);
   const [raw, setRaw] = useState(markdown(initial));
   const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
   const [checked, setChecked] = useState(false);
   const [leave, setLeave] = useState(false);
   const [viewFile, setViewFile] = useState("SKILL.md");
@@ -608,7 +686,9 @@ function SkillEditor({
       version: initial.version,
     };
   }
-  function commit(state: SkillState) {
+  async function commit(state: SkillState) {
+    if (saving) return;
+    setSaving(true);
     try {
       const value = current();
       const errors = validateSkill(value, role, existing, state === "draft");
@@ -626,12 +706,19 @@ function SkillEditor({
         existing.some((s) => s.key === initial.key) && contentChanged
           ? parts.join(".")
           : initial.version;
-      save({ ...value, state, version });
+      await save({ ...value, state, version });
     } catch (e) {
       setError((e as Error).message);
+    } finally {
+      setSaving(false);
     }
   }
-  const closeEditor = () => (dirty && !readOnly ? setLeave(true) : close());
+  const closeEditor = () => {
+    if (!saving) {
+      if (dirty && !readOnly) setLeave(true);
+      else close();
+    }
+  };
   const paths = ["SKILL.md", ...draft.files.map((f) => f.path)];
   const treeRows: {
     path: string;
@@ -942,7 +1029,22 @@ function SkillEditor({
                                 patch({
                                   files: [
                                     ...draft.files,
-                                    { path, text, size: file.size },
+                                    {
+                                      path,
+                                      text,
+                                      size: file.size,
+                                      content:
+                                        text === undefined
+                                          ? btoa(
+                                              Array.from(
+                                                new Uint8Array(
+                                                  await file.arrayBuffer(),
+                                                ),
+                                                (b) => String.fromCharCode(b),
+                                              ).join(""),
+                                            )
+                                          : undefined,
+                                    },
                                   ],
                                 });
                               } catch {
@@ -1127,7 +1229,11 @@ function SkillEditor({
             </button>
           )}
           {!readOnly && (
-            <button className="sc-secondary" onClick={() => commit("draft")}>
+            <button
+              className="sc-secondary"
+              disabled={saving}
+              onClick={() => void commit("draft")}
+            >
               保存草稿
             </button>
           )}
@@ -1140,8 +1246,8 @@ function SkillEditor({
             !readOnly && (
               <button
                 className="ad-primary"
-                disabled={!checked}
-                onClick={() => commit("published")}
+                disabled={!checked || saving}
+                onClick={() => void commit("published")}
               >
                 {initial.state === "paused" ? "重新启用" : "启用技能"}
               </button>
@@ -1170,7 +1276,7 @@ function SkillImport({
   role: SkillRole;
   existing: Skill[];
   close: () => void;
-  imported: (s: Skill) => void;
+  imported: (s: Skill) => Promise<void>;
 }) {
   const folder = useRef<HTMLInputElement>(null);
   const entry = useRef<HTMLInputElement>(null);
@@ -1334,30 +1440,13 @@ function SkillImport({
           className="sc-secondary"
           disabled={!candidate || !checked || busy}
           onClick={() =>
-            candidate && imported({ ...candidate, state: "draft" })
+            candidate &&
+            void imported({ ...candidate, state: "draft" }).catch((e) =>
+              setError((e as Error).message),
+            )
           }
         >
           导入为草稿
-        </button>
-        <button
-          className="ad-primary"
-          disabled={
-            !candidate ||
-            !checked ||
-            busy ||
-            !!modelPreferenceErrors(
-              candidate.modelPreference || defaultModelPreference(),
-            ).length
-          }
-          onClick={() =>
-            candidate &&
-            !modelPreferenceErrors(
-              candidate.modelPreference || defaultModelPreference(),
-            ).length &&
-            imported({ ...candidate, state: "published" })
-          }
-        >
-          导入并启用
         </button>
       </footer>
     </Dialog>

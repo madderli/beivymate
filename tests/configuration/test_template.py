@@ -12,7 +12,9 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 TEMPLATE_PATH = (
     PROJECT_ROOT
-    / "resources"
+    / "src"
+    / "beivymate"
+    / "builtin"
     / "skills"
     / "tester"
     / "requirement_understand"

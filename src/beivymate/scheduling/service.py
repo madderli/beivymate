@@ -100,6 +100,8 @@ class RunService:
             draft = next((t for t in board['tasks'] if t['id'] == task), None)
             if not draft:
                 raise IdentityError('任务不存在', 404)
+            if draft.get('closedAt'):
+                raise IdentityError('任务已关闭，不能启动运行', 409)
             if draft['revision'] != expected_revision:
                 raise IdentityError('任务配置已变化，请刷新后重新检查', 409)
             if db.execute("SELECT 1 FROM runs WHERE task=? AND status NOT IN ('completed','failed','rejected','stopped')", (task,)).fetchone():
