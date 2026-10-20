@@ -18,7 +18,9 @@ PROJECT_ROOT = Path(__file__).resolve().parents[3]
 
 TEMPLATE_ROOT = (
     PROJECT_ROOT
-    / "resources"
+    / "src"
+    / "beivymate"
+    / "builtin"
     / "skills"
 )
 
@@ -43,11 +45,12 @@ def create_tester_agent(
     execution_service=None,
     custom_skill_root: Path | None = None,
     model_resolver=None,
+    skill_policy=None,
 ) -> TesterAgent:
 
     from beivymate.configuration.skill_package import SkillCatalog
     from beivymate.runtime.configured_skill import ConfiguredSkill
-    catalog = SkillCatalog(PROJECT_ROOT / 'resources/skills', custom_skill_root or Path(workflow_path).resolve().parent.parent / 'skills')
+    catalog = SkillCatalog(PROJECT_ROOT / 'src/beivymate/builtin/skills', custom_skill_root or Path(workflow_path).resolve().parent.parent / 'skills', publication_policy=skill_policy)
     definition = load_workflow_definition(Path(workflow_path))
     skill_registry = SkillRegistry()
     for identity in dict.fromkeys(step.skill for step in definition.resolved_steps()):
@@ -139,6 +142,7 @@ def create_agent_factory(
     execution_service=None,
     custom_skill_root: Path | None = None,
     model_resolver=None,
+    skill_policy=None,
 ) -> AgentFactory:
 
     tester_agent = create_tester_agent(

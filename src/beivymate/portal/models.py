@@ -3,7 +3,7 @@
 These describe the user's planning form, not Run state. Lifecycle, ownership,
 IDs, attachment handles and group membership are server-owned records.
 """
-from typing import Literal
+from typing import Annotated, Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
@@ -24,6 +24,23 @@ class Draft(BaseModel):
 
 
 class WorkspaceDraft(Draft):
+    description: str = Field(default='', max_length=2000)
+    products: list[Annotated[str, Field(min_length=1, max_length=120)]] = Field(default_factory=list, max_length=100)
+    projects: list[Annotated[str, Field(min_length=1, max_length=120)]] = Field(default_factory=list, max_length=100)
+    knowledgeDirectories: list[Annotated[str, Field(min_length=1, max_length=2000)]] = Field(default_factory=list, max_length=100)
+
+    @field_validator('products', 'projects', 'knowledgeDirectories', mode='before')
+    @classmethod
+    def clean_entries(cls, value):
+        if not isinstance(value, list):
+            raise ValueError('请使用列表填写多个值')
+        if any(not isinstance(item, str) or not item.strip() or any(c in item for c in ('\n', '\r', '\x00')) for item in value):
+            raise ValueError('列表内容不能为空或包含换行')
+        entries = [item.strip() for item in value]
+        if len(set(entries)) != len(entries):
+            raise ValueError('列表内容不能重复')
+        return entries
+
     outputDirectory: str = Field(default='', max_length=2000)
     name: str = Field(min_length=1, max_length=120)
     subtitle: str = Field(default='', max_length=2000)

@@ -30,10 +30,13 @@ test("production shell uses server data, not demo storage; completed tasks remai
     board.tasks[0].title,
   );
   await page.getByRole("button", { name: "工作区", exact: true }).click();
-  await page.getByText("已完成任务 · 查看历史或复制", { exact: true }).click();
-  await page
-    .getByRole("button", { name: new RegExp(board.tasks[0].title) })
-    .click();
+  await expect(
+    page.getByText("已完成任务 · 查看历史或复制", { exact: true }),
+  ).toHaveCount(0);
+  // Completed-task deep links still preserve read-only history access.
+  await page.evaluate((id) => {
+    location.hash = `task/${id}`;
+  }, board.tasks[0].id);
   await expect(page.getByRole("button", { name: "准备新运行" })).toBeDisabled();
   await expect(page.getByRole("button", { name: "复制任务" })).toBeEnabled();
   await expect(page.getByRole("button", { name: "删除任务" })).toHaveCount(0);

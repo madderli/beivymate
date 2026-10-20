@@ -51,12 +51,16 @@ class Credential(BaseModel):
 
 
 def create_app(data_dir: Path, setup_token: str, *, origins=None, vault=None, workflow_root=None,
-               run_prepare=None, run_restore=None, worker_enabled=True):
-    service = IdentityService(data_dir / 'identity.sqlite3', setup_token)
+               run_prepare=None, run_restore=None, worker_enabled=True, skills_root=None):
+    from beivymate.foundation.paths import AppPaths
+    from beivymate.foundation.resources import ResourceRegistry
+    paths = AppPaths(data_dir, Path(skills_root) if skills_root is not None else None)
+    migration_reports = paths.migrate_skills()
+    service = IdentityService(paths.root / 'identity.sqlite3', setup_token)
     vault = vault or CredentialVault()
     from beivymate.portal.service import PortalService
     from beivymate.application.portal_api import portal_router
-    portal = PortalService(data_dir / 'work', workflow_root or Path(__file__).resolve().parents[3] / 'resources/configuration/workflow')
+    portal = PortalService(paths.work, workflow_root or Path(__file__).resolve().parents[3] / 'resources/configuration/workflow')
     allowed_origins = set(origins or [
         f'http://{host}:{port}' for host in ('127.0.0.1', 'localhost')
         for port in (8000, 5173, 4173)
@@ -122,9 +126,62 @@ def create_app(data_dir: Path, setup_token: str, *, origins=None, vault=None, wo
             capability)
 
     from beivymate.configuration.library import ConfigurationLibrary
-    library = ConfigurationLibrary(Path(__file__).resolve().parents[3] / 'resources', data_dir / 'configuration')
+    from beivymate.configuration.skill_center import SkillCenter
+    skill_center = SkillCenter(paths.skills, registry=ResourceRegistry(paths.registry),
+        guard=lambda identity: portal.resource_guard('skill', identity))
+    portal.skill_root = skill_center.custom
+    portal.skill_center = skill_center
+    app.state.paths = paths
+    app.state.migration_reports = migration_reports
+    library = ConfigurationLibrary(Path(__file__).resolve().parents[3] / 'resources', data_dir / 'configuration', skill_root=skill_center.custom)
+    app.state.skill_center = skill_center
+    library.guard = lambda kind, identity: portal.resource_guard(kind.rstrip('s'), identity)
+    library.skill_policy = skill_center.require_published
+
+    @app.get('/api/v1/skill-center')
+    def skill_packages(request: Request):
+        require(request, 'configuration.manage')
+        result = skill_center.scan()
+        result['migrationReports'] = migration_reports
+        for item in result['items']:
+            item['lockedTasks'] = portal.resource_locks('skill', item['id'])
+        return result
+
+    @app.post('/api/v1/skill-center/{identity}/state')
+    async def transition_skill_package(identity: str, request: Request):
+        require(request, 'configuration.manage')
+        try:
+            body = await request.json()
+            if not isinstance(body, dict):
+                raise ValueError('状态操作格式无效')
+            return skill_center.transition(identity, body.get('action'), body.get('revision'))
+        except PermissionError as exc:
+            raise IdentityError(str(exc), 403) from None
+        except FileExistsError as exc:
+            raise IdentityError(str(exc), 409) from None
+        except (ValueError, OSError) as exc:
+            raise IdentityError(str(exc), 422) from None
+
+    @app.put('/api/v1/skill-center/{identity}')
+    async def save_skill_package(identity: str, request: Request):
+        require(request, 'configuration.manage')
+        try:
+            return skill_center.save(identity, await request.json())
+        except PermissionError as exc:
+            raise IdentityError(str(exc), 403) from None
+        except FileExistsError as exc:
+            raise IdentityError(str(exc), 409) from None
+        except (ValueError, OSError) as exc:
+            raise IdentityError(str(exc), 422) from None
+
     app.state.configuration_library = library
-    portal.custom_workflow_root = data_dir / 'configuration/workflows'
+    portal.custom_workflow_root = paths.workflows
+    try:
+        portal.initialize_references()
+        app.state.reference_warning = ''
+    except IdentityError as exc:
+        # Keep the client readable; mutations continue to fail closed until repaired.
+        app.state.reference_warning = str(exc)
 
     @app.get('/api/v1/configuration/{kind}')
     def configurations(kind: str, request: Request):
@@ -255,7 +312,9 @@ def main():
     args = parser.parse_args()
     token = secrets.token_urlsafe(24)
     origins = [f'http://{h}:{p}' for h in ('127.0.0.1', 'localhost') for p in (args.port, 5173, 4173)]
-    app = create_app(args.data_dir, token, origins=origins)
+    import os
+    app = create_app(args.data_dir, token, origins=origins,
+        skills_root=Path(os.environ['BEIVYMATE_SKILLS_DIR']) if os.environ.get('BEIVYMATE_SKILLS_DIR') else None)
     if not app.state.identity.initialized():
         print(f'首次账户初始化码（仅本机使用）：{token}', flush=True)
     import uvicorn

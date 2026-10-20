@@ -242,3 +242,29 @@ npm run build
 登录后进入默认工作区；工作区助手填满剩余屏幕，任务在助手框内滚动，下方为对话输入框。
 
 验收：`npx playwright test --config ../../tests/ui/task-home.config.ts`（在 `src/frontend` 下执行）。
+
+
+### 工作区表单与编辑规则
+
+正式应用与工作区 Demo 共用 `WorkspaceEditor.tsx`，展示标识、名称、描述、可自由输入的多个产品／项目、多个知识目录，以及底部的默认工作区选项。
+产品／项目通过回车或添加按钮变成可移除的标签。新字段 `products`、`projects`、`knowledgeDirectories` 以列表写入工作区 Markdown，描述写入正文；旧单值配置仍可读取，旧运行接口保留兼容字段。
+存在任一未完成任务时，界面只读且后端拒绝配置修改；有未关闭任务时也不能停用；启用可恢复历史上已停用的工作区。
+无未完成任务时可修改标识。服务事务同步任务配置和默认引用，文件变更通过写入日志恢复，已有运行快照保持原值。
+厂商新增／编辑与工作区共用 `RequiredMark.tsx`，字段名后显示同色星号。
+
+验证：`pytest tests/portal/test_planning.py tests/scheduling`；前端目录下执行 `npx playwright test --config ../../tests/ui/workspace-ui.config.ts`。正式接口联调沿用 `BEIVYMATE_REAL_API=1 PLAYWRIGHT_CHANNEL=chrome npm test`。
+
+
+正式工作区卡片与 Demo 共用 `WorkspaceCard.tsx`：显示简称与名称、单行描述、产品／项目、知识目录、默认标记，以及未完成的独立／关联任务数。
+“编辑”和“停用”在有未完成任务时禁用，后端同步拒绝绕过界面的请求；停用确认使用当前服务快照与 revision。
+工作区状态保存为服务端 `paused`，停用后保留配置与历史，仍可打开查看；启用前不允许输入、上传或创建任务。
+
+### 技能包目录与真实技能中心（2026-10-17）
+
+技能中心从 `/api/v1/skill-center` 扫描真实文件，不再加载前端 seedSkills 或 localStorage 技能缓存。内置包位于 `src/beivymate/builtin/skills/`；正常启动服务时自定义包位于仓库根 `skills/`（可通过 `BEIVYMATE_SKILLS_DIR` 覆盖）。独立测试应用使用隔离数据目录。
+
+新建、复制和导入通过后端保存 SKILL.md 与完整资源，保留二进制文件及原始目录名称。复制外部包到目录后，聚焦页面或等待约 10 秒即可重新发现；无效包和重复标识显示错误。内置包只读，自定义包保存检查文件修订冲突。已有浏览器演示技能不会自动转成真实包。模型库和工作流本地配置的后端接入仍是独立工作项。
+
+### 公共基础规范更新（2026-10-17）
+
+以根目录 ARCHITECTURE.md 和 IMPLEMENTATION_CHECKLIST.md 为准：自定义技能默认改为用户数据根的 skills/，不依赖仓库。复制／导入的包先是待验证；本机验证和确认发布记录存数据库并绑定完整内容指纹，不继承包内 state。外部修改取消原资格。后端引用保护覆盖未关闭任务的工作流和技能、旧配置与模板接口。后端新增任务关闭操作，UI 与全局关闭统计口径仍待任务模块接入。

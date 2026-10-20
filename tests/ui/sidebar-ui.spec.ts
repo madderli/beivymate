@@ -278,7 +278,7 @@ test("entering the app opens the configured default workspace", async ({
   await page.goto("/#home");
   await page.getByRole("button", { name: "进入 Agent" }).click();
   await expect(page).toHaveURL(/#workspace\/CIS$/);
-  await expect(page.locator(".workspace-conversation-context")).toHaveText(
+  await expect(page.locator(".ad-header")).toContainText(
     board.workspaces[1].name,
   );
 });
@@ -293,8 +293,10 @@ test("workspace assistant scrolls within a fixed height and composer stays nearb
     title: `任务示例 ${i + 1}`,
   }));
   await page.route("**/api/v1/workbench", (r) => r.fulfill({ json: board }));
-  await page.getByRole("button", { name: "刷新", exact: true }).click();
   await page.locator(".ps-workspace-row").first().click();
+  await expect(
+    page.locator(".workspace-reminder-tasks .ad-task-list > button"),
+  ).toHaveCount(12, { timeout: 10000 });
   const bubble = page.locator(
     ".workspace-conversation-intro .task-reminder-bubble",
   );

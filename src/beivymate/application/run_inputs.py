@@ -45,7 +45,8 @@ def prepare(portal, data_dir, owner, task_id, directory, run_id):
         raise ValueError('需求与附件合计超过本阶段单次输入限制，请拆分任务，不能静默截断需求')
     from beivymate.configuration.skill_package import SkillCatalog
     from beivymate.application.composition import PROJECT_ROOT
-    catalog_specs = SkillCatalog(PROJECT_ROOT / 'resources/skills', data_dir / 'configuration/skills')
+    policy = portal.skill_center.require_published if hasattr(portal, 'skill_center') else None
+    catalog_specs = SkillCatalog(PROJECT_ROOT / 'src/beivymate/builtin/skills', getattr(portal, 'skill_root', data_dir / 'configuration/skills'), publication_policy=policy)
     specs = [catalog_specs.get(step.skill) for step in load_workflow_definition(path).resolved_steps()]
     gateway, model_name = None, ''
     if any(spec.executor != 'test_execution' and not spec.model for spec in specs):
@@ -65,8 +66,10 @@ def prepare(portal, data_dir, owner, task_id, directory, run_id):
     case_store = CaseStore(data_dir / 'work/cases.sqlite3', catalog) if catalog else None
     from beivymate.execution.service import ExecutionService
     execution = ExecutionService(data_dir / 'work/execution' / task_id, task_id)
-    agent = create_tester_agent(str(path), gateway, model_name, locale=task['locale'],
-        custom_skill_root=data_dir / 'configuration/skills', design_store=case_store, execution_service=execution)
+    from beivymate.application.model_binding import resolve_model
+    agent = create_tester_agent(str(path), gateway, model_name, locale=task['locale'], skill_policy=policy,
+        model_resolver=lambda identity: resolve_model(identity, PROJECT_ROOT / 'resources/configuration/llm/model', data_dir / 'configuration/models'),
+        custom_skill_root=getattr(portal, 'skill_root', data_dir / 'configuration/skills'), design_store=case_store, execution_service=execution)
     context = AgentContext()
     context.set('requirement', Requirement(id=task['group'], title=task['title'], content=content))
     context.set_role('tester'); context.set_locale(task['locale']); context.set_scope('global')

@@ -70,7 +70,7 @@ def test_configuration_conflict_and_manual_edit(portal):
 
 
 def test_pause_resume_preserves_tasks_and_unique_ids(portal):
-    c, _, _ = portal
+    c, service, _ = portal
     create(c,related=['CIS'])
     main, child=c.get('/api/v1/workbench').json()['tasks']
     assert action(c,main,'start').status_code==409
@@ -78,7 +78,10 @@ def test_pause_resume_preserves_tasks_and_unique_ids(portal):
     assert action(c,main,'pause','pause-key').status_code==200
     main=c.get('/api/v1/workbench').json()['tasks'][0]
     ws=c.get('/api/v1/workbench').json()['workspaces'][0]
-    assert c.patch('/api/v1/workspaces/HIS',json={'paused':True,'expectedRevision':ws['revision']}).status_code==200
+    assert c.patch('/api/v1/workspaces/HIS',json={'paused':True,'expectedRevision':ws['revision']}).status_code==409
+    # Historical paused workspaces must still reject new work and support reenable.
+    with service.db() as db:
+        db.execute("UPDATE entity SET status='paused' WHERE id='HIS'")
     assert action(c,main,'resume').status_code==409
     assert create(c,key='paused-new').status_code==409
     assert action(c,main,'delete').status_code==409
@@ -170,3 +173,152 @@ def test_default_workspace_is_durable_and_uses_workspace_revision(portal):
     assert reopened.board(owner)['defaultWorkspace'] == 'CIS'
     assert reopened.board('another-user')['defaultWorkspace'] == ''
     assert c.patch('/api/v1/workspaces/missing', json={'isDefault': True}).status_code == 404
+
+
+def test_workspace_multi_value_roundtrip_and_legacy_compatibility(portal):
+    c, service, owner = portal
+    old = c.get('/api/v1/workbench').json()['workspaces'][0]
+    assert old['projects'] == ['试点项目']
+    assert old['knowledgeDirectories'] == ['公司共享资料']
+    payload = dict(id='LAB', name='检验协同', description='检验需求\n跨项目协同',
+                   products=['LIS', 'CIS'], projects=['一期', '二期'],
+                   knowledgeDirectories=['/docs/需求', 'C:\\Knowledge\\Manuals'], isDefault=True)
+    assert c.post('/api/v1/workspaces', json=payload).status_code == 201
+    board = PortalService(service.root, ROOT).board(owner)
+    workspace = next(w for w in board['workspaces'] if w['id'] == 'LAB')
+    for key in ('description', 'products', 'projects', 'knowledgeDirectories'):
+        assert workspace[key] == payload[key]
+    assert workspace['product'] == 'LIS'
+    assert board['defaultWorkspace'] == 'LAB'
+    payload['id'] = 'BAD'
+    payload['products'] = ['LIS', ' LIS ']
+    assert c.post('/api/v1/workspaces', json=payload).status_code == 422
+
+
+def test_workspace_configuration_locked_by_unfinished_tasks(portal):
+    c, _, _ = portal
+    assert create(c).status_code == 201
+    workspace = c.get('/api/v1/workbench').json()['workspaces'][0]
+    for changes in [{'name': '不能更改'}, {'id': 'NEW'}, {'isDefault': True}, {'products': ['CIS']}]:
+        response = c.patch('/api/v1/workspaces/HIS', json={**changes, 'expectedRevision': workspace['revision']})
+        assert response.status_code == 409
+        assert '未完成任务' in response.json()['message']
+    assert c.get('/api/v1/workbench').json()['workspaces'][0]['name'] == workspace['name']
+
+
+def test_workspace_rename_preserves_completed_tasks_and_can_rename_back(portal):
+    c, service, owner = portal
+    assert create(c, related=['CIS']).status_code == 201
+    with service.db() as db:
+        db.execute("UPDATE entity SET status='completed' WHERE kind='task'")
+    board = c.get('/api/v1/workbench').json()
+    workspace = board['workspaces'][0]
+    original_task = board['tasks'][0]
+    response = c.patch('/api/v1/workspaces/HIS', json=dict(id='HOSPITAL', name='医院协同',
+        products=['HIS', 'CIS'], projects=['新项目'], knowledgeDirectories=['/docs/new'],
+        description='新版工作区', isDefault=True, expectedRevision=workspace['revision']))
+    assert response.status_code == 200, response.text
+    board = PortalService(service.root, ROOT).board(owner)
+    task = next(t for t in board['tasks'] if t['id'] == original_task['id'])
+    assert task['workspace'] == 'HOSPITAL'
+    assert task['group'] == original_task['group']
+    assert task['attachments'] == original_task['attachments']
+    assert board['defaultWorkspace'] == 'HOSPITAL'
+    assert not Path(workspace['configPath']).exists()
+    current = next(w for w in board['workspaces'] if w['id'] == 'HOSPITAL')
+    assert c.patch('/api/v1/workspaces/HOSPITAL', json={'id': 'HIS', 'expectedRevision': current['revision']}).status_code == 200
+    board = c.get('/api/v1/workbench').json()
+    assert board['defaultWorkspace'] == 'HIS'
+    assert board['tasks'][0]['workspace'] == 'HIS'
+    assert c.patch('/api/v1/workspaces/HIS', json={'name':'旧草稿', 'expectedRevision':workspace['revision']}).status_code == 409
+
+
+def test_workspace_rename_recovers_journal_after_interrupted_flush(portal, monkeypatch):
+    _, service, owner = portal
+    workspace = service.board(owner)['workspaces'][0]
+    original_flush = service._flush
+    calls = 0
+
+    def interrupt(db):
+        nonlocal calls
+        calls += 1
+        if calls == 2:
+            raise OSError('simulated interruption after database commit')
+        original_flush(db)
+
+    monkeypatch.setattr(service, '_flush', interrupt)
+    with pytest.raises(OSError):
+        service.workspace(owner, {'id': 'HOSPITAL', 'expectedRevision': workspace['revision']}, 'HIS')
+    monkeypatch.setattr(service, '_flush', original_flush)
+    board = service.board(owner)
+    assert board['defaultWorkspace'] == 'HOSPITAL'
+    assert any(w['id'] == 'HOSPITAL' for w in board['workspaces'])
+    assert not Path(workspace['configPath']).exists()
+    assert (service.configs / 'workspace' / 'HOSPITAL.md').exists()
+
+
+
+def test_workspace_disable_rechecks_pending_and_reenable_preserves_configuration(portal):
+    c, _, _ = portal
+    workspace = c.get('/api/v1/workbench').json()['workspaces'][0]
+    assert c.patch('/api/v1/workspaces/HIS', json={'paused': True, 'expectedRevision':workspace['revision']}).status_code == 200
+    disabled = c.get('/api/v1/workbench').json()['workspaces'][0]
+    assert disabled['paused'] is True
+    assert disabled['name'] == workspace['name']
+    assert create(c).status_code == 409
+    assert c.patch('/api/v1/workspaces/HIS', json={'paused': False, 'expectedRevision': disabled['revision']}).status_code == 200
+    assert create(c).status_code == 201
+    current = c.get('/api/v1/workbench').json()['workspaces'][0]
+    response = c.patch('/api/v1/workspaces/HIS', json={'paused': True, 'expectedRevision': current['revision']})
+    assert response.status_code == 409
+    assert '未完成任务' in response.json()['message']
+    assert not c.get('/api/v1/workbench').json()['workspaces'][0]['paused']
+
+
+def test_skill_center_http_uses_files_not_browser_data(portal):
+    c, service, owner = portal
+    initial = c.get('/api/v1/skill-center')
+    assert initial.status_code == 200
+    assert {x['id'] for x in initial.json()['items']} == {'requirement_understand','test_analysis','test_design','test_execution','test_report'}
+    content = '---\nid: http_skill\nname: HTTP skill\ndescription: Real disk package\nrole: common\nversion: "1"\n---\n\nRead the input.'
+    body = {'content':content,'state':'draft','files':[{'path':'references/rules.md','text':'business rules'}]}
+    saved = c.put('/api/v1/skill-center/http_skill', json=body)
+    assert saved.status_code == 200, saved.text
+    assert (service.skill_root/'http_skill/references/rules.md').read_text() == 'business rules'
+    assert next(s for s in c.get('/api/v1/skill-center').json()['items'] if s['id']=='http_skill')['state'] == 'draft'
+    assert c.put('/api/v1/skill-center/http_skill',json=body).status_code == 409
+    assert c.put('/api/v1/skill-center/test_analysis',json=body).status_code == 403
+    c.headers.pop('x-csrf-token')
+    assert c.put('/api/v1/skill-center/http_skill',json=body).status_code == 403
+
+
+def test_open_task_locks_skill_workflow_and_legacy_template_routes_until_closed(portal):
+    c, service, owner = portal
+    response = create(c)
+    task_id = response.json()['id']
+    board = c.get('/api/v1/workbench').json()
+    task = next(t for t in board['tasks'] if t['id']==task_id)
+    skill = task['steps'][0]['skill']
+    assert task_id in service.resource_locks('skill',skill)
+    assert task_id in service.resource_locks('workflow',task['workflow'])
+    # Guards are shared with old configuration and template endpoints.
+    definitions = c.get('/api/v1/configuration/skills').json()['items']
+    entry = next(s for s in definitions if s['id']==skill)
+    assert c.put('/api/v1/configuration/skills/'+skill,json={'content':entry['content'],'revision':entry['revision']}).status_code==409
+    templates = c.get(f'/api/v1/configuration/skills/{skill}/templates').json()['items']
+    if templates:
+        template = templates[0]
+        assert c.put(f'/api/v1/configuration/skills/{skill}/templates',json={'name':template['name'],'revision':template['revision'],'content':template['content']}).status_code==409
+    with service.db() as db:
+        db.execute("UPDATE entity SET status='completed' WHERE id=?", (task_id,))
+    assert task_id in service.resource_locks('skill',skill)  # Completion is not business closure.
+    closed = action(c,task,'close',key='close-resource-test')
+    assert closed.status_code==200,closed.text
+    assert action(c,task,'close',key='close-resource-test').json()==closed.json()
+    assert service.resource_locks('skill',skill)==[]
+    assert service.resource_locks('workflow',task['workflow'])==[]
+    latest = next(t for t in c.get('/api/v1/workbench').json()['tasks'] if t['id']==task_id)
+    assert latest['closedAt']
+    assert c.post(f'/api/v1/tasks/{task_id}/runs',json={'expectedRevision':latest['revision']},headers={'idempotency-key':'closed-run'}).status_code==409
+    # Closing retains task, attachments and audit history.
+    assert latest['attachments'] and any('关闭任务' in e for e in latest['history'])

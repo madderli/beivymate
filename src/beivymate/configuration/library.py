@@ -6,27 +6,46 @@ import re
 import shutil
 import tempfile
 from threading import RLock
+from contextlib import nullcontext
 from beivymate.configuration.skill_package import load_skill
 from beivymate.configuration.loader import load_workflow_definition, load_model_definition
 
 
 class ConfigurationLibrary:
-    def __init__(self, builtin: Path, customer: Path):
+    def __init__(self, builtin: Path, customer: Path, *, skill_root: Path | None = None):
         self.builtin, self.customer = builtin.resolve(), customer.resolve()
+        self.skill_root = skill_root
         self.lock = RLock()
+        self.guard = lambda kind, identity: nullcontext()
+        self.skill_policy = None
 
     def paths(self, kind):
         if kind not in ('skills', 'workflows', 'models'):
             raise ValueError('配置类型无效')
         bundled = self.builtin / {'skills':'skills', 'workflows':'configuration/workflow', 'models':'configuration/llm/model'}[kind]
-        custom = self.customer / kind
+        if kind == 'skills' and self.builtin == Path(__file__).resolve().parents[3] / 'resources':
+            bundled = Path(__file__).resolve().parents[1] / 'builtin/skills'
+        custom = self.skill_root if kind == 'skills' and self.skill_root is not None else self.customer / kind
         pattern = '**/SKILL.md' if kind == 'skills' else '*.md'
-        return [(p, True) for p in sorted(bundled.glob(pattern))] + [(p, False) for p in sorted(custom.glob(pattern))]
+        entries = [(p, True) for p in sorted(bundled.glob(pattern))] + [(p, False) for p in sorted(custom.glob(pattern))]
+        if kind == 'skills':
+            # The configuration/runtime editor manages registered executors; generic
+            # instruction packages remain visible through the skill-center API.
+            from beivymate.markdown.metadata import read_markdown
+            entries = [(p, b) for p, b in entries if read_markdown(p)[0].get('executor')]
+        return entries
 
     def list(self, kind):
         result = []
         for path, builtin in self.paths(kind):
-            root = self.builtin if builtin else self.customer
+            if kind == 'skills' and builtin:
+                from beivymate.configuration.skill_center import BUILTIN_SKILLS
+                shipped = Path(__file__).resolve().parents[3] / 'resources'
+                root = BUILTIN_SKILLS if self.builtin == shipped else self.builtin / 'skills'
+            elif kind == 'skills' and self.skill_root is not None:
+                root = self.skill_root
+            else:
+                root = self.builtin if builtin else self.customer
             if not path.resolve().is_relative_to(root):
                 raise ValueError('配置路径超出管理目录')
             definition = {'skills':load_skill,'workflows':load_workflow_definition,'models':load_model_definition}[kind](path)
@@ -42,7 +61,7 @@ class ConfigurationLibrary:
             raise PermissionError('当前只允许编辑技能和工作流')
         if not re.fullmatch(r'[a-z][a-z0-9_-]*', identity):
             raise ValueError('配置标识只能使用小写字母、数字、下划线及连字符')
-        with self.lock:
+        with self.guard(kind, identity), self.lock:
             entries = self.list(kind)
             old = next((e for e in entries if e['id'] == identity), None)
             if old and old['builtin']:
@@ -51,8 +70,8 @@ class ConfigurationLibrary:
                 raise FileExistsError('文件已修改，请保留草稿并对照最新版本')
             if not old and revision is not None:
                 raise FileExistsError('配置已删除，不能覆盖')
-            directory = self.customer / kind
-            if not directory.resolve().is_relative_to(self.customer):
+            directory = self.skill_root if kind == 'skills' and self.skill_root is not None else self.customer / kind
+            if not directory.resolve().is_relative_to(self.skill_root.resolve() if kind == 'skills' and self.skill_root is not None else self.customer):
                 raise ValueError('配置目录不能指向管理目录之外')
             directory.mkdir(parents=True, exist_ok=True)
             with tempfile.TemporaryDirectory(dir=directory, prefix='.draft-') as temporary:
@@ -78,6 +97,8 @@ class ConfigurationLibrary:
                 if kind == 'workflows':
                     skills = {load_skill(p).id: load_skill(p) for p, _ in self.paths('skills')}
                     for step in definition.resolved_steps():
+                        if self.skill_policy:
+                            self.skill_policy(step.skill)
                         if step.skill not in skills:
                             raise ValueError('工作流引用了不存在的 Skill：' + step.skill)
                         if step.analysis_strategy and step.analysis_strategy not in skills[step.skill].analysis_strategies:
@@ -126,7 +147,7 @@ class ConfigurationLibrary:
         return items
 
     def save_template(self, identity, name, content: bytes, revision):
-        with self.lock:
+        with self.guard('skills', identity), self.lock:
             template = next((item for item in self.templates(identity) if item['name'] == name), None)
             if template is None:
                 raise ValueError('模板不存在，请从 Skill 副本中选择模板')

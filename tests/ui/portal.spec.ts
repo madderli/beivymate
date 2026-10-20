@@ -156,10 +156,10 @@ test("real local account initialization, refresh, logout and recovery", async ({
     expect(
       await dialog.evaluate((el) => el.scrollHeight <= el.clientHeight + 1),
     ).toBe(true);
-    await dialog.getByLabel("工作区标识", { exact: true }).fill(id);
+    await dialog.getByLabel("工作区标识（简称）", { exact: true }).fill(id);
     await dialog.getByLabel("工作区名称", { exact: true }).fill(id + " 产品");
-    await dialog.getByLabel("产品范围", { exact: true }).fill("支付业务");
-    await dialog.getByRole("button", { name: "保存工作区" }).click();
+    await dialog.getByLabel("工作区描述", { exact: true }).fill("支付业务");
+    await dialog.getByRole("button", { name: "创建工作区" }).click();
     await expect(dialog).toHaveCount(0);
   }
   await page.getByRole("button", { name: "我的工作", exact: true }).click();

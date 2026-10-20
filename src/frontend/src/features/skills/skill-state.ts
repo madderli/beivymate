@@ -11,7 +11,8 @@ export const backupModels: Record<string, string[]> = {
 };
 export type SkillRole =
   "tester" | "developer" | "product" | "operations" | "common";
-export type SkillState = "draft" | "published" | "paused" | "invalid";
+export type SkillState =
+  "discovered" | "validated" | "draft" | "published" | "paused" | "invalid";
 export type ModelPreference = {
   minTier?: "质量优先" | "均衡" | "速度优先" | "不限制";
   mode: "inherit" | "tier" | "specific" | "none";
@@ -212,9 +213,17 @@ export function modelPreferenceErrors(
     return ["推荐模型在当前环境不可用，请重新选择模型。"];
   return [];
 }
-export type PackageFile = { path: string; text?: string; size: number };
+export type PackageFile = {
+  path: string;
+  text?: string;
+  content?: string;
+  size: number;
+};
 export type Skill = {
   key: string;
+  revision?: string;
+  lockedTasks?: string[];
+  validationErrors?: string[];
   id: string;
   name: string;
   description: string;
@@ -241,6 +250,8 @@ export const roleNames: Record<SkillRole, string> = {
   operations: "运维",
 };
 export const stateNames: Record<SkillState, string> = {
+  discovered: "待验证",
+  validated: "已验证",
   invalid: "校验失败",
   draft: "草稿",
   published: "启用",
@@ -288,9 +299,16 @@ export function parseMarkdown(
     if (typeof value !== "string") throw new Error(`${m[1]} 必须是文本`);
     fields[m[1]] = value.trim();
   }
-  for (const field of ["id", "name", "description", "role", "version"])
+  fields.id ||=
+    fields.name
+      ?.toLowerCase()
+      .replace(/[^a-z0-9_-]+/g, "_")
+      .replace(/^[^a-z]+/, "") || `skill_${crypto.randomUUID().slice(0, 8)}`;
+  fields.role ||= "common";
+  fields.version ||= "1";
+  for (const field of ["name", "description"])
     if (!fields[field])
-      throw new Error(`缺少必要元数据：${field}（演示 使用单行字段）`);
+      throw new Error(`缺少必要元数据：${field}（请使用单行字段）`);
   if (
     !["tester", "developer", "product", "operations", "common"].includes(
       fields.role,
@@ -356,7 +374,7 @@ export function validateSkill(
     s.files.some(
       (f) =>
         f.path.split("/").at(-1) === "SKILL.md" ||
-        !/^(scripts|reference|assets)\/[^/]/.test(f.path) ||
+        f.path.startsWith("/") ||
         f.path.includes("\\") ||
         f.path.split("/").some((p) => p === ".." || p === "."),
     )
@@ -393,7 +411,7 @@ export async function readPackage(
     files.reduce((n, f) => n + f.size, 0) > 20 * 1024 * 1024 ||
     files.some((f) => f.size > 5 * 1024 * 1024)
   )
-    throw new Error("演示 最多读取 100 个文件，总计 20 MB，单文件 5 MB。");
+    throw new Error("最多读取 100 个文件，总计 20 MB，单文件 5 MB。");
   const paths = files.map((f) => f.webkitRelativePath || f.name);
   const entries = paths.filter((p) => p.split("/").at(-1) === "SKILL.md");
   if (entries.length !== 1)
@@ -409,30 +427,15 @@ export async function readPackage(
       p.split("/").some((part) => part === ".." || part === ".")
     )
       throw new Error("存在包目录之外的文件或非法路径。");
-    let relative = p.slice(root.length);
-    if (/^(references|templates)\//.test(relative)) {
-      warnings.push(
-        "已预览迁移：references/ → reference/，templates/ → assets/templates/；SKILL.md 中的链接也会同步调整。",
-      );
-      relative = relative
-        .replace(/^references\//, "reference/")
-        .replace(/^templates\//, "assets/templates/");
-    }
-    if (
-      relative !== "SKILL.md" &&
-      !/^(scripts|reference|assets)\/[^/]/.test(relative)
-    )
-      throw new Error(
-        `不支持的包路径：${relative}。仅允许 SKILL.md、scripts/、reference/、assets/。`,
-      );
+    const relative = p.slice(root.length);
+    if (!relative || relative.startsWith("/"))
+      throw new Error("非法技能包文件路径。");
     return relative;
   });
   if (new Set(normalized).size !== normalized.length)
     throw new Error("迁移后的文件路径重复，请合并重复文件后重新导入。");
   const entry = files[paths.indexOf(entries[0])];
-  const raw = (await entry.text())
-    .replace(/\breferences\//g, "reference/")
-    .replace(/(?<!assets\/)\btemplates\//g, "assets/templates/");
+  const raw = await entry.text();
   const parsed = parseMarkdown(raw);
   const folderRole = root
     .split("/")
@@ -448,6 +451,13 @@ export async function readPackage(
           ? raw
           : await f.text()
         : undefined,
+      content: /\.(md|txt|json|py|js|ts|sh|yaml|yml|csv)$/i.test(f.name)
+        ? undefined
+        : btoa(
+            Array.from(new Uint8Array(await f.arrayBuffer()), (b) =>
+              String.fromCharCode(b),
+            ).join(""),
+          ),
     })),
   );
   const skill: Skill = {
@@ -480,103 +490,6 @@ export function blankSkill(role: SkillRole): Skill {
     files: [],
   };
 }
-export function seedSkills(): Skill[] {
-  return [
-    [
-      "requirement_understand",
-      "需求理解",
-      "梳理需求范围、业务规则与待澄清问题，形成可追溯的需求理解文档。",
-      "builtin",
-      "published",
-      "tester",
-    ],
-    [
-      "test_analysis",
-      "测试分析",
-      "从业务风险出发，识别测试范围、覆盖策略和关键检查点。",
-      "builtin",
-      "published",
-      "tester",
-    ],
-    [
-      "test_design",
-      "测试设计",
-      "将测试分析转化为可执行的测试用例，明确前置条件和预期结果。",
-      "builtin",
-      "published",
-      "tester",
-    ],
-    [
-      "document_summary",
-      "文档摘要",
-      "整理长文档中的关键结论、行动项与来源，适用于各工作角色。",
-      "builtin",
-      "published",
-      "common",
-    ],
-    [
-      "payment_review",
-      "支付异常专项分析",
-      "聚焦重复回调、超时重试、退款与账务一致性。",
-      "custom",
-      "published",
-      "tester",
-    ],
-    [
-      "regression_checklist",
-      "回归检查清单",
-      "按照变更范围生成回归检查清单，帮助团队确认影响面。",
-      "custom",
-      "draft",
-      "tester",
-    ],
-    [
-      "legacy_api_check",
-      "旧接口兼容性检查",
-      "检查接口字段、错误码和向后兼容性，等待业务规则更新。",
-      "custom",
-      "paused",
-      "tester",
-    ],
-    [
-      "broken_report",
-      "报告格式检查",
-      "模板尚未补全，请修复工作指令后重新校验。",
-      "custom",
-      "invalid",
-      "tester",
-    ],
-  ].map(([id, name, description, source, state, role], index) => ({
-    ...blankSkill(role as SkillRole),
-    icon: ["🔍", "🧭", "🧪", "📝", "🛡️", "📋", "⚙️", "📊"][index],
-    calls: [128, 96, 84, 215, 32, 0, 17, 0][index],
-    updated: "2026/10/09 14:30",
-    roles:
-      id === "payment_review" ? ["tester", "developer"] : [role as SkillRole],
-    id,
-    name,
-    description,
-    source: source as Skill["source"],
-    state: state as SkillState,
-    files: [
-      {
-        path: "reference/business-rules.md",
-        text: "# 业务规则\n\n请根据产品文档补充规则与来源。",
-        size: 80,
-      },
-      {
-        path: "assets/templates/report.md",
-        text: "# 分析报告\n\n## 范围\n\n## 发现\n\n## 待确认事项",
-        size: 80,
-      },
-    ],
-    body:
-      state === "invalid"
-        ? ""
-        : `# ${name}\n\n${description}\n\n## 工作步骤\n\n1. 核对输入材料及来源。\n2. 参考 [业务规则](reference/business-rules.md) 完成分析。\n3. 按 [报告模板](assets/templates/report.md) 组织输出。\n\n## 边界\n\n缺少信息时列出待确认事项，不编造业务结论。`,
-  }));
-}
-
 export type SkillWorkflow = {
   id: string;
   name: string;

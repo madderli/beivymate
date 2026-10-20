@@ -51,7 +51,7 @@ def test_exporter_directory_respects_customer_root_and_default(tmp_path):
     from beivymate.configuration.skill_package import SkillCatalog
     from beivymate.documents.runtime import prepare_output_directory
     from pathlib import Path
-    spec=SkillCatalog(Path(__file__).resolve().parents[2]/'resources/skills').get('test_report')
+    spec=SkillCatalog(Path(__file__).resolve().parents[2]/'src/beivymate/builtin/skills').get('test_report')
     context=AgentContext()
     for key,value in {'document_store_directory':str(tmp_path/'data'),'run_id':'run','step_id':'report'}.items():context.set(key,value)
     prepare_output_directory(spec,context)
@@ -70,7 +70,7 @@ def test_export_and_managed_files_share_legacy_customer_root(tmp_path,executor,k
     from beivymate.configuration.skill_package import SkillCatalog
     from beivymate.documents.runtime import prepare_output_directory,resolved_output_root
     from beivymate.documents.models import DocumentOrigin
-    spec=SkillCatalog(Path(__file__).resolve().parents[2]/'resources/skills').get(executor)
+    spec=SkillCatalog(Path(__file__).resolve().parents[2]/'src/beivymate/builtin/skills').get(executor)
     context=AgentContext()
     for name,value in {'document_store_directory':str(tmp_path/'data'),'run_id':'run','step_id':'step',key:str(tmp_path/'customer')}.items():context.set(name,value)
     prepare_output_directory(spec,context)
@@ -91,7 +91,7 @@ def test_repeated_export_steps_do_not_treat_generated_path_as_customer_config(tm
     from pathlib import Path
     from beivymate.configuration.skill_package import SkillCatalog
     from beivymate.documents.runtime import prepare_output_directory
-    spec=SkillCatalog(Path(__file__).resolve().parents[2]/'resources/skills').get('test_report')
+    spec=SkillCatalog(Path(__file__).resolve().parents[2]/'src/beivymate/builtin/skills').get('test_report')
     context=AgentContext()
     context.set('document_store_directory',str(tmp_path/'data'));context.set('run_id','run')
     for step in ('a','b'):

@@ -104,7 +104,7 @@ def test_skill_uses_template():
 
     template = load_template_definition(
         Path(
-            "resources/skills/tester/"
+            "src/beivymate/builtin/skills/tester/"
             "requirement_understand/templates/"
             "zh-CN/RequirementUnderstandTemplate.md"
         )
@@ -159,7 +159,7 @@ def test_skill_writes_result_to_context():
 
     template = load_template_definition(
         Path(
-            "resources/skills/tester/"
+            "src/beivymate/builtin/skills/tester/"
             "requirement_understand/templates/"
             "zh-CN/RequirementUnderstandTemplate.md"
         )
@@ -199,7 +199,7 @@ def test_skill_requires_requirement():
 
     template = load_template_definition(
         Path(
-            "resources/skills/tester/"
+            "src/beivymate/builtin/skills/tester/"
             "requirement_understand/templates/"
             "zh-CN/RequirementUnderstandTemplate.md"
         )

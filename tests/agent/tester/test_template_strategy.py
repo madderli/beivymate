@@ -8,7 +8,7 @@ from beivymate.model.entity.requirement import Requirement
 from beivymate.model.artifact.requirement_understanding import UnderstandingData
 
 
-ROOT = Path(__file__).resolve().parents[3] / "resources/skills/tester/requirement_understand/templates"
+ROOT = Path(__file__).resolve().parents[3] / "src/beivymate/builtin/skills/tester/requirement_understand/templates"
 
 
 @pytest.mark.parametrize("locale", ["zh-CN", "en-US"])

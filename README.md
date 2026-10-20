@@ -41,3 +41,7 @@ The local account portal supports initialization, login, recovery and settings.
 Workspaces, linked tasks, editable configurations and attachments are persisted locally.
 Runtime execution is connected in subsequent UI milestones; the complete
 external trial release is not yet ready. See [frontend startup and validation](src/frontend/README.md).
+
+## 本地客户端架构与开发跟踪
+
+各安装独立保存本机数据，通过包导入导出共享资源。统一规则见 [架构与状态规范](ARCHITECTURE.md)，逐模块进度见 [实施验收清单](IMPLEMENTATION_CHECKLIST.md)。

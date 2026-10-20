@@ -1,8 +1,9 @@
+import { WorkspaceEditor, type WorkspaceDraft } from "./WorkspaceEditor";
 import { useRef, useState } from "react";
 import { api } from "./api";
 import { Dialog } from "./components";
 import { AttachmentInput } from "./attachments";
-import type { Board, Workspace, Task } from "./model";
+import { statusLabels, type Board, type Workspace, type Task } from "./model";
 export function TaskForm({
   board,
   initial,
@@ -249,116 +250,54 @@ export function TaskForm({
 export function WorkspaceForm({
   workspace,
   isDefault = false,
+  workspaces = [],
+  tasks = [],
   close,
   saved,
 }: {
   workspace?: Workspace;
   isDefault?: boolean;
+  workspaces?: Workspace[];
+  tasks?: Task[];
   close: () => void;
   saved: () => Promise<void>;
 }) {
-  const [error, setError] = useState("");
-  const [busy, setBusy] = useState(false);
+  const draft = (w: Workspace): WorkspaceDraft => ({
+    key: w.id,
+    id: w.id,
+    name: w.name,
+    description: w.description ?? w.subtitle,
+    products: w.products ?? (w.product ? [w.product] : []),
+    projects: w.projects ?? (w.project ? [w.project] : []),
+    directories: w.knowledgeDirectories ?? (w.knowledge ? [w.knowledge] : []),
+    isDefault: w.id === workspace?.id && isDefault,
+    pending: tasks
+      .filter((t) => t.workspace === w.id && t.status !== "completed")
+      .map((t) => ({ name: t.title, status: statusLabels[t.status] })),
+  });
   return (
-    <Dialog
-      className="workspace-dialog"
-      title={workspace ? "配置工作区" : "新增工作区"}
-      close={() => {
-        if (!busy) close();
+    <WorkspaceEditor
+      initial={workspace ? draft(workspace) : undefined}
+      existing={workspaces.map(draft)}
+      defaultChecked={isDefault}
+      close={close}
+      save={async (value) => {
+        await api.saveWorkspace(
+          {
+            id: value.id,
+            name: value.name,
+            description: value.description,
+            products: value.products,
+            projects: value.projects,
+            knowledgeDirectories: value.directories,
+            isDefault: value.isDefault,
+            expectedRevision: workspace?.revision,
+          },
+          workspace?.id,
+        );
+        await saved();
+        close();
       }}
-    >
-      <form
-        noValidate
-        className="dialog-body"
-        onSubmit={async (e) => {
-          e.preventDefault();
-          setBusy(true);
-          setError("");
-          const fields = Object.fromEntries(new FormData(e.currentTarget));
-          try {
-            await api.saveWorkspace(
-              {
-                ...fields,
-                isDefault: fields.isDefault === "on",
-                expectedRevision: workspace?.revision,
-              },
-              workspace?.id,
-            );
-            await saved();
-            close();
-          } catch (e) {
-            setError((e as Error).message);
-          } finally {
-            setBusy(false);
-          }
-        }}
-      >
-        <fieldset disabled={busy} className="workspace-fields">
-          <label className="checkbox-label">
-            <input
-              type="checkbox"
-              name="isDefault"
-              defaultChecked={isDefault}
-            />
-            设为默认工作区
-          </label>
-          <label>
-            工作区标识
-            <input
-              required
-              name="id"
-              defaultValue={workspace?.id}
-              readOnly={!!workspace}
-            />
-          </label>
-          <label>
-            工作区名称
-            <input required name="name" defaultValue={workspace?.name} />
-          </label>
-          <label>
-            产品范围
-            <input name="subtitle" defaultValue={workspace?.subtitle} />
-          </label>
-          <label>
-            产品标识
-            <input name="product" defaultValue={workspace?.product} />
-          </label>
-          <label>
-            客户项目（可选）
-            <input name="project" defaultValue={workspace?.project} />
-          </label>
-          <label>
-            客户产物目录
-            <input
-              name="outputDirectory"
-              defaultValue={workspace?.outputDirectory}
-              placeholder="可选，留空使用个人或应用默认目录"
-            />
-          </label>
-          <label>
-            知识来源
-            <input name="knowledge" defaultValue={workspace?.knowledge} />
-          </label>
-        </fieldset>
-        {error && (
-          <p role="alert" className="notice error">
-            {error}
-          </p>
-        )}
-        <div className="dialog-actions">
-          <button
-            className="secondary"
-            type="button"
-            onClick={close}
-            disabled={busy}
-          >
-            取消
-          </button>
-          <button className="primary" disabled={busy}>
-            {busy ? "正在保存…" : "保存工作区"}
-          </button>
-        </div>
-      </form>
-    </Dialog>
+    />
   );
 }

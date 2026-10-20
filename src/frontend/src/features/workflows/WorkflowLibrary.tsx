@@ -351,7 +351,10 @@ export default function WorkflowLibrary({
           <h1>我的工作流</h1>
           <p>把技能串成工作流，让重复工作有序自动完成。</p>
         </div>
-        <button className="ad-primary" onClick={() => edit()}>
+        <button
+          className="ad-primary homepage-heading-action"
+          onClick={() => edit()}
+        >
           <Plus size={16} />
           新建工作流
         </button>

@@ -89,6 +89,7 @@ def test_pause_stop_and_active_task_protection(client, app):
     t = task(client); run = prepare(client, t)
     assert client.patch('/api/v1/tasks/'+t['id'], json={'expectedRevision':t['revision'],'title':'changed'}).status_code == 200
     assert client.post('/api/v1/tasks/'+t['id']+'/actions',json={'action':'delete','expectedRevision':t['revision']},headers={'idempotency-key':'delete'}).status_code == 409
+    assert client.post(f"/api/v1/tasks/{t['id']}/actions",json={'action':'close','expectedRevision':t['revision']},headers={'idempotency-key':'close-active'}).status_code == 409
     command(client, run, 'start')
     command(client, run, 'pause')
     assert not app.state.runs.tick()
@@ -129,7 +130,10 @@ def test_owner_boundary_and_workspace_queue(client, app):
     t = task(client); run = prepare(client, t)
     command(client, run, 'start')
     ws = client.get('/api/v1/workbench').json()['workspaces'][0]
-    client.patch('/api/v1/workspaces/product',json={'expectedRevision':ws['revision'],'paused':True})
+    assert client.patch('/api/v1/workspaces/product',json={'expectedRevision':ws['revision'],'paused':True}).status_code == 409
+    # Existing paused data still prevents dispatch, even though new pauses are guarded.
+    with app.state.portal.db() as db:
+        db.execute("UPDATE entity SET status='paused' WHERE id='product'")
     assert not app.state.runs.tick()
     from beivymate.identity.service import IdentityError
     with pytest.raises(IdentityError):

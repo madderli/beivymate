@@ -9,7 +9,7 @@ from beivymate.assets.excel import ExcelExporter, DEFAULT_MAPPING
 from beivymate.model.artifact.test_design import ProductCatalog, CaseProposal
 
 ROOT = Path(__file__).resolve().parents[2]
-TEMPLATE = ROOT/'resources/skills/tester/test_design/templates/DefaultTestCaseTemplate.xlsx'
+TEMPLATE = ROOT/'src/beivymate/builtin/skills/tester/test_design/templates/DefaultTestCaseTemplate.xlsx'
 
 
 def catalog():
