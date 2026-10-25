@@ -79,7 +79,10 @@ def _create_gateway(
     )
 
 
-def create_gateway(provider, base_url, timeout, api_key_env=None, max_retries=2):
+def create_gateway(provider=None, base_url=None, timeout=60, api_key_env=None, max_retries=2, catalog_snapshot=None, vault=None):
+    if catalog_snapshot is not None:
+        from beivymate.models.runtime import FrozenGateway
+        return FrozenGateway(catalog_snapshot, vault=vault)
     binding = dict(provider=provider, base_url=base_url, timeout=timeout,
                    api_key_env=api_key_env, max_retries=max_retries)
     gateway = _create_gateway(**binding)

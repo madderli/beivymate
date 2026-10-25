@@ -2630,3 +2630,14 @@ legend {
   display: block;
   margin-top: 8px;
 }
+
+/* Inset the arrow consistently; expanded list boxes keep their native UI. */
+select:not([multiple]):not([size]), select[size="1"]:not([multiple]) {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 36px !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23647465' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") !important;
+  background-position: right 14px center !important;
+  background-repeat: no-repeat !important;
+  background-size: 16px 16px !important;
+}

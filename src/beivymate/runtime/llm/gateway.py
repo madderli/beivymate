@@ -33,7 +33,7 @@ class LLMGateway:
         finally:
             usage = getattr(response, "usage", None)
             self.last_metric = CallMetric(
-                model=request.model, status="failed" if error_type else "success",
+                model=response.model if response is not None else request.model, status="failed" if error_type else "success",
                 duration_seconds=perf_counter() - started,
                 input_tokens=usage.input_tokens if usage else None,
                 output_tokens=usage.output_tokens if usage else None,

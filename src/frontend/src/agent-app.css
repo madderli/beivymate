@@ -602,3 +602,50 @@
 .production-agent .ad-header .workspace-header-id {
   font-size: 14px;
 }
+
+.production-agent .chat-model-choice {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 11px;
+  min-width: 0;
+  color: #708276;
+}
+.production-agent .chat-model-choice select {
+  width: auto;
+  max-width: 220px;
+  min-height: 30px;
+  padding: 4px 8px;
+  font-size: 11px;
+  border-color: #dfe6dc;
+  background: #fafcf8;
+}
+@media (max-width: 760px) {
+  .production-agent .ad-composer-tools {
+    flex-wrap: wrap;
+  }
+  .production-agent .chat-model-choice {
+    flex-basis: 100%;
+  }
+}
+
+.chat-model-filter {
+  position: relative;
+  font-size: 12px;
+}
+.chat-model-filter summary {
+  cursor: pointer;
+  color: #66796c;
+}
+.chat-model-filter input {
+  position: absolute;
+  bottom: 26px;
+  left: 0;
+  width: 220px;
+  padding: 9px;
+  background: white;
+  border: 1px solid #dce4d7;
+  border-radius: 8px;
+  z-index: 2;
+}

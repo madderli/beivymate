@@ -1,8 +1,8 @@
 export const tiers = ["质量优先", "均衡", "速度优先"] as const;
 export const tierModels: Record<string, string> = {
-  质量优先: "vision",
-  均衡: "balanced",
-  速度优先: "light",
+  质量优先: "",
+  均衡: "",
+  速度优先: "",
 };
 export const backupModels: Record<string, string[]> = {
   质量优先: [],
@@ -23,6 +23,7 @@ export type ModelPreference = {
 export const modelCapabilities = {
   images: "图片理解",
   tools: "工具调用",
+  reasoning: "推理",
   structured: "结构化输出",
 };
 export type ModelService = {
@@ -37,38 +38,8 @@ export type ModelService = {
   auth: string;
   enabled: boolean;
 };
-export const modelServices: ModelService[] = [
-  {
-    id: "vendor",
-    name: "厂商服务（演示）",
-    kind: "厂商直连",
-    endpoint: "https://vendor.example.invalid/v1",
-    protocol: "兼容对话接口",
-    auth: "访问密钥",
-    enabled: true,
-    configured: true,
-  },
-  {
-    id: "platform",
-    name: "统一模型平台（演示）",
-    kind: "模型平台",
-    endpoint: "https://platform.example.invalid/v1",
-    protocol: "兼容对话接口",
-    auth: "访问密钥",
-    enabled: true,
-    configured: true,
-  },
-  {
-    id: "company",
-    name: "公司内网模型服务（演示）",
-    kind: "公司本地",
-    endpoint: "http://127.0.0.1:11434",
-    protocol: "本地模型接口",
-    auth: "无需鉴权",
-    enabled: true,
-    configured: true,
-  },
-];
+// Read-only projection of the backend model catalog; never seeded in the browser.
+export const modelServices: ModelService[] = [];
 export function isModelEnabled(m: ConfiguredModel) {
   return (
     m.enabled &&
@@ -111,72 +82,13 @@ export type ConfiguredModel = {
   connection: "未验证" | "可用" | "连接失败";
   connectionSimulated: boolean;
 };
-export let defaultModelId = "balanced";
+export let defaultModelId = "";
 export function setDefaultModelId(id: string) {
   defaultModelId = id;
 }
-export const configuredModels: ConfiguredModel[] = [
-  {
-    id: "balanced",
-    name: "通用模型（演示）",
-    capabilities: ["tools", "structured"],
-  },
-  {
-    id: "vision",
-    name: "多模态模型（演示）",
-    capabilities: ["images", "tools", "structured"],
-  },
-  { id: "light", name: "轻量文本模型（演示）", capabilities: ["structured"] },
-].map((m) => ({
-  ...m,
-  contextK: m.id === "light" ? 32 : 128,
-  lineage: "演示配置，参数非厂商承诺",
-  serviceId: m.id === "light" ? "platform" : "vendor",
-  enabled: true,
-  provider: "演示服务",
-  endpoint: "https://example.invalid/v1",
-  identifier: m.id,
-  deployment: "云端",
-  pricing: m.id === "light" ? "免费额度" : "付费",
-  orientation:
-    m.id === "light" ? "速度优先" : m.id === "vision" ? "质量优先" : "均衡",
-  inputs: m.capabilities.includes("images") ? ["文本", "图像"] : ["文本"],
-  quota: m.id === "light" ? "演示额度：每月 100 次，超出后需付费" : "",
-  connection: "未验证",
-  connectionSimulated: false,
-}));
-modelServices.push({
-  id: "native",
-  name: "原生接口厂商（待配置示例）",
-  kind: "厂商直连",
-  endpoint: "https://native.example.invalid",
-  protocol: "Anthropic",
-  auth: "访问密钥",
-  enabled: true,
-  configured: false,
-});
-configuredModels.push({
-  id: "company-qwen",
-  serviceId: "company",
-  name: "Qwen3 8B（内部部署示例）",
-  identifier: "qwen3:8b",
-  provider: "公司内网模型服务（演示）",
-  endpoint: "http://127.0.0.1:11434",
-  capabilities: [],
-  enabled: true,
-  deployment: "本地",
-  pricing: "免费",
-  orientation: "均衡",
-  inputs: ["文本"],
-  quota: "",
-  connection: "未验证",
-  connectionSimulated: false,
-  lineage: "内部部署示例，能力与上下文待验证",
-  inputPrice: 0,
-  outputPrice: 0,
-});
+export const configuredModels: ConfiguredModel[] = [];
 export const defaultModelPreference = (): ModelPreference => ({
-  mode: "tier",
+  mode: "inherit",
   tier: "均衡",
   model: "",
   capabilities: [],
@@ -518,10 +430,3 @@ export function seedWorkflows(): SkillWorkflow[] {
     },
   ];
 }
-
-export const failover = {
-  strategy: "same",
-  retries: 1,
-  timeout: 60,
-  triggers: ["超时", "接口报错", "限流 429"],
-};

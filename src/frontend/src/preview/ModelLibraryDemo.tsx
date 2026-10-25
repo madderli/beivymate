@@ -7,7 +7,6 @@ import {
   sourceLabels,
   RequiredLabel,
 } from "./ModelSourceDialog";
-import ModelPlatformImport from "./ModelPlatformImport";
 import ModelRegistryEditor, { registryTier } from "./ModelRegistryEditor";
 import {
   demoModels,
@@ -44,7 +43,6 @@ export default function ModelLibraryDemo({ changed }: { changed: () => void }) {
     modelServices.slice(1).map((s) => s.id),
   );
   const [source, setSource] = useState<ModelService | "new">();
-  const [importing, setImporting] = useState(false);
   const [editing, setEditing] = useState<ConfiguredModel>();
   const [deleting, setDeleting] = useState<ConfiguredModel>();
   const [configuring, setConfiguring] = useState<ModelService>();
@@ -98,7 +96,6 @@ export default function ModelLibraryDemo({ changed }: { changed: () => void }) {
         : collapsed,
     );
     setSource(undefined);
-    setImporting(false);
     changed();
     setNotice(ids.length ? `已注册 ${ids.length} 个模型` : "厂商信息已更新");
   }
@@ -151,9 +148,6 @@ export default function ModelLibraryDemo({ changed }: { changed: () => void }) {
       <div className="ms-panel-intro">
         <p>统一管理直连厂商、模型平台与公司自部署模型</p>
         <div className="mr-actions">
-          <button className="sc-secondary" onClick={() => setImporting(true)}>
-            ⇧ 从平台导入
-          </button>
           <button className="ad-primary" onClick={() => setSource("new")}>
             ＋ 添加厂商
           </button>
@@ -398,12 +392,6 @@ export default function ModelLibraryDemo({ changed }: { changed: () => void }) {
         <ModelSourceDialog
           initial={source === "new" ? undefined : source}
           close={() => setSource(undefined)}
-          save={saveSource}
-        />
-      )}
-      {importing && (
-        <ModelPlatformImport
-          close={() => setImporting(false)}
           save={saveSource}
         />
       )}

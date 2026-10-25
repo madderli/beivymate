@@ -14,7 +14,7 @@ class ChatMessage(BaseModel):
 class LLMRequest(BaseModel):
     model: str = Field(min_length = 1)
     messages: list[ChatMessage] = Field(min_length = 1)
-    temperature: float = 0.0
+    temperature: float | None = 0.0
     response_schema: dict | None = None
     max_output_tokens: int | None = Field(default=None, gt=0)
 
@@ -28,4 +28,6 @@ class LLMConnectionConfig(BaseModel):
     base_url: str = Field(min_length=1)
     api_key: str | None = Field(default=None, repr=False, exclude=True)
     proxy: str | None = None
+    self_signed: bool = False
+    allow_unauthenticated: bool = False
     timeout: float = Field(default=60.0, gt=0)

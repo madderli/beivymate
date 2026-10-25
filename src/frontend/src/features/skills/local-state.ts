@@ -1,13 +1,4 @@
 import { useEffect, useState } from "react";
-import {
-  configuredModels,
-  modelServices,
-  tierModels,
-  backupModels,
-  defaultModelId,
-  setDefaultModelId,
-  failover,
-} from "./skill-state";
 
 const prefix = "beivymate.ui.v1.";
 export function readLocal<T>(
@@ -50,42 +41,4 @@ export function useLocalState<T>(
   );
   useEffect(() => writeLocal(key, value), [key, value]);
   return [value, setValue] as const;
-}
-
-const cached = readLocal("models", () => ({
-  models: configuredModels,
-  services: modelServices,
-  tiers: tierModels,
-  backups: backupModels,
-  defaultId: defaultModelId,
-  failover,
-}));
-if (
-  Array.isArray(cached.models) &&
-  Array.isArray(cached.services) &&
-  cached.models.every(
-    (m) => m && typeof m.id === "string" && Array.isArray(m.capabilities),
-  ) &&
-  cached.services.every((s) => s && typeof s.id === "string") &&
-  cached.tiers &&
-  cached.backups &&
-  cached.failover &&
-  Array.isArray(cached.failover.triggers)
-) {
-  configuredModels.splice(0, configuredModels.length, ...cached.models);
-  modelServices.splice(0, modelServices.length, ...cached.services);
-  Object.assign(tierModels, cached.tiers);
-  Object.assign(backupModels, cached.backups);
-  Object.assign(failover, cached.failover);
-  setDefaultModelId(cached.defaultId);
-}
-export function persistModels() {
-  writeLocal("models", {
-    models: configuredModels,
-    services: modelServices,
-    tiers: tierModels,
-    backups: backupModels,
-    defaultId: defaultModelId,
-    failover,
-  });
 }

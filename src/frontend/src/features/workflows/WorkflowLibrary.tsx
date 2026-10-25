@@ -1,3 +1,4 @@
+import { request } from "../../api";
 import DisableWorkflowDialog from "./DisableWorkflowDialog";
 import { useEffect, useState, type Dispatch, type SetStateAction } from "react";
 import {
@@ -70,6 +71,33 @@ export default function WorkflowLibrary({
   setWorkflows: Dispatch<SetStateAction<WorkflowDesign[]>>;
 }) {
   const [query, setQuery] = useState("");
+  const [modelIssues, setModelIssues] = useState<
+    Record<string, { message: string; publicationState?: string }>
+  >({});
+  useEffect(() => {
+    let active = true;
+    const load = () => {
+      void request<{
+        resources: Record<
+          string,
+          { message: string; publicationState?: string }
+        >;
+      }>("/models/lifecycle")
+        .then((r) => {
+          if (active) setModelIssues(r.resources);
+        })
+        .catch(() => {});
+    };
+    load();
+    window.addEventListener("focus", load);
+    window.addEventListener("beivymate-models-changed", load);
+    return () => {
+      active = false;
+      window.removeEventListener("focus", load);
+      window.removeEventListener("beivymate-models-changed", load);
+    };
+  }, []);
+
   const [filter, setFilter] = useState("all");
   const [draft, setDraft] = useState<WorkflowDesign>();
   const [detailId, setDetailId] = useState("");
@@ -285,6 +313,48 @@ export default function WorkflowLibrary({
                 <span>输入 ← {inputLabel(s, w)}</span>
                 <span>输出 → {s.output}</span>
               </div>
+              {modelIssues["workflow:" + w.id]?.publicationState && (
+                <button
+                  className="sc-secondary"
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    setErrors([]);
+                    try {
+                      const publish =
+                        modelIssues["workflow:" + w.id].publicationState ===
+                        "validated";
+                      const result = await request<{
+                        state: string;
+                        errors: string[];
+                      }>(
+                        `/models/maintenance/workflows/${encodeURIComponent(w.id)}/${publish ? "publish" : "validate"}`,
+                        { method: "POST" },
+                      );
+                      if (result.errors.length) setErrors(result.errors);
+                      else
+                        setNotice(
+                          publish
+                            ? "工作流已发布"
+                            : "模型配置已验证，请确认发布",
+                        );
+                      const status = await request<{
+                        resources: Record<
+                          string,
+                          { message: string; publicationState?: string }
+                        >;
+                      }>("/models/lifecycle");
+                      setModelIssues(status.resources);
+                    } catch (error) {
+                      setErrors([(error as Error).message]);
+                    }
+                  }}
+                >
+                  {modelIssues["workflow:" + w.id].publicationState ===
+                  "validated"
+                    ? "确认发布"
+                    : "验证模型配置"}
+                </button>
+              )}
               <div className="wf-badges">
                 <span className={`wf-badge ${s.confirmation}`}>
                   {s.confirmation === "human" ? "人工确认" : "自动确认"}
@@ -421,6 +491,11 @@ export default function WorkflowLibrary({
               >
                 <GitBranch size={19} />
                 <h2>{w.name}</h2>
+                {modelIssues["workflow:" + w.id] && (
+                  <span className="mm-resource-issue">
+                    {modelIssues["workflow:" + w.id].message}
+                  </span>
+                )}
                 <ChevronRight size={16} />
               </button>
               <div className="wf-badges">

@@ -63,11 +63,9 @@ export default function SkillModelPicker({
             });
           }}
         >
-          <option value="tier">按档位选择（推荐）</option>
+          <option value="inherit">跟随默认模型</option>
+          <option value="tier">按档位选择</option>
           <option value="specific">直接选择模型</option>
-          {value.mode === "inherit" && (
-            <option value="inherit">跟随用户默认模型</option>
-          )}
           <option value="none">不使用模型（纯脚本技能）</option>
         </select>
       </label>

@@ -5,7 +5,7 @@ from beivymate.markdown.metadata import read_markdown
 from beivymate.configuration.models import WorkflowDefinition, WorkflowStepDefinition
 
 FIELDS = {'技能': 'skill', '输入': 'inputs', '分析策略': 'analysis_strategy',
-          '结果确认': 'review_mode', '执行授权': 'authorization_mode'}
+          '结果确认': 'review_mode', '执行授权': 'authorization_mode', '模型': 'model'}
 VALUES = {'简要': 'simple', '标准': 'standard', '深入': 'deep', '人工': 'manual', '自动': 'auto'}
 
 

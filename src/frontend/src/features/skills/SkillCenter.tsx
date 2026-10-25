@@ -1,3 +1,4 @@
+import { loadModelLibrary } from "./model-api";
 import ProductSidebar from "../../ProductSidebar";
 import WorkflowLibrary from "../workflows/WorkflowLibrary";
 import {
@@ -5,7 +6,7 @@ import {
   isWorkflowLibrary,
 } from "../workflows/workflow-state";
 import { api, request } from "../../api";
-import { useLocalState, persistModels, readLocal } from "./local-state";
+import { useLocalState, readLocal } from "./local-state";
 import SkillModelPicker from "./SkillModelPicker";
 import ModelSettings from "./ModelSettings";
 import { useEffect, useRef, useState, type InputHTMLAttributes } from "react";
@@ -62,6 +63,30 @@ export default function SkillCenter({
   navigate?: (page: string) => void;
 }) {
   const [skills, setSkills] = useState<Skill[]>([]);
+  const [modelIssues, setModelIssues] = useState<
+    Record<string, { message: string }>
+  >({});
+  useEffect(() => {
+    let active = true;
+    const load = () => {
+      void request<{ resources: Record<string, { message: string }> }>(
+        "/models/lifecycle",
+      )
+        .then((r) => {
+          if (active) setModelIssues(r.resources);
+        })
+        .catch(() => {});
+    };
+    load();
+    window.addEventListener("focus", load);
+    window.addEventListener("beivymate-models-changed", load);
+    return () => {
+      active = false;
+      window.removeEventListener("focus", load);
+      window.removeEventListener("beivymate-models-changed", load);
+    };
+  }, [page]);
+
   const [loadingSkills, setLoadingSkills] = useState(true);
   const [packageErrors, setPackageErrors] = useState("");
   const loadSkills = async () => {
@@ -86,7 +111,14 @@ export default function SkillCenter({
       flight = true;
       try {
         await api.session();
-        if (active) await loadSkills();
+        if (active) {
+          const results = await Promise.allSettled([
+            loadSkills(),
+            loadModelLibrary(),
+          ]);
+          const failure = results.find((r) => r.status === "rejected");
+          if (failure?.status === "rejected") throw failure.reason;
+        }
       } catch (e) {
         if (active) setPackageErrors((e as Error).message);
       } finally {
@@ -147,7 +179,6 @@ export default function SkillCenter({
     }
   };
   const settingsOpen = activePage === "models";
-  const setSettingsOpen = (open: boolean) => go(open ? "models" : "skills");
   const [userMenu, setUserMenu] = useState(false);
   const [, refreshModels] = useState(0);
   const [notice, setNotice] = useState("");
@@ -301,11 +332,8 @@ export default function SkillCenter({
         )}
         <div hidden={!settingsOpen}>
           <ModelSettings
-            skills={skills}
-            workflows={workflows}
-            back={() => setSettingsOpen(false)}
+            active={settingsOpen}
             changed={() => {
-              persistModels();
               refreshModels((x) => x + 1);
             }}
           />
@@ -405,6 +433,11 @@ export default function SkillCenter({
                       onClick={() => open(s, true)}
                     >
                       <h2>{s.name}</h2>
+                      {modelIssues["skill:" + s.id] && (
+                        <span className="mm-resource-issue">
+                          {modelIssues["skill:" + s.id].message}
+                        </span>
+                      )}
                     </button>
                     <span className={`sc-state ${s.state}`}>
                       <i />

@@ -46,6 +46,7 @@ def create_tester_agent(
     custom_skill_root: Path | None = None,
     model_resolver=None,
     skill_policy=None,
+    skill_model_resolver=None,
 ) -> TesterAgent:
 
     from beivymate.configuration.skill_package import SkillCatalog
@@ -53,12 +54,24 @@ def create_tester_agent(
     catalog = SkillCatalog(PROJECT_ROOT / 'src/beivymate/builtin/skills', custom_skill_root or Path(workflow_path).resolve().parent.parent / 'skills', publication_policy=skill_policy)
     definition = load_workflow_definition(Path(workflow_path))
     skill_registry = SkillRegistry()
-    for identity in dict.fromkeys(step.skill for step in definition.resolved_steps()):
+    resolved_steps=definition.resolved_steps()
+    import hashlib
+    registry_identity=lambda step: step.skill if not step.model else step.skill+"__"+hashlib.sha256(step.id.encode()).hexdigest()[:16]
+    registrations={}
+    for step in resolved_steps:
+        identity=step.skill
+        registry_id=registry_identity(step)
+        if registry_id in registrations:continue
+        registrations[registry_id]=True
         spec = catalog.get(identity)
+        if step.model:spec=spec.model_copy(update={'model':step.model})
         if spec.role != 'tester':
             raise ValueError('Skill 不属于当前角色：' + identity)
         selected_gateway, selected_model = gateway, model
-        if spec.model:
+        resolved = skill_model_resolver(spec) if skill_model_resolver and spec.executor != 'test_execution' else None
+        if resolved is not None:
+            selected_gateway, selected_model = resolved
+        elif spec.model:
             if model_resolver is None:
                 from beivymate.application.model_binding import resolve_model
                 selected_gateway, selected_model = resolve_model(spec.model, PROJECT_ROOT / 'resources/configuration/llm/model',
@@ -109,7 +122,7 @@ def create_tester_agent(
         if executor_id == 'test_report':
             snapshot['binary_template'] = base64.b64encode(executor.service.template.read_bytes()).decode()
         from beivymate.application.app import create_gateway
-        skill_registry.register(identity, ConfiguredSkill(executor, spec, snapshot, create_gateway))
+        skill_registry.register(registry_id, ConfiguredSkill(executor, spec, snapshot, create_gateway))
     knowledge_service = KnowledgeService(root=KNOWLEDGE_ROOT)
 
     runtime = Runtime(
@@ -117,9 +130,13 @@ def create_tester_agent(
         knowledge_service = knowledge_service,
     )
 
-    workflow = runtime.load_workflow(
-        workflow_path,
-    )
+    if any(step.model for step in resolved_steps):
+        from beivymate.runtime.workflow import Workflow
+        runtime_steps=[step.model_copy(update={'skill':registry_identity(step)}) if step.model else step for step in resolved_steps]
+        definition=definition.model_copy(update={'steps':[s.skill for s in runtime_steps],'step_definitions':runtime_steps})
+        workflow=Workflow(definition,skill_registry.resolve([s.skill for s in runtime_steps]),Path(workflow_path).resolve().parent)
+    else:
+        workflow = runtime.load_workflow(workflow_path)
 
     return TesterAgent(
         runtime = runtime,
@@ -143,6 +160,7 @@ def create_agent_factory(
     custom_skill_root: Path | None = None,
     model_resolver=None,
     skill_policy=None,
+    skill_model_resolver=None,
 ) -> AgentFactory:
 
     tester_agent = create_tester_agent(

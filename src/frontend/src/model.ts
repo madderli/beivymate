@@ -144,7 +144,12 @@ export type Artifact = {
   sources: string[];
   reviewable: boolean;
 };
-export type Message = { id: string; role: "user" | "assistant"; text: string };
+export type Message = {
+  id: string;
+  role: "user" | "assistant";
+  text: string;
+  model?: string;
+};
 export const emptyBoard = (): Board => ({
   workspaces: [],
   tasks: [],

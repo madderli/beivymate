@@ -211,6 +211,56 @@ class PortalService:
                 raise IdentityError('资源被未关闭任务引用，不能修改、删除或停用：' + '、'.join(locked), 409)
             yield
 
+    @contextmanager
+    def model_guard(self, catalog, identities):
+        with self.db() as db:
+            self._backfill_references(db)
+            locked=set()
+            for identity in identities:
+                locked.update(self._resource_locks(db,'model',identity))
+            # Pending tasks have not frozen a model yet: resolve their present inheritance.
+            rows=db.execute("""SELECT e.id,r.resource FROM entity e
+                JOIN resource_reference r ON r.task=e.id AND r.kind='skill'
+                LEFT JOIN task_lifecycle l ON l.task=e.id
+                WHERE e.deleted=0 AND l.closed_at IS NULL""").fetchall()
+            for row in rows:
+                if not hasattr(self,'skill_center'):
+                    continue
+                from beivymate.markdown.metadata import read_markdown
+                try:
+                    entry,_=self.skill_center._entry(row['resource'])
+                    meta,_=read_markdown(entry)
+                    if meta.get('executor')=='test_execution':
+                        continue
+                    preference=meta.get('model_preference',{})
+                    if isinstance(preference,str):
+                        preference=json.loads(preference)
+                    if not isinstance(preference,dict):
+                        raise ValueError('技能模型偏好必须为对象')
+                    mode=preference.get('mode','inherit')
+                    if mode=='none':
+                        continue
+                    selected=meta.get('model') or (preference.get('model') if mode=='specific' else
+                        catalog.tiers.get(preference.get('tier','均衡')) if mode=='tier' else
+                        catalog.defaults.skill or catalog.defaults.general)
+                    if selected in identities:
+                        locked.add(row['id'])
+                except (ValueError,OSError):
+                    raise IdentityError('任务引用的技能配置无法解析，请修复后再调整模型',409) from None
+            workflow_rows=db.execute("SELECT e.id,r.resource FROM entity e JOIN resource_reference r ON r.task=e.id AND r.kind='workflow' LEFT JOIN task_lifecycle l ON l.task=e.id WHERE e.deleted=0 AND l.closed_at IS NULL").fetchall()
+            for row in workflow_rows:
+                try:
+                    paths=list(self.workflow_root.glob('*.md'))
+                    custom=getattr(self,'custom_workflow_root',None)
+                    if custom:paths.extend(custom.glob('*.md'))
+                    for path in paths:
+                        definition=load_workflow_definition(path)
+                        if definition.id==row['resource'] and any(step.model in identities for step in definition.resolved_steps()):locked.add(row['id'])
+                except (ValueError,OSError):raise IdentityError('任务工作流配置无法解析，请修复后再调整模型',409) from None
+            if locked:
+                raise IdentityError('模型被未关闭任务引用，不能修改、删除或停用：'+'、'.join(sorted(locked)),409)
+            yield
+
     def close_task(self, owner, identity, body, key):
         if not key or len(key) > 160:
             raise IdentityError('关闭操作缺少幂等标识', 422)
