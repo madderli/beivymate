@@ -30,6 +30,12 @@ def prepare(portal, data_dir, owner, task_id, directory, run_id):
     path = next((p for p in paths if load_workflow_definition(p).id == task['workflow']), None)
     if path is None:
         raise ValueError('工作流已不存在')
+    if hasattr(portal,'skill_center'):
+        import hashlib
+        with portal.skill_center.registry.db() as registry_db:
+            tracked=registry_db.execute("SELECT 1 FROM resource WHERE kind='workflow' AND id=?",(task['workflow'],)).fetchone()
+        if tracked:
+            portal.skill_center.registry.require_published('workflow',task['workflow'],hashlib.sha256(path.read_bytes()).hexdigest())
     content = task['description']
     sources = []
     for attachment in task['attachments']:
@@ -50,12 +56,15 @@ def prepare(portal, data_dir, owner, task_id, directory, run_id):
     specs = [catalog_specs.get(step.skill) for step in load_workflow_definition(path).resolved_steps()]
     gateway, model_name = None, ''
     if any(spec.executor != 'test_execution' and not spec.model for spec in specs):
-        model_path = data_dir / 'configuration/models/default.md'
-        model = load_model_definition(model_path if model_path.exists() else MODEL_PATH)
-        if not model.enabled or not model.base_url:
-            raise ValueError('默认模型未启用或未配置服务地址')
-        gateway = create_gateway(model.provider, model.base_url, model.timeout, model.api_key_env, model.max_retries)
-        model_name = model.model
+        if hasattr(portal, 'model_catalog') and portal.model_catalog.exists(owner):
+            pass  # Every model-using step resolves its own inherited/explicit preference below.
+        else:
+            model_path = data_dir / 'configuration/models/default.md'
+            model = load_model_definition(model_path if model_path.exists() else MODEL_PATH)
+            if not model.enabled or not model.base_url:
+                raise ValueError('默认模型未启用或未配置服务地址')
+            gateway = create_gateway(model.provider, model.base_url, model.timeout, model.api_key_env, model.max_retries)
+            model_name = model.model
     # Explicit product catalog; never invent a customer's functional hierarchy.
     from beivymate.assets.cases import CaseStore
     from beivymate.model.artifact.test_design import ProductCatalog
@@ -67,7 +76,19 @@ def prepare(portal, data_dir, owner, task_id, directory, run_id):
     from beivymate.execution.service import ExecutionService
     execution = ExecutionService(data_dir / 'work/execution' / task_id, task_id)
     from beivymate.application.model_binding import resolve_model
-    agent = create_tester_agent(str(path), gateway, model_name, locale=task['locale'], skill_policy=policy,
+    def resolve_skill_model(spec):
+        if hasattr(portal,'model_catalog') and portal.model_catalog.exists(owner):
+            from beivymate.markdown.metadata import read_markdown
+            entry,_=portal.skill_center._entry(spec.id)
+            meta,_=read_markdown(entry)
+            preference=meta.get('model_preference')
+            if isinstance(preference,str):
+                import json
+                preference=json.loads(preference)
+            return portal.model_catalog.gateway(owner,purpose='skill',selection={**(preference or {}),'mode':'specific','model':spec.model} if spec.model else preference,
+                task=task_id,required=['structured'])
+        return None
+    agent = create_tester_agent(str(path), gateway, model_name, locale=task['locale'], skill_policy=policy, skill_model_resolver=resolve_skill_model,
         model_resolver=lambda identity: resolve_model(identity, PROJECT_ROOT / 'resources/configuration/llm/model', data_dir / 'configuration/models'),
         custom_skill_root=getattr(portal, 'skill_root', data_dir / 'configuration/skills'), design_store=case_store, execution_service=execution)
     context = AgentContext()
@@ -116,13 +137,15 @@ def prepare(portal, data_dir, owner, task_id, directory, run_id):
 
 
 
-def restore_runtime(state: Checkpoint, data_dir: Path, directory: Path):
+def restore_runtime(state: Checkpoint, data_dir: Path, directory: Path, *, vault=None):
     """Rebuild from frozen packages only, even if customer config has been edited/deleted."""
     context = AgentContext.restore(state.context)
+    from functools import partial
+    gateway_factory = partial(create_gateway, vault=vault)
     registry = SkillRegistry()
     for identity, snapshot in context.get('skill_packages', {}).items():
         spec = SkillDefinition.model_validate(snapshot['definition'])
-        gateway = create_gateway(**snapshot['model_binding']) if snapshot.get('model_binding') else None
+        gateway = gateway_factory(**snapshot['model_binding']) if snapshot.get('model_binding') else None
         model = snapshot['resolved_model']
         template = TemplateDefinition.model_validate(snapshot['template']) if 'template' in snapshot else None
         binary = directory / (identity + ('-template.xlsx' if spec.executor == 'test_design' else '-template.docx'))
@@ -150,7 +173,7 @@ def restore_runtime(state: Checkpoint, data_dir: Path, directory: Path):
             executor = TestReportSkill(ReportService(gateway, model, binary))
         else:
             raise ValueError('原执行器不可用：' + spec.executor)
-        configured = ConfiguredSkill(executor, spec, snapshot, create_gateway)
+        configured = ConfiguredSkill(executor, spec, snapshot, gateway_factory)
         configured.restore(snapshot)
         registry.register(identity, configured)
     return Runtime(registry)

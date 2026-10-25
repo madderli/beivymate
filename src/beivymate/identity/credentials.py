@@ -21,6 +21,14 @@ class CredentialVault:
         except Exception:
             raise IdentityError('无法写入系统凭据库，请检查系统授权。', 503) from None
 
+    def get(self, user_id: str, connection: str):
+        try:
+            return self._backend().get_password('BeIvyMate', f'{user_id}:{connection}')
+        except IdentityError:
+            raise
+        except Exception:
+            raise IdentityError('无法读取系统凭据库，请检查系统授权。', 503) from None
+
     def delete(self, user_id: str, connection: str):
         try:
             backend = self._backend()

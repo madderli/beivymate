@@ -6,6 +6,7 @@ class WorkflowStepDefinition(BaseModel):
     model_config = ConfigDict(extra="forbid")
     id: str = Field(min_length=1)
     skill: str = Field(min_length=1)
+    model: str | None = None
     inputs: list[str] = Field(default_factory=list)
     analysis_strategy: Literal["simple", "standard", "deep"] | None = None
     review_mode: Literal["manual", "auto"] = "manual"

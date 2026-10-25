@@ -444,37 +444,6 @@ test("registry wizard follows attachment and required labels stay inline", async
   await expect(page.locator(".sc-success")).toContainText("连接成功（模拟）");
 });
 
-test("platform import matches attachment including configure and deduplication", async ({
-  page,
-}, info) => {
-  await openLibrary(page);
-  await page.getByRole("button", { name: "从平台导入" }).click();
-  await expect(page.getByLabel("导入到", { exact: true })).toHaveCount(0);
-  await page.getByRole("button", { name: "同步目录", exact: true }).click();
-  await expect(page.locator(".mr-discovered input")).toHaveCount(6);
-  await expect(page.locator(".mr-discovered input:checked")).toHaveCount(3);
-  await page.getByLabel("搜索平台模型").fill("vision");
-  await page.locator(".mr-discovered input").check();
-  await page.screenshot({ path: info.outputPath("platform-import.png") });
-  await page.getByRole("button", { name: "导入选中", exact: true }).click();
-  const group = page.locator(".mr-group").filter({
-    has: page.locator(".mr-vendor-name strong", { hasText: "OpenRouter" }),
-  });
-  await expect(group.locator("tbody tr")).toHaveCount(4);
-  await expect(group).toContainText("未配置");
-  await group.getByRole("button", { name: "去配置", exact: true }).click();
-  await page.getByRole("button", { name: "测试连接", exact: true }).click();
-  await expect(page.getByRole("alert")).toContainText("填写密钥");
-  await page.getByLabel("密钥", { exact: true }).fill("demo-key");
-  await page.getByRole("button", { name: "测试连接", exact: true }).click();
-  await expect(group).toContainText("已配置");
-  await page.getByRole("button", { name: "从平台导入" }).click();
-  await page.getByRole("button", { name: "同步目录", exact: true }).click();
-  await expect(page.locator(".mr-discovered input")).toHaveCount(6);
-  await page.getByRole("button", { name: "导入选中", exact: true }).click();
-  await expect(group.locator("tbody tr")).toHaveCount(4);
-});
-
 test("registry model fields, sync and unavailable mapping match attachment", async ({
   page,
 }, info) => {

@@ -1,3 +1,4 @@
+import ChatModelPicker from "./ChatModelPicker";
 import { WorkspaceCard } from "./WorkspaceCard";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -151,12 +152,14 @@ export default function AgentApp() {
       w.id ===
       (task?.workspace || (route.page === "workspace" ? route.id : undefined)),
   );
+  const [chatReady, setChatReady] = useState(false);
   const context = task
     ? `task:${task.id}`
     : workspace
       ? `workspace:${workspace.id}`
       : "global";
-  const isLanding = landingPages.includes(route.page);
+  const isLanding =
+    landingPages.includes(route.page) || route.page === "models";
   const isChat = ["workspace", "task", "start"].includes(route.page);
   const defaultId = board.defaultWorkspace || board.workspaces[0]?.id;
   useEffect(() => {
@@ -256,6 +259,8 @@ export default function AgentApp() {
         messageKey.current = undefined;
       }
     } catch (e) {
+      if ((e as { status?: number }).status === 422)
+        messageKey.current = undefined;
       if (location.hash === origin) setChatError((e as Error).message);
     } finally {
       setBusy(false);
@@ -565,6 +570,9 @@ export default function AgentApp() {
                             : "OmniAlba"}
                         </span>
                         <p>{m.text}</p>
+                        {m.role === "assistant" && m.model && (
+                          <small>模型：{m.model}</small>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -621,6 +629,16 @@ export default function AgentApp() {
                         }}
                       />
                       <div className="ad-composer-tools">
+                        {can("chat") && (
+                          <ChatModelPicker
+                            context={context}
+                            busy={busy}
+                            ready={setChatReady}
+                            onError={setChatError}
+                            configure={() => go("models")}
+                          />
+                        )}
+
                         <button
                           type="button"
                           disabled={
@@ -667,7 +685,8 @@ export default function AgentApp() {
                             busy ||
                             !prompt.trim() ||
                             workspace.paused ||
-                            (!can("chat") && !can("task.create"))
+                            (!can("chat") && !can("task.create")) ||
+                            (can("chat") && !files.length && !chatReady)
                           }
                         >
                           <ArrowUp size={20} />

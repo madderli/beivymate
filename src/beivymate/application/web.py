@@ -68,16 +68,28 @@ def create_app(data_dir: Path, setup_token: str, *, origins=None, vault=None, wo
     from contextlib import asynccontextmanager
     from beivymate.scheduling.service import RunService
     from beivymate.application.run_inputs import prepare, restore_runtime
-    runs = RunService(data_dir, portal, run_prepare or prepare, run_restore or restore_runtime)
+    from functools import partial
+    runs = RunService(data_dir, portal, run_prepare or prepare, run_restore or partial(restore_runtime, vault=vault))
     portal.runs = runs
 
     @asynccontextmanager
     async def lifespan(app):
-        if worker_enabled:
-            runs.start()
+        import asyncio
+        def startup_model_check():
+            with service.db() as db:
+                owners=[r[0] for r in db.execute('SELECT id FROM account')]
+            for owner in owners:
+                if model_catalog.exists(owner):
+                    try:model_catalog.lifecycle.check(owner,used_only=True)
+                    except (ValueError,RuntimeError,OSError,IdentityError):pass
+        async def bootstrap():
+            await asyncio.to_thread(startup_model_check)
+            if worker_enabled:runs.start()
+        check_task=asyncio.create_task(bootstrap())
         try:
             yield
         finally:
+            if not check_task.done():check_task.cancel()
             if worker_enabled:
                 runs.close()
 
@@ -124,6 +136,19 @@ def create_app(data_dir: Path, setup_token: str, *, origins=None, vault=None, wo
         return service.require(request.cookies.get(COOKIE),
             request.headers.get('x-csrf-token', '') if request.method != 'GET' else None,
             capability)
+
+    from beivymate.models.catalog import ModelCatalog
+    from beivymate.models.api import model_router
+    model_catalog = ModelCatalog(paths.root, vault, portal)
+    portal.model_catalog = model_catalog
+    app.state.model_catalog = model_catalog
+    app.include_router(model_router(model_catalog, require))
+    from beivymate.models.conversations import Conversations, conversation_router
+    conversations = Conversations(paths.root, model_catalog, portal)
+    app.state.conversations = conversations
+    from beivymate.models.replacement import Replacements
+    model_catalog.replacements = Replacements(model_catalog)
+    app.include_router(conversation_router(conversations, require))
 
     from beivymate.configuration.library import ConfigurationLibrary
     from beivymate.configuration.skill_center import SkillCenter
@@ -175,6 +200,11 @@ def create_app(data_dir: Path, setup_token: str, *, origins=None, vault=None, wo
             raise IdentityError(str(exc), 422) from None
 
     app.state.configuration_library = library
+    from beivymate.models.maintenance import ModelMaintenance
+    from beivymate.models.lifecycle import ModelLifecycle
+    model_catalog.maintenance = ModelMaintenance(model_catalog, conversations, library)
+    model_catalog.lifecycle = ModelLifecycle(model_catalog, conversations)
+
     portal.custom_workflow_root = paths.workflows
     try:
         portal.initialize_references()
@@ -287,12 +317,16 @@ def create_app(data_dir: Path, setup_token: str, *, origins=None, vault=None, wo
         account = require(request, 'credentials.manage')
         if not connection.isascii() or not connection.replace('-', '').replace('_', '').isalnum() or len(connection) > 80:
             raise IdentityError('连接标识只支持字母、数字、短横线、下划线，最多 80 字符。', 422)
+        if any(s.id == connection for s in model_catalog._read(account['user']['id'])[0].services):
+            return model_catalog.credential(account['user']['id'], connection, body.secret)
         vault.save(account['user']['id'], connection, body.secret)
         return {'saved': True}
 
     @app.delete('/api/v1/account/credentials/{connection}')
     def delete_credential(connection: str, request: Request):
         account = require(request, 'credentials.manage')
+        if any(s.id == connection for s in model_catalog._read(account['user']['id'])[0].services):
+            return model_catalog.delete_credential(account['user']['id'], connection)
         vault.delete(account['user']['id'], connection)
         return {'deleted': True}
 

@@ -1,5 +1,8 @@
+import { Fragment, useEffect, useState } from "react";
+import { ModelMaintenanceDialog, type Lifecycle } from "./ModelMaintenance";
+import { request } from "../../api";
+import { type Catalog, modelPayload, servicePayload } from "./model-api";
 import { modelFacts } from "./model-capabilities";
-import { useEffect, useRef, useState } from "react";
 import { Dialog } from "../../components";
 import {
   ModelSourceDialog,
@@ -7,7 +10,6 @@ import {
   sourceLabels,
   RequiredLabel,
 } from "./ModelSourceDialog";
-import ModelPlatformImport from "./ModelPlatformImport";
 import ModelRegistryEditor, { registryTier } from "./ModelRegistryEditor";
 import {
   configuredModels,
@@ -15,7 +17,7 @@ import {
   type ModelService,
   type ConfiguredModel,
 } from "./skill-state";
-export function newModel(service: ModelService): ConfiguredModel {
+function newModel(service: ModelService): ConfiguredModel {
   return {
     id: crypto.randomUUID(),
     serviceId: service.id,
@@ -34,109 +36,152 @@ export function newModel(service: ModelService): ConfiguredModel {
     quota: "",
     connection: "未验证",
     connectionSimulated: false,
-    contextK: 32,
+    contextK: undefined,
   };
 }
-export default function ModelLibrary({ changed }: { changed: () => void }) {
+export default function ModelLibrary({
+  doc,
+  save,
+  reload,
+  active = true,
+}: {
+  doc: Catalog;
+  save: (next: Catalog) => Promise<Catalog>;
+  reload: () => Promise<void>;
+  active?: boolean;
+}) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("全部来源");
   const [collapsed, setCollapsed] = useState(
     modelServices.slice(1).map((s) => s.id),
   );
+  const [selectionOnly, setSelectionOnly] = useState(false);
   const [source, setSource] = useState<ModelService | "new">();
-  const [importing, setImporting] = useState(false);
   const [editing, setEditing] = useState<ConfiguredModel>();
-  const [deleting, setDeleting] = useState<ConfiguredModel>();
   const [configuring, setConfiguring] = useState<ModelService>();
   const [secret, setSecret] = useState("");
   const [configError, setConfigError] = useState("");
   const [busy, setBusy] = useState<string[]>([]);
+  const [probes, setProbes] = useState<
+    Record<string, { busy: boolean; message: string; failed?: boolean }>
+  >({});
   const [notice, setNotice] = useState("");
-  const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
-  useEffect(() => () => timers.current.forEach(clearTimeout), []);
-  const later = (fn: () => void) => {
-    timers.current.push(setTimeout(fn, 700));
-  };
-  function saveSource(g: ModelService, ids: string[]) {
-    const index = modelServices.findIndex((x) => x.id === g.id);
-    if (index < 0) modelServices.unshift(g);
-    else modelServices[index] = g;
-    ids.forEach((identifier, i) => {
-      if (
-        configuredModels.some(
-          (m) => m.serviceId === g.id && m.identifier === identifier,
-        )
-      )
-        return;
-      configuredModels.push({
-        ...newModel(g),
-        identifier,
-        name: identifier.split("/").at(-1) || identifier,
-        registryCapabilities: identifier.includes("vision")
-          ? ["视觉理解"]
-          : identifier.includes("lite")
-            ? []
-            : identifier.includes("chat")
-              ? ["函数调用", "结构化输出（JSON）"]
-              : ["深度推理", "代码能力"],
-        capabilitySource: "provider",
-        contextK: i === 0 ? 128 : 64,
-        inputPrice: i === 0 ? 0.003 : 0.001,
-        outputPrice: i === 0 ? 0.009 : 0.003,
-        orientation: i === 0 ? "质量优先" : i === 1 ? "均衡" : "速度优先",
-      });
-    });
-    configuredModels
-      .filter((m) => m.serviceId === g.id)
-      .forEach((m) => {
-        m.provider = g.name;
-        m.endpoint = g.endpoint;
-      });
-    setCollapsed(
-      ids.length
-        ? modelServices.filter((s) => s.id !== g.id).map((s) => s.id)
-        : collapsed,
-    );
-    setSource(undefined);
-    setImporting(false);
-    changed();
-    setNotice(ids.length ? `已注册 ${ids.length} 个模型` : "厂商信息已更新");
+  const [error, setError] = useState("");
+  const [lifecycle, setLifecycle] = useState<Lifecycle>({ models: {} });
+  const [maintenance, setMaintenance] = useState<{
+    source: Catalog["models"][number];
+    action: "replace" | "delete";
+  }>();
+  const [checkMessages, setCheckMessages] = useState<Record<string, string>>({});
+  const [checking, setChecking] = useState(false);
+  async function loadLifecycle() {
+    setLifecycle(await request<Lifecycle>("/models/lifecycle"));
   }
-  function sync(g: ModelService) {
-    setBusy((xs) => [...xs, g.id]);
-    later(() => {
-      const identifier = `${g.id}/synced-latest`;
-      const exists = configuredModels.some(
-        (m) => m.serviceId === g.id && m.identifier === identifier,
+  async function checkModels(ids?: string[], serviceId?: string) {
+    const feedback = (message: string) => {
+      if (serviceId) setCheckMessages((current) => ({ ...current, [serviceId]: message }));
+      else setError(message);
+    };
+    if (serviceId) feedback("正在检查模型版本，请稍候…");
+    setChecking(true);
+    setError("");
+    try {
+      const result = await request<Lifecycle>(
+        "/models/lifecycle/check",
+        {
+          method: "POST",
+          body: JSON.stringify({ models: ids, usedOnly: !ids }),
+        },
+        Math.min(305000, 35000 * doc.services.length + 5000),
       );
-      if (!exists)
-        configuredModels.unshift({
-          ...newModel(g),
-          identifier,
-          name: "同步发现的新模型",
-          registryCapabilities: ["结构化输出（JSON）"],
-          capabilitySource: "provider",
-          contextK: 64,
-          inputPrice: 0.001,
-          outputPrice: 0.003,
-          lineage: "目录同步发现",
-        });
-      const candidate = configuredModels.find(
-        (m) =>
-          m.serviceId === g.id && !m.offline && m.identifier !== identifier,
-      );
-      if (candidate && g.name !== "OpenRouter") {
-        candidate.offline = true;
-        candidate.enabled = false;
+      setLifecycle(result);
+      await loadLifecycle();
+      await reload();
+      window.dispatchEvent(new Event("beivymate-models-changed"));
+      if (result.errors?.length)
+        feedback(
+          result.errors
+            .map((e) => `${e.service}：检查未完成，${e.message}`)
+            .join("；"),
+        );
+      else if (ids) {
+        const checked = new Set(result.checkedModels ?? []);
+        const models = doc.models.filter((m) => ids.includes(m.id) && checked.has(m.id));
+        const updates = models.filter((m) => result.models[m.id]?.versionStatus === "update_available");
+        const unknown = models.filter((m) => !["latest", "update_available"].includes(result.models[m.id]?.versionStatus ?? "unknown"));
+        if (!models.length) feedback("暂无模型可检查。");
+        else if (updates.length) feedback(
+          `模型检查完成，${updates.map((m) => m.name).join("、")}模型有新版本，请使用“更换模型”功能更新。` +
+          (unknown.length ? `另有 ${unknown.length} 个模型暂时无法确认是否有更新。` : ""),
+        );
+        else if (unknown.length) feedback("模型检查完成，厂商未提供版本信息，暂时无法确认是否有更新。");
+        else feedback("模型检查完成，当前模型均为最新版本。");
       }
-      setBusy((xs) => xs.filter((id) => id !== g.id));
-      changed();
-      setNotice(
-        `同步完成：新增 ${exists ? 0 : 1} 个模型，${candidate && g.name !== "OpenRouter" ? 1 : 0} 个模型已下线`,
-      );
-    });
+    } catch (e) {
+      feedback(`模型版本检查未完成：${(e as Error).message}`);
+    } finally {
+      setChecking(false);
+    }
   }
-  const matches = (m: ConfiguredModel, g: ModelService) =>
+  useEffect(() => {
+    if (!active) return;
+    void loadLifecycle().catch((e) => setError(e.message));
+    void checkModels();
+  }, [active]);
+
+  async function action(id: string, fn: () => Promise<void>) {
+    if (busy.includes(id)) return;
+    setBusy((xs) => [...xs, id]);
+    setError("");
+    setNotice("");
+    try {
+      await fn();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy((xs) => xs.filter((x) => x !== id));
+    }
+  }
+  async function saveSource(g: ModelService, ids: string[], key = "") {
+    const additions = ids
+      .filter(
+        (identifier) =>
+          !doc.models.some(
+            (m) => m.serviceId === g.id && m.identifier === identifier,
+          ),
+      )
+      .map((identifier) =>
+        modelPayload({ ...newModel(g), identifier, name: identifier }),
+      );
+    await save({
+      ...doc,
+      services: doc.services.some((s) => s.id === g.id)
+        ? doc.services.map((s) => (s.id === g.id ? servicePayload(g) : s))
+        : [servicePayload(g), ...doc.services],
+      models: [...doc.models, ...additions],
+    });
+    if (key.trim()) {
+      try {
+        await request(`/models/services/${g.id}/credential`, {
+          method: "PUT",
+          body: JSON.stringify({ secret: key }),
+        });
+      } catch (e) {
+        await reload();
+        throw Error(`连接信息已保存，但密钥保存失败：${(e as Error).message}`);
+      }
+    }
+    await reload();
+    setSource(undefined);
+    setCollapsed((xs) => xs.filter((id) => id !== g.id));
+    setNotice(
+      additions.length ? `已添加 ${additions.length} 个模型` : "厂商信息已更新",
+    );
+  }
+  const matches = (
+    m: Pick<ConfiguredModel, "name" | "identifier" | "lineage">,
+    g: ModelService,
+  ) =>
     !query ||
     `${g.name} ${m.identifier} ${m.name} ${m.lineage || ""}`
       .toLowerCase()
@@ -150,39 +195,43 @@ export default function ModelLibrary({ changed }: { changed: () => void }) {
   return (
     <>
       <div className="ms-panel-intro">
-        <p>统一管理直连厂商、模型平台与公司自部署模型</p>
+        <p>集中管理模型来源、连接信息与可选模型。</p>
         <div className="mr-actions">
-          <button className="sc-secondary" onClick={() => setImporting(true)}>
-            ⇧ 从平台导入
-          </button>
-          <button className="ad-primary" onClick={() => setSource("new")}>
+          <button
+            className="ad-primary"
+            onClick={() => {
+              setSelectionOnly(false);
+              setSource("new");
+            }}
+          >
             ＋ 添加厂商
           </button>
         </div>
       </div>
-      <div className="mr-stats">
-        <div>
-          <strong>{modelServices.length}</strong>
-          <span>已接入厂商</span>
-        </div>
-        <div>
-          <strong>{configuredModels.length}</strong>
-          <span>已注册模型</span>
-        </div>
-        <div>
-          <strong>
-            {
-              configuredModels.filter(
-                (m) =>
-                  m.enabled &&
-                  !m.offline &&
-                  modelServices.find((g) => g.id === m.serviceId)?.enabled,
-              ).length
-            }
-          </strong>
-          <span>已启动模型</span>
-        </div>
-      </div>
+      {Object.entries(lifecycle.models)
+        .filter(
+          ([, f]) => f.references && ["expiring", "retired"].includes(f.status),
+        )
+        .map(([id, f]) => (
+          <div key={id} className={`mm-retirement-banner ${f.status}`}>
+            <span>
+              <b>{doc.models.find((m) => m.id === id)?.name || id}</b>{" "}
+              {f.status === "retired"
+                ? "已到厂商停用日期"
+                : "将于 " + f.shutdownDate + " 停用"}{" "}
+              · 影响 {f.references} 处引用
+            </span>
+            <button
+              className="sc-secondary"
+              onClick={() => {
+                const model = doc.models.find((m) => m.id === id);
+                if (model) setMaintenance({ source: model, action: "replace" });
+              }}
+            >
+              去更换
+            </button>
+          </div>
+        ))}
       <div className="ms-library-tools">
         <input
           aria-label="搜索模型管理"
@@ -227,13 +276,13 @@ export default function ModelLibrary({ changed }: { changed: () => void }) {
                 {g.endpoint || "未设置 Base URL"}
                 {g.selfCert ? " · 允许自签名证书" : ""}
               </small>
+              {checkMessages[g.id] && (
+                <p role="status" style={{ margin: "8px 0 0", fontSize: 13 }}>
+                  {checkMessages[g.id]}
+                </p>
+              )}
             </div>
             <div className="mr-group-controls">
-              <span
-                className={`mr-config-state ${g.configured === false ? "missing" : ""}`}
-              >
-                {g.configured === false ? "未配置" : "已配置"}
-              </span>
               {g.configured === false &&
                 !["无", "无需鉴权"].includes(g.auth) && (
                   <button
@@ -243,19 +292,32 @@ export default function ModelLibrary({ changed }: { changed: () => void }) {
                       setConfigError("");
                     }}
                   >
-                    去配置
+                    配置密钥
                   </button>
                 )}
               <small>
                 {configuredModels.filter((m) => m.serviceId === g.id).length}{" "}
                 个模型
               </small>
-              <button disabled={busy.includes(g.id)} onClick={() => sync(g)}>
-                {busy.includes(g.id) ? "同步中…" : "重新同步"}
+              <button
+                disabled={checking}
+                onClick={() =>
+                  void checkModels(
+                    doc.models
+                      .filter((m) => m.serviceId === g.id && matches(m, g))
+                      .map((m) => m.id),
+                    g.id,
+                  )
+                }
+              >
+                {checking ? "检查中…" : "检查模型版本"}
               </button>
               <button
                 aria-label={`编辑 ${g.name}`}
-                onClick={() => setSource(g)}
+                onClick={() => {
+                  setSelectionOnly(false);
+                  setSource(g);
+                }}
               >
                 编辑
               </button>
@@ -264,9 +326,16 @@ export default function ModelLibrary({ changed }: { changed: () => void }) {
                 className="mr-switch"
                 aria-label={`启用厂商 ${g.name}`}
                 aria-checked={g.enabled}
+                disabled={busy.includes(`toggle:${g.id}`)}
                 onClick={() => {
-                  g.enabled = !g.enabled;
-                  changed();
+                  void action(`toggle:${g.id}`, async () => {
+                    await save({
+                      ...doc,
+                      services: doc.services.map((s) =>
+                        s.id === g.id ? { ...s, enabled: !s.enabled } : s,
+                      ),
+                    });
+                  });
                 }}
               >
                 <i />
@@ -309,103 +378,228 @@ export default function ModelLibrary({ changed }: { changed: () => void }) {
                     {configuredModels
                       .filter((m) => m.serviceId === g.id && matches(m, g))
                       .map((m) => (
-                        <tr
-                          key={m.id}
-                          className={m.offline ? "mr-offline" : ""}
-                        >
-                          <td>
-                            <code>{m.identifier}</code>
-                            {m.offline && (
-                              <span className="mr-danger-tag">已下线</span>
-                            )}
-                            <strong>{m.name}</strong>
-                            {m.lineage && <small>{m.lineage}</small>}
-                          </td>
-                          <td>
-                            <div className="mr-pills">
-                              {modelFacts(m).map((c) => (
-                                <span key={c}>{c}</span>
-                              ))}
-                            </div>
-                          </td>
-                          <td>{m.contextK || 32}K</td>
-                          <td>
-                            {m.offline ? (
-                              "—"
-                            ) : m.pricing === "免费" ? (
-                              <strong>内部</strong>
-                            ) : (
-                              <>
-                                <span>
-                                  输入 ¥{m.inputPrice || 0} / 输出 ¥
-                                  {m.outputPrice || 0}
-                                </span>
-                                <small>每千 tokens · 示例</small>
-                              </>
-                            )}
-                          </td>
-                          <td>{registryTier(m)}</td>
-                          <td>
-                            <button
-                              role="switch"
-                              className="mr-switch"
-                              aria-label={`启用模型 ${m.identifier}`}
-                              aria-checked={m.enabled}
-                              disabled={!!m.offline}
-                              onClick={() => {
-                                m.enabled = !m.enabled;
-                                changed();
-                              }}
+                        <Fragment key={m.id}>
+                          <tr className={m.offline ? "mr-offline" : ""}>
+                            <td>
+                              <code>{m.identifier}</code>
+                              {lifecycle.models[m.id] &&
+                                ["expiring", "retired"].includes(
+                                  lifecycle.models[m.id].status,
+                                ) && (
+                                  <small
+                                    className={`mm-model-tag ${lifecycle.models[m.id].status} ${!lifecycle.models[m.id].references ? "unused" : ""}`}
+                                  >
+                                    {lifecycle.models[m.id].status === "retired"
+                                      ? "已下线"
+                                      : "即将停用"}
+                                    {!lifecycle.models[m.id].references
+                                      ? " · 未被引用"
+                                      : ""}
+                                  </small>
+                                )}
+
+                              {m.offline && (
+                                <span className="mr-danger-tag">已下线</span>
+                              )}
+                              {m.name !== m.identifier && (
+                                <strong>{m.name}</strong>
+                              )}
+                              {m.lineage && <small>{m.lineage}</small>}
+                            </td>
+                            <td>
+                              <div className="mr-pills">
+                                {modelFacts(m).map((c) => (
+                                  <span key={c}>{c}</span>
+                                ))}
+                              </div>
+                            </td>
+                            <td>{m.contextK ? `${m.contextK}K` : "未提供"}</td>
+                            <td>
+                              {m.offline ? (
+                                "—"
+                              ) : m.pricing === "免费" ? (
+                                <strong>内部</strong>
+                              ) : (
+                                <>
+                                  <span>
+                                    输入 {m.currency === "USD" ? "$" : "¥"}
+                                    {m.inputPrice ?? "未知"} / 输出{" "}
+                                    {m.currency === "USD" ? "$" : "¥"}
+                                    {m.outputPrice ?? "未知"}
+                                  </span>
+                                  <small>每千 tokens</small>
+                                </>
+                              )}
+                            </td>
+                            <td>{registryTier(m)}</td>
+                            <td>
+                              <button
+                                role="switch"
+                                className="mr-switch"
+                                aria-label={`启用模型 ${m.identifier}`}
+                                aria-checked={m.enabled}
+                                disabled={
+                                  !!m.offline || busy.includes(`toggle:${m.id}`)
+                                }
+                                onClick={() => {
+                                  void action(`toggle:${m.id}`, async () => {
+                                    await save({
+                                      ...doc,
+                                      models: doc.models.map((x) =>
+                                        x.id === m.id
+                                          ? { ...x, enabled: !x.enabled }
+                                          : x,
+                                      ),
+                                    });
+                                  });
+                                }}
+                              >
+                                <i />
+                              </button>
+                            </td>
+                            <td>
+                              <div className="mr-row-actions">
+                                <button
+                                  onClick={() => setEditing(structuredClone(m))}
+                                >
+                                  编辑
+                                </button>
+                                <button
+                                  disabled={probes[m.id]?.busy}
+                                  onClick={async () => {
+                                    setProbes((current) => ({
+                                      ...current,
+                                      [m.id]: {
+                                        busy: true,
+                                        message: "正在调用模型，请稍候…",
+                                      },
+                                    }));
+                                    try {
+                                      const result = await request<{
+                                        actualModel: string;
+                                        testedAt: string;
+                                      }>(
+                                        `/models/${m.id}/test`,
+                                        { method: "POST" },
+                                        35000,
+                                      );
+                                      setProbes((current) => ({
+                                        ...current,
+                                        [m.id]: {
+                                          busy: false,
+                                          message: `连接测试成功 · 实际模型：${result.actualModel} · ${new Date(result.testedAt).toLocaleString()}`,
+                                        },
+                                      }));
+                                    } catch (e) {
+                                      setProbes((current) => ({
+                                        ...current,
+                                        [m.id]: {
+                                          busy: false,
+                                          failed: true,
+                                          message: `连接测试失败：${(e as Error).message}`,
+                                        },
+                                      }));
+                                    }
+                                  }}
+                                >
+                                  {probes[m.id]?.busy
+                                    ? "正在测试…"
+                                    : "连接测试"}
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    const model = doc.models.find(
+                                      (x) => x.id === m.id,
+                                    );
+                                    if (model)
+                                      setMaintenance({
+                                        source: model,
+                                        action: "replace",
+                                      });
+                                  }}
+                                >
+                                  更换模型
+                                </button>
+                                <button
+                                  className="mr-delete"
+                                  onClick={() => {
+                                    const model = doc.models.find(
+                                      (x) => x.id === m.id,
+                                    );
+                                    if (model)
+                                      setMaintenance({
+                                        source: model,
+                                        action: "delete",
+                                      });
+                                  }}
+                                >
+                                  删除
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                          {probes[m.id] && (
+                            <tr
+                              className={`ms-probe-result ${probes[m.id].failed ? "error" : ""}`}
                             >
-                              <i />
-                            </button>
-                          </td>
-                          <td>
-                            <div className="mr-row-actions">
-                              <button
-                                onClick={() => setEditing(structuredClone(m))}
+                              <td
+                                colSpan={7}
+                                role={probes[m.id].failed ? "alert" : "status"}
                               >
-                                编辑
-                              </button>
-                              <button
-                                className="mr-delete"
-                                onClick={() => setDeleting(m)}
-                              >
-                                删除
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
+                                {probes[m.id].message}
+                              </td>
+                            </tr>
+                          )}
+                        </Fragment>
                       ))}
                   </tbody>
                 </table>
               </div>
               <button
                 className="sc-secondary mr-add-model"
-                onClick={() => setEditing(newModel(g))}
+                onClick={() => {
+                  setSelectionOnly(true);
+                  setSource(g);
+                }}
               >
-                ＋ 添加模型
+                选择模型
               </button>
             </>
           )}
         </section>
       ))}
       {!groups.length && <div className="mr-empty">没有匹配的模型</div>}
-      {notice && (
-        <div className="ms-feedback" role="status">
-          {notice}
+      {error && (
+        <div className="sc-warning" role="alert">
+          {error}
         </div>
+      )}
+      {notice && <div className="ms-feedback" role="status">{notice}</div>}
+      {maintenance && (
+        <ModelMaintenanceDialog
+          source={maintenance.source}
+          doc={doc}
+          action={maintenance.action}
+          close={() => setMaintenance(undefined)}
+          changed={async () => {
+            await reload();
+            await loadLifecycle();
+            window.dispatchEvent(new Event("beivymate-models-changed"));
+          }}
+          upgrade={() =>
+            setMaintenance({ source: maintenance.source, action: "replace" })
+          }
+          key={maintenance.action + maintenance.source.id}
+        />
       )}
       {source && (
         <ModelSourceDialog
           initial={source === "new" ? undefined : source}
+          selectionOnly={selectionOnly}
+          existingModels={doc.models
+            .filter((m) => source !== "new" && m.serviceId === source.id)
+            .map((m) => m.identifier)}
           close={() => setSource(undefined)}
-          save={saveSource}
-        />
-      )}
-      {importing && (
-        <ModelPlatformImport
-          close={() => setImporting(false)}
           save={saveSource}
         />
       )}
@@ -413,46 +607,15 @@ export default function ModelLibrary({ changed }: { changed: () => void }) {
         <ModelRegistryEditor
           initial={editing}
           close={() => setEditing(undefined)}
-          save={(m) => {
-            const i = configuredModels.findIndex((x) => x.id === m.id);
-            if (i < 0) configuredModels.unshift(m);
-            else configuredModels[i] = m;
+          save={async (m) => {
+            await save({
+              ...doc,
+              models: doc.models.map((x) => (x.id === m.id ? modelPayload(m) : x)),
+            });
             setEditing(undefined);
-            changed();
             setNotice("模型已保存");
           }}
         />
-      )}
-      {deleting && (
-        <Dialog
-          className="mr-dialog mr-delete-dialog"
-          title="删除模型"
-          close={() => setDeleting(undefined)}
-        >
-          <div className="mr-dialog-body mr-delete-copy">
-            <p>
-              确定删除模型 <strong>{deleting.identifier}</strong>？
-            </p>
-            <p>档位映射中引用它将被标记为不可用。</p>
-          </div>
-          <footer className="mr-footer">
-            <button onClick={() => setDeleting(undefined)}>取消</button>
-            <button
-              className="ad-primary"
-              onClick={() => {
-                const i = configuredModels.findIndex(
-                  (m) => m.id === deleting.id,
-                );
-                if (i >= 0) configuredModels.splice(i, 1);
-                setDeleting(undefined);
-                changed();
-                setNotice("模型已删除");
-              }}
-            >
-              确认删除
-            </button>
-          </footer>
-        </Dialog>
       )}
       {configuring && (
         <Dialog
@@ -487,21 +650,32 @@ export default function ModelLibrary({ changed }: { changed: () => void }) {
             <button
               className="ad-primary"
               disabled={busy.includes("configure")}
-              onClick={() => {
-                if (!secret.trim()) {
-                  setConfigError("请先填写密钥并测试连接");
-                  return;
-                }
-                const g = configuring;
-                setBusy((xs) => [...xs, "configure"]);
-                later(() => {
-                  g.configured = true;
-                  setBusy((xs) => xs.filter((id) => id !== "configure"));
-                  setConfiguring(undefined);
-                  changed();
-                  setNotice("配置成功，该厂商的模型可用于档位映射");
-                });
-              }}
+              onClick={() =>
+                void action("configure", async () => {
+                  if (!secret.trim()) {
+                    setConfigError("请先填写密钥");
+                    return;
+                  }
+                  try {
+                    await request(
+                      `/models/services/${configuring.id}/credential`,
+                      { method: "PUT", body: JSON.stringify({ secret }) },
+                    );
+                    await request(
+                      `/models/services/${configuring.id}/discover`,
+                      { method: "POST" },
+                      305000,
+                    );
+                    await reload();
+                    setConfiguring(undefined);
+                    setSecret("");
+                    setNotice("凭据已保存，目录连接成功");
+                  } catch (e) {
+                    await reload();
+                    setConfigError((e as Error).message);
+                  }
+                })
+              }
             >
               {busy.includes("configure") ? "测试中…" : "测试连接"}
             </button>

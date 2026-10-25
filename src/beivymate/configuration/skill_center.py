@@ -38,6 +38,10 @@ class SkillCenter:
         self.guard = guard or (lambda identity: nullcontext())
 
     def package(self, entry, builtin, *, observe=True):
+        with self.lock:
+            return self._package(entry,builtin,observe=observe)
+
+    def _package(self, entry, builtin, *, observe=True):
         directory = entry.parent
         root = self.builtin if builtin else self.custom
         if entry.is_symlink() or not entry.resolve().is_relative_to(root):
@@ -112,6 +116,10 @@ class SkillCenter:
         return result
 
     def scan(self):
+        with self.lock:
+            return self._scan()
+
+    def _scan(self):
         items, errors, seen = [], [], set()
         for root, builtin in ((self.builtin, True), (self.custom, False)):
             if not root.exists():

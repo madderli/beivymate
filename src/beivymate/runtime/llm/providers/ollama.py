@@ -15,6 +15,7 @@ class OllamaProvider:
     ):
         self.base_url = config.base_url.rstrip("/")
         self.transport = HTTPTransport(config)
+        self.headers = {"Authorization":"Bearer " + config.api_key} if config.api_key else {}
 
     def chat(
         self,
@@ -38,6 +39,9 @@ class OllamaProvider:
             },
         }
 
+        if request.temperature is None:
+            payload["options"].pop("temperature",None)
+
         if request.response_schema is not None:
             payload["format"] = request.response_schema
         if request.max_output_tokens is not None:
@@ -46,6 +50,7 @@ class OllamaProvider:
         result = self.transport.post_json(
             url=url,
             payload=payload,
+            **({"headers": self.headers} if self.headers else {}),
         )
 
         return LLMResponse(

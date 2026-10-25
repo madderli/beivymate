@@ -36,6 +36,10 @@ class ConfigurationLibrary:
         return entries
 
     def list(self, kind):
+        with self.lock:
+            return self._list(kind)
+
+    def _list(self, kind):
         result = []
         for path, builtin in self.paths(kind):
             if kind == 'skills' and builtin:

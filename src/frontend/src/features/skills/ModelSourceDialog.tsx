@@ -1,3 +1,5 @@
+import { ModelDiscoveryList } from "./ModelDiscoveryList";
+import { discoverConnection } from "./model-api";
 import { RequiredMark } from "../../RequiredMark";
 import { useEffect, useRef, useState } from "react";
 import { Dialog } from "../../components";
@@ -37,27 +39,48 @@ export function RequiredLabel({ children }: { children: React.ReactNode }) {
 }
 export function ModelSourceDialog({
   initial,
+  selectionOnly = false,
+  existingModels = [],
   close,
   save,
 }: {
   initial?: ModelService;
+  selectionOnly?: boolean;
+  existingModels?: string[];
   close: () => void;
-  save: (s: ModelService, ids: string[]) => void;
+  save: (s: ModelService, ids: string[], secret?: string) => Promise<void>;
 }) {
   const [draft, setDraft] = useState<ModelService>(
     initial ? { ...initial } : createService(),
   );
-  const [step, setStep] = useState(0);
+  const [step, setStep] = useState(selectionOnly ? 1 : 0);
   const [credentials, setCredentials] = useState<Record<string, string>>({});
+  const [useStoredKey, setUseStoredKey] = useState(
+    selectionOnly && initial?.configured === true,
+  );
   const [verified, setVerified] = useState(initial?.configured === true);
   const [catalog, setCatalog] = useState<string[]>([]);
   const [selected, setSelected] = useState<string[]>([]);
-  const [error, setError] = useState("");
+  const added = new Set(existingModels);
+  const [error, updateError] = useState("");
+  const errorMessage = useRef<HTMLDivElement>(null);
+  const setError = (message: string) => {
+    updateError(message);
+    if (message) requestAnimationFrame(() => {
+      errorMessage.current?.scrollIntoView({ block: "nearest" });
+      errorMessage.current?.focus({ preventScroll: true });
+    });
+  };
   const [busy, setBusy] = useState(false);
   const [testResult, setTestResult] = useState("");
-  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  useEffect(() => () => clearTimeout(timer.current), []);
-  const noAuth = ["无", "无需鉴权"].includes(draft.auth);
+  const discovery = useRef<AbortController | null>(null);
+  useEffect(() => () => discovery.current?.abort(), []);
+  const dismiss = () => {
+    if (busy && !discovery.current) return;
+    discovery.current?.abort();
+    close();
+  };
+  const noAuth = ["无", "无需鉴权", "none"].includes(draft.auth);
   const patch = (p: Partial<ModelService>) => {
     setDraft({ ...draft, ...p });
     setVerified(false);
@@ -68,57 +91,79 @@ export function ModelSourceDialog({
   };
   const authFields = noAuth
     ? []
-    : draft.auth === "AK-SK 签名"
-      ? [
-          ["accessKey", "AccessKey"],
-          ["secretKey", "SecretKey"],
-        ]
-      : draft.auth === "OAuth 2.0"
-        ? [
-            ["clientId", "Client ID"],
-            ["clientSecret", "Client Secret"],
-            ["tokenUrl", "Token URL"],
-          ]
-        : [
-            [
-              "secret",
-              ["Token", "令牌"].includes(draft.auth) ? "Token" : "API Key",
-            ],
-          ];
+    : [
+        [
+          "secret",
+          ["Token", "令牌"].includes(draft.auth) ? "Token" : "API Key",
+        ],
+      ];
   function checkAuth() {
-    if (authFields.some(([key]) => !credentials[key]?.trim())) {
+    if (
+      !noAuth &&
+      !useStoredKey &&
+      authFields.some(([key]) => !credentials[key]?.trim())
+    ) {
       setError("请填写完整鉴权信息后再测试");
       return false;
     }
     setError("");
     return true;
   }
-  function discover() {
+  async function discover() {
     setTestResult("");
     setVerified(false);
     if (!checkAuth()) return;
+    const controller = new AbortController();
+    discovery.current?.abort();
+    discovery.current = controller;
     setBusy(true);
-    timer.current = setTimeout(() => {
+    try {
+      const result = await discoverConnection(
+        draft,
+        useStoredKey ? undefined : (credentials.secret || "").trim(),
+        controller.signal,
+      );
+      if (controller.signal.aborted) return;
       setVerified(true);
-      setTestResult("✓ 连接成功（模拟），可以保存");
-      setBusy(false);
-      if (!initial) {
-        const ids = ["novamind-pro", "novamind-chat", "novamind-lite"];
-        setCatalog(ids);
-        setSelected(ids);
+      setTestResult(
+        `✓ 已读取模型目录${useStoredKey ? "（使用已保存的密钥）" : ""}；模型调用请在列表中单独测试`,
+      );
+      setCatalog(result.models);
+      setSelected(result.models.filter((id) => !added.has(id)));
+    } catch (e) {
+      if (!controller.signal.aborted) setError((e as Error).message);
+    } finally {
+      if (discovery.current === controller) {
+        discovery.current = null;
+        setBusy(false);
       }
-    }, 700);
+    }
+  }
+  async function submit(ids: string[]) {
+    setBusy(true);
+    setError("");
+    try {
+      await save(
+        { ...draft, name: draft.name.trim() },
+        ids,
+        credentials.secret || "",
+      );
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
   }
   return (
     <Dialog
       className="mr-dialog"
-      title={initial ? "编辑厂商" : "添加厂商"}
-      close={close}
+      title={selectionOnly ? "选择模型" : initial ? "编辑厂商" : "添加厂商"}
+      close={dismiss}
     >
       <p className="mr-lead">
         {initial
           ? "更新厂商连接信息并重新验证"
-          : "注册新的模型来源，无需修改产品代码"}
+          : "添加新的模型来源，无需修改产品代码"}
       </p>
       {!initial && (
         <ol className="mr-steps">
@@ -134,7 +179,12 @@ export function ModelSourceDialog({
         </ol>
       )}
       <div className="mr-dialog-body">
-        {(step === 0 || initial) && (
+        {error && (
+          <div className="sc-warning mr-source-warning" role="alert" ref={errorMessage} tabIndex={-1}>
+            {error}
+          </div>
+        )}
+        {!selectionOnly && (step === 0 || initial) && (
           <div className="sc-form">
             <div className="sc-two-col">
               <label>
@@ -155,17 +205,20 @@ export function ModelSourceDialog({
                   onChange={(e) => patch({ protocol: e.target.value })}
                 >
                   {Array.from(
-                    new Set([
-                      draft.protocol,
-                      "OpenAI 兼容",
-                      "Anthropic",
-                      "自定义适配器",
-                    ]),
+                    new Set([draft.protocol, "OpenAI 兼容", "Ollama"]),
                   ).map((x) => (
                     <option key={x}>{x}</option>
                   ))}
+                  <option value="Anthropic" disabled>
+                    Anthropic（原生协议待接入）
+                  </option>
+                  <option value="自定义适配器" disabled>
+                    自定义适配器（待接入）
+                  </option>
                 </select>
-                <small>非 OpenAI 兼容接口需走对应适配器</small>
+                <small>
+                  支持 OpenAI 兼容接口与 Ollama；其他原生协议尚未接入
+                </small>
               </label>
             </div>
             <fieldset className="mr-choice-field">
@@ -212,25 +265,42 @@ export function ModelSourceDialog({
                   value={draft.auth}
                   onChange={(e) => {
                     setCredentials({});
+                    setUseStoredKey(false);
                     patch({ auth: e.target.value });
                   }}
                 >
                   {Array.from(
-                    new Set([
-                      draft.auth,
-                      "API Key",
-                      "Token",
-                      "AK-SK 签名",
-                      "OAuth 2.0",
-                      "无",
-                    ]),
+                    new Set([draft.auth, "API Key", "Token", "无"]),
                   ).map((x) => (
                     <option key={x}>{x}</option>
                   ))}
+                  <option value="AK-SK 签名" disabled>
+                    AK-SK 签名（待接入）
+                  </option>
+                  <option value="OAuth 2.0" disabled>
+                    OAuth 2.0（待接入）
+                  </option>
                 </select>
               </label>
             </div>
             <div className="sc-two-col">
+              {initial?.configured && !noAuth && (
+                <label className="mr-check">
+                  <input
+                    type="checkbox"
+                    checked={useStoredKey}
+                    onChange={(e) => {
+                      setUseStoredKey(e.target.checked);
+                      setCredentials({});
+                      setVerified(false);
+                      setCatalog([]);
+                      setSelected([]);
+                      setTestResult("");
+                    }}
+                  />
+                  使用已保存的密钥（不显示原文）
+                </label>
+              )}
               {authFields.map(([key, label]) => (
                 <label key={key}>
                   <RequiredLabel>{label}</RequiredLabel>
@@ -241,6 +311,12 @@ export function ModelSourceDialog({
                       key === "clientId" || key === "tokenUrl"
                         ? "text"
                         : "password"
+                    }
+                    disabled={useStoredKey}
+                    placeholder={
+                      useStoredKey
+                        ? "使用本机已保存的密钥"
+                        : "请输入本次要测试或保存的 API Key"
                     }
                     autoComplete="off"
                     value={credentials[key] || ""}
@@ -281,12 +357,14 @@ export function ModelSourceDialog({
             )}
           </div>
         )}
-        {!initial && step === 1 && (
+        {(step === 1 || (initial && catalog.length > 0)) && (
           <div className="sc-form">
             {!catalog.length && (
               <div className="mr-discover">
                 <h3>验证连接并读取模型目录</h3>
-                <p>原型将模拟发现 3 个模型，不会发送真实请求。</p>
+                <p>
+                  读取服务提供的模型目录，不会自动推断能力和价格。服务不支持目录时，可点击下一步保存厂商，再手动添加模型。
+                </p>
                 <button
                   className="ad-primary"
                   disabled={busy}
@@ -297,31 +375,18 @@ export function ModelSourceDialog({
               </div>
             )}
             {!!catalog.length && (
-              <div className="mr-discovered">
-                {catalog.map((id) => (
-                  <label key={id}>
-                    <input
-                      type="checkbox"
-                      checked={selected.includes(id)}
-                      onChange={(e) =>
-                        setSelected(
-                          e.target.checked
-                            ? [...selected, id]
-                            : selected.filter((x) => x !== id),
-                        )
-                      }
-                    />
-                    <code>{id}</code>
-                    <small>示例</small>
-                  </label>
-                ))}
-              </div>
+              <ModelDiscoveryList
+                models={catalog}
+                existing={existingModels}
+                selected={selected}
+                change={setSelected}
+              />
             )}
           </div>
         )}
         {!initial && step === 2 && (
           <div className="mr-review">
-            <h3>准备注册</h3>
+            <h3>准备添加</h3>
             <p>
               {draft.name} · {sourceLabels[draft.kind]} · {draft.protocol} ·{" "}
               {draft.auth} · {selected.length} 个模型
@@ -329,37 +394,26 @@ export function ModelSourceDialog({
             {selected.map((id) => (
               <div className="mr-review-row" key={id}>
                 <code>{id}</code>
-                <span>将注册</span>
+                <span>待添加</span>
               </div>
             ))}
-          </div>
-        )}
-        {error && (
-          <div className="sc-warning" role="alert">
-            {error}
           </div>
         )}
       </div>
       <footer className="mr-footer">
         {initial ? (
           <>
-            <button onClick={close}>取消</button>
+            <button onClick={dismiss}>取消</button>
             <button
               className="ad-primary"
               disabled={busy}
               onClick={() => {
-                if (!draft.name.trim()) {
-                  setError("请输入厂商名称");
+                if (!draft.name.trim() || !draft.endpoint.trim()) {
+                  setError("请输入厂商名称和 Base URL");
                   return;
                 }
-                if (!noAuth && !verified) {
-                  setError("请填写完整鉴权信息并测试连接");
-                  return;
-                }
-                save(
-                  { ...draft, name: draft.name.trim(), configured: true },
-                  [],
-                );
+                if (!checkAuth()) return;
+                void submit(selected);
               }}
             >
               保存修改
@@ -381,14 +435,13 @@ export function ModelSourceDialog({
             {step < 2 ? (
               <button
                 className="ad-primary"
-                disabled={
-                  busy || (step === 1 && (!verified || !selected.length))
-                }
+                disabled={busy}
                 onClick={() => {
-                  if (!draft.name.trim()) {
-                    setError("请输入厂商名称");
+                  if (!draft.name.trim() || !draft.endpoint.trim()) {
+                    setError("请输入厂商名称和 Base URL");
                     return;
                   }
+                  if (step === 0 && !checkAuth()) return;
                   setError("");
                   setStep(step + 1);
                 }}
@@ -398,12 +451,8 @@ export function ModelSourceDialog({
             ) : (
               <button
                 className="ad-primary"
-                onClick={() =>
-                  save(
-                    { ...draft, name: draft.name.trim(), configured: true },
-                    selected,
-                  )
-                }
+                disabled={busy}
+                onClick={() => void submit(selected)}
               >
                 确认添加
               </button>

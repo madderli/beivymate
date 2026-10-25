@@ -65,6 +65,7 @@ export function syncCapabilityFields(m: ConfiguredModel): ConfiguredModel {
     ...m,
     registryCapabilities: caps,
     capabilities: [
+      "text",
       ...(caps.includes("视觉理解") ? ["images"] : []),
       ...(caps.includes("函数调用") ? ["tools"] : []),
       ...(caps.includes("结构化输出（JSON）") ? ["structured"] : []),

@@ -18,7 +18,7 @@ export default function ModelRegistryEditor({
 }: {
   initial: ConfiguredModel;
   close: () => void;
-  save: (m: ConfiguredModel) => void;
+  save: (m: ConfiguredModel) => Promise<void>;
 }) {
   const [draft, setDraft] = useState<ConfiguredModel>({
     ...initial,
@@ -32,6 +32,7 @@ export default function ModelRegistryEditor({
   });
   const [calibrating, setCalibrating] = useState(false);
   const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
   const patch = (p: Partial<ConfiguredModel>) => setDraft({ ...draft, ...p });
   const existing = configuredModels.some((m) => m.id === initial.id);
   const caps = modelFacts(draft);
@@ -40,7 +41,9 @@ export default function ModelRegistryEditor({
       <Dialog
         className="mr-dialog mr-model-dialog"
         title={existing ? "编辑模型" : "添加模型"}
-        close={close}
+        close={() => {
+          if (!busy) close();
+        }}
       >
         <div className="mr-dialog-body sc-form">
           <div className="sc-two-col">
@@ -81,7 +84,7 @@ export default function ModelRegistryEditor({
                 {draft.capabilitySource === "calibrated"
                   ? `已校准 · ${draft.calibrations?.length || 0} 次`
                   : draft.capabilitySource === "provider"
-                    ? "来自模型提供方（演示）"
+                    ? "来自模型提供方"
                     : "待确认"}
               </span>
               <button
@@ -102,7 +105,7 @@ export default function ModelRegistryEditor({
             <small>
               {draft.capabilitySource === "calibrated"
                 ? "当前展示最近一次校准结果，可再次校准。"
-                : "默认带入提供方的能力信息；发现不准确时可校准。"}
+                : "未声明的能力不作推断，可参考厂商文档或实际验证结果校准。"}
             </small>
           </section>
           <div className="sc-two-col">
@@ -112,8 +115,14 @@ export default function ModelRegistryEditor({
                 type="number"
                 min="1"
                 aria-label="上下文窗口（K）"
-                value={draft.contextK ?? 32}
-                onChange={(e) => patch({ contextK: Number(e.target.value) })}
+                value={draft.contextK ?? ""}
+                onChange={(e) =>
+                  patch({
+                    contextK: e.target.value
+                      ? Number(e.target.value)
+                      : undefined,
+                  })
+                }
               />
             </label>
             <label>
@@ -153,9 +162,17 @@ export default function ModelRegistryEditor({
             ))}
           </fieldset>
           {draft.pricing !== "免费" && (
-            <fieldset className="mr-choice-field">
-              <legend>单价（示例 / 千 tokens）</legend>
-              <div className="sc-two-col">
+            <fieldset className="mr-choice-field mr-price-section">
+              <legend>单价（每千 tokens）</legend>
+              <div className="mr-price-row">
+                <select
+                    aria-label="计费币种"
+                    value={draft.currency || "CNY"}
+                    onChange={(e) => patch({ currency: e.target.value })}
+                  >
+                    <option value="CNY">人民币 CNY</option>
+                    <option value="USD">美元 USD</option>
+                </select>
                 <input
                   aria-label="输入单价"
                   type="number"
@@ -164,7 +181,11 @@ export default function ModelRegistryEditor({
                   placeholder="输入单价"
                   value={draft.inputPrice ?? ""}
                   onChange={(e) =>
-                    patch({ inputPrice: Number(e.target.value) })
+                    patch({
+                      inputPrice: e.target.value
+                        ? Number(e.target.value)
+                        : undefined,
+                    })
                   }
                 />
                 <input
@@ -175,7 +196,11 @@ export default function ModelRegistryEditor({
                   placeholder="输出单价"
                   value={draft.outputPrice ?? ""}
                   onChange={(e) =>
-                    patch({ outputPrice: Number(e.target.value) })
+                    patch({
+                      outputPrice: e.target.value
+                        ? Number(e.target.value)
+                        : undefined,
+                    })
                   }
                 />
               </div>
@@ -191,7 +216,8 @@ export default function ModelRegistryEditor({
           <button onClick={close}>取消</button>
           <button
             className="ad-primary"
-            onClick={() => {
+            disabled={busy}
+            onClick={async () => {
               const identifier = draft.identifier.trim();
               if (!identifier) {
                 setError("请输入模型 ID");
@@ -199,7 +225,10 @@ export default function ModelRegistryEditor({
               }
               if (
                 configuredModels.some(
-                  (m) => m.id !== draft.id && m.identifier === identifier,
+                  (m) =>
+                    m.id !== draft.id &&
+                    m.serviceId === draft.serviceId &&
+                    m.identifier === identifier,
                 )
               ) {
                 setError("模型 ID 已存在，请使用唯一 ID");
@@ -214,25 +243,32 @@ export default function ModelRegistryEditor({
                 return;
               }
               const tier = registryTier(draft);
-              save(
-                syncCapabilityFields({
-                  ...draft,
-                  identifier,
-                  name: draft.name.trim() || identifier,
-                  registryTier: tier,
-                  orientation:
-                    tier === "旗舰"
-                      ? "质量优先"
-                      : tier === "快速"
-                        ? "速度优先"
-                        : "均衡",
-                  contextK: draft.contextK,
-                  inputPrice:
-                    draft.pricing === "免费" ? 0 : draft.inputPrice || 0,
-                  outputPrice:
-                    draft.pricing === "免费" ? 0 : draft.outputPrice || 0,
-                }),
-              );
+              setBusy(true);
+              setError("");
+              try {
+                await save(
+                  syncCapabilityFields({
+                    ...draft,
+                    identifier,
+                    name: draft.name.trim() || identifier,
+                    registryTier: tier,
+                    orientation:
+                      tier === "旗舰"
+                        ? "质量优先"
+                        : tier === "快速"
+                          ? "速度优先"
+                          : "均衡",
+                    contextK: draft.contextK,
+                    inputPrice: draft.pricing === "免费" ? 0 : draft.inputPrice,
+                    outputPrice:
+                      draft.pricing === "免费" ? 0 : draft.outputPrice,
+                  }),
+                );
+              } catch (e) {
+                setError((e as Error).message);
+              } finally {
+                setBusy(false);
+              }
             }}
           >
             保存模型

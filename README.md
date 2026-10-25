@@ -45,3 +45,7 @@ external trial release is not yet ready. See [frontend startup and validation](s
 ## 本地客户端架构与开发跟踪
 
 各安装独立保存本机数据，通过包导入导出共享资源。统一规则见 [架构与状态规范](ARCHITECTURE.md)，逐模块进度见 [实施验收清单](IMPLEMENTATION_CHECKLIST.md)。
+
+## 安装与维护
+
+见 [安装与维护手册](INSTALLATION.md)，包含当前源码启动、首次登录、本机数据、证书与代理、备份升级及正式发行交付检查。正式发布时须随安装包一并提供此手册。

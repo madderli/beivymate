@@ -20,9 +20,13 @@ function object(v: unknown): v is Record<string, unknown> {
 export async function request<T>(
   path: string,
   init: RequestInit = {},
+  timeoutMs = 15000,
 ): Promise<T> {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 15000);
+  const abort = () => controller.abort();
+  init.signal?.addEventListener("abort", abort, { once: true });
+  if (init.signal?.aborted) abort();
+  const timer = setTimeout(abort, timeoutMs);
   try {
     const headers = new Headers(init.headers);
     if (init.body && !(init.body instanceof FormData))
@@ -56,12 +60,14 @@ export async function request<T>(
       );
     return data as T;
   } catch (error) {
+    if (init.signal?.aborted) throw new DOMException("请求已取消", "AbortError");
     if (error instanceof ApiError) throw error;
     throw new ApiError(
       "无法连接后台服务或请求超时。结果未知，请刷新核实；不会自动重试写操作。",
     );
   } finally {
     clearTimeout(timer);
+    init.signal?.removeEventListener("abort", abort);
   }
 }
 function session(v: Session): Session {
@@ -166,9 +172,13 @@ export const api = {
     model: string,
     idempotencyKey: string,
   ) =>
-    request(`/conversations/${key(context)}/messages`, {
-      method: "POST",
-      body: JSON.stringify({ text, model: model || null }),
-      headers: { "Idempotency-Key": idempotencyKey },
-    }),
+    request(
+      `/conversations/${key(context)}/messages`,
+      {
+        method: "POST",
+        body: JSON.stringify({ text, model: model || null }),
+        headers: { "Idempotency-Key": idempotencyKey },
+      },
+      600000,
+    ),
 };

@@ -1,25 +1,34 @@
 import { useState } from "react";
-import {
-  configuredModels,
-  isModelEnabled,
-  defaultModelId,
-  setDefaultModelId,
-} from "./skill-state";
-import { tiers, tierModels, backupModels } from "./skill-state";
-export { tiers, tierModels, backupModels } from "./skill-state";
-import { failover } from "./skill-state";
-export { failover } from "./skill-state";
-export default function ModelFailover({ changed }: { changed: () => void }) {
+import { configuredModels, isModelEnabled } from "./skill-state";
+import { tiers } from "./skill-state";
+import { type Catalog } from "./model-api";
+export default function ModelFailover({
+  doc,
+  save,
+}: {
+  doc: Catalog;
+  save: (next: Catalog) => Promise<Catalog>;
+}) {
+  const [draft] = useState(() => structuredClone(doc));
+  const tierModels = draft.tiers,
+    backupModels = draft.backups,
+    failover = draft.failover;
+  const defaultModelId = draft.defaults.general;
+  const setDefaultModelId = (id: string) => {
+    draft.defaults.general = id;
+  };
+  const [timeoutText, setTimeoutText] = useState(String(failover.timeout));
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
   const [, refresh] = useState(0);
   const [adding, setAdding] = useState("");
   const [candidate, setCandidate] = useState("");
   const [logs, setLogs] = useState<string[]>([]);
   const update = () => {
     refresh((n) => n + 1);
-    changed();
   };
   const name = (id: string) =>
-    configuredModels.find((m) => m.id === id)?.name || `${id}（已删除）`;
+    !id ? "尚未配置" : configuredModels.find((m) => m.id === id)?.name || `${id}（已删除）`;
   const available = (id: string) => {
     const m = configuredModels.find((m) => m.id === id);
     return !!m && isModelEnabled(m) && m.connection !== "连接失败";
@@ -28,7 +37,7 @@ export default function ModelFailover({ changed }: { changed: () => void }) {
     const lines: string[] = [];
     const startIndex = 0;
     const minIndex = tiers.length - 1;
-    const failure = failover.triggers[0] || "接口报错";
+    const failure = failover.triggers[0] || "server";
     const seen = new Set<string>();
     const primary = tierModels[tiers[startIndex]];
     lines.push(
@@ -86,6 +95,37 @@ export default function ModelFailover({ changed }: { changed: () => void }) {
   }
   return (
     <div className="mr-mapping">
+      {error && (
+        <div className="sc-warning" role="alert">
+          {error}
+        </div>
+      )}
+      <div className="mr-actions ms-advanced-heading">
+        <p>设置默认档位、主备模型顺序与故障转移策略</p>
+        <button
+          className="ad-primary"
+          disabled={busy}
+          onClick={async () => {
+            const seconds = Number(timeoutText);
+            if (!timeoutText.trim() || !Number.isSafeInteger(seconds) || seconds < 1) {
+              setError("请输入大于0的整数超时时间（秒）");
+              return;
+            }
+            failover.timeout = seconds;
+            setBusy(true);
+            setError("");
+            try {
+              await save(draft);
+            } catch (e) {
+              setError((e as Error).message);
+            } finally {
+              setBusy(false);
+            }
+          }}
+        >
+          {busy ? "保存中…" : "保存设置"}
+        </button>
+      </div>
       <section>
         <h3>默认模型档位</h3>
         <p>这里的档位表示维护者配置的定位，不代表模型固有能力。</p>
@@ -93,7 +133,7 @@ export default function ModelFailover({ changed }: { changed: () => void }) {
           {tiers.map((t) => (
             <button
               key={t}
-              aria-pressed={tierModels[t] === defaultModelId}
+              aria-pressed={!!tierModels[t] && tierModels[t] === defaultModelId}
               disabled={!available(tierModels[t])}
               onClick={() => {
                 setDefaultModelId(tierModels[t]);
@@ -138,7 +178,7 @@ export default function ModelFailover({ changed }: { changed: () => void }) {
                     </option>
                   )}
                   {configuredModels
-                    .filter((m) => available(m.id))
+                    .filter((m) => available(m.id) && m.orientation === t)
                     .map((m) => (
                       <option value={m.id} key={m.id}>
                         {m.provider} / {m.name}
@@ -200,7 +240,12 @@ export default function ModelFailover({ changed }: { changed: () => void }) {
                   >
                     <option value="">选择尚未加入调用链的模型</option>
                     {configuredModels
-                      .filter((m) => available(m.id) && !chain.includes(m.id))
+                      .filter(
+                        (m) =>
+                          available(m.id) &&
+                          m.orientation === t &&
+                          !chain.includes(m.id),
+                      )
                       .map((m) => (
                         <option value={m.id} key={m.id}>
                           {m.name}
@@ -262,7 +307,7 @@ export default function ModelFailover({ changed }: { changed: () => void }) {
                 name="failover"
                 checked={failover.strategy === v}
                 onChange={() => {
-                  failover.strategy = v;
+                  failover.strategy = v as Catalog["failover"]["strategy"];
                   update();
                 }}
               />
@@ -291,25 +336,24 @@ export default function ModelFailover({ changed }: { changed: () => void }) {
           </label>
           <label>
             调用超时
-            <select
+            <input
               aria-label="调用超时"
-              value={failover.timeout}
-              onChange={(e) => {
-                failover.timeout = Number(e.target.value);
-                update();
-              }}
-            >
-              {[30, 60, 120].map((n) => (
-                <option key={n} value={n}>
-                  {n} 秒
-                </option>
-              ))}
-            </select>
+              type="number"
+              min="1"
+              step="1"
+              value={timeoutText}
+              onChange={(e) => setTimeoutText(e.target.value)}
+            />
+            <small>单位：秒，请按模型服务响应时间设置。</small>
           </label>
         </div>
         <fieldset className="mr-choice-field">
           <legend>触发条件</legend>
-          {["超时", "接口报错", "限流 429"].map((t) => (
+          {[
+            ["timeout", "超时"],
+            ["server", "服务错误（5xx）"],
+            ["429", "限流 429"],
+          ].map(([t, title]) => (
             <label className="mf-trigger" key={t}>
               <input
                 type="checkbox"
@@ -321,7 +365,7 @@ export default function ModelFailover({ changed }: { changed: () => void }) {
                   update();
                 }}
               />
-              {t}
+              {title}
             </label>
           ))}
         </fieldset>
