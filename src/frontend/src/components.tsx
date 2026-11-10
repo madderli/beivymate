@@ -65,6 +65,7 @@ export function Dialog({
   return (
     <dialog
       ref={ref}
+      aria-label={title}
       className={className}
       onCancel={(e) => {
         if (e.target !== e.currentTarget) return;

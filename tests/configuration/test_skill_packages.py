@@ -7,7 +7,7 @@ from beivymate.runtime.configured_skill import ConfiguredSkill
 from beivymate.runtime.context import AgentContext
 from beivymate.runtime.skill import Skill
 
-ROOT = Path(__file__).resolve().parents[2] / 'resources'
+ROOT = Path(__file__).resolve().parents[1] / 'fixtures/legacy-resources'
 
 
 def test_library_readonly_copy_conflict_and_package_templates(tmp_path):
@@ -44,7 +44,7 @@ class Observe(Skill):
 
 
 def test_supported_strategy_inheritance_and_rejection():
-    catalog=SkillCatalog(ROOT.parent/'src/beivymate/builtin/skills')
+    catalog=SkillCatalog(ROOT/'skills')
     spec=catalog.get('test_analysis')
     skill=ConfiguredSkill(Observe(),spec,catalog.snapshot(spec.id))
     context=AgentContext();context.set('default_analysis_strategy','deep')
@@ -69,13 +69,13 @@ def test_custom_skill_model_binding_and_no_fallback(tmp_path):
     def resolve(identity):
         calls.append(identity)
         return gateway,'chosen-model'
-    agent=create_tester_agent(str(flow),gateway,'default',custom_skill_root=tmp_path/'skills',model_resolver=resolve)
+    agent=create_tester_agent(str(flow),gateway,'default',custom_skill_root=tmp_path/'skills',model_resolver=resolve, builtin_skill_root=Path(__file__).resolve().parents[2] / 'tests/fixtures/legacy-resources/skills')
     assert calls==['special_model']
     configured=agent._workflow.skills[0]
     assert configured.executor._model=='chosen-model'
     assert configured.snapshot['resolved_model']=='chosen-model'
     with pytest.raises(ValueError,match='模型配置不存在'):
-        create_tester_agent(str(flow),gateway,'default',custom_skill_root=tmp_path/'skills')
+        create_tester_agent(str(flow),gateway,'default',custom_skill_root=tmp_path/'skills', builtin_skill_root=Path(__file__).resolve().parents[2] / 'tests/fixtures/legacy-resources/skills')
 
 
 def test_checkpoint_freezes_instructions_without_mutating_new_runs(tmp_path):
@@ -89,7 +89,7 @@ def test_checkpoint_freezes_instructions_without_mutating_new_runs(tmp_path):
         def execute(self, context): 
             context.set('result',context.get('skill_instructions'))
             context.set(f"steps.{context.get('step_id')}.test_analysis", context.get('skill_instructions'))
-    catalog=SkillCatalog(ROOT.parent/'src/beivymate/builtin/skills')
+    catalog=SkillCatalog(ROOT/'skills')
     spec=catalog.get('test_analysis')
     old=spec.model_copy(update={'instructions':'original instructions'})
     snapshot={'definition':old.model_dump(), 'resolved_model':'fake'}

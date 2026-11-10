@@ -51,7 +51,7 @@ class Credential(BaseModel):
 
 
 def create_app(data_dir: Path, setup_token: str, *, origins=None, vault=None, workflow_root=None,
-               run_prepare=None, run_restore=None, worker_enabled=True, skills_root=None):
+               run_prepare=None, run_restore=None, worker_enabled=True, skills_root=None, builtin_skill_root=None):
     from beivymate.foundation.paths import AppPaths
     from beivymate.foundation.resources import ResourceRegistry
     paths = AppPaths(data_dir, Path(skills_root) if skills_root is not None else None)
@@ -113,16 +113,18 @@ def create_app(data_dir: Path, setup_token: str, *, origins=None, vault=None, wo
                 return JSONResponse({'message': '请求来源未获允许。'}, status_code=403)
             if request.headers.get('sec-fetch-site') == 'cross-site':
                 return JSONResponse({'message': '不接受跨站操作。'}, status_code=403)
-            if request.url.path == '/api/v1/tasks' and request.method == 'POST':
+            if ((request.url.path == '/api/v1/tasks' and request.method == 'POST') or
+                    (request.url.path == '/api/v1/skill-authoring' and request.method == 'PUT')):
                 try:
-                    service.require(request.cookies.get(COOKIE), request.headers.get('x-csrf-token', ''), 'task.create')
+                    capability = 'task.create' if request.url.path == '/api/v1/tasks' else 'configuration.manage'
+                    service.require(request.cookies.get(COOKIE), request.headers.get('x-csrf-token', ''), capability)
                 except IdentityError as exc:
                     return JSONResponse({'message': str(exc)}, status_code=exc.status)
             total = 0
             chunks = []
             async for chunk in request.stream():
                 total += len(chunk)
-                if total > (101 * 1024 * 1024 if request.url.path == '/api/v1/tasks' and request.method == 'POST' else 256 * 1024):
+                if total > (101 * 1024 * 1024 if request.url.path == '/api/v1/tasks' and request.method == 'POST' else 28 * 1024 * 1024 if request.url.path == '/api/v1/skill-authoring' and request.method == 'PUT' else 256 * 1024):
                     return JSONResponse({'message': '请求过大。'}, status_code=413)
                 chunks.append(chunk)
             request._body = b''.join(chunks)
@@ -152,33 +154,47 @@ def create_app(data_dir: Path, setup_token: str, *, origins=None, vault=None, wo
 
     from beivymate.configuration.library import ConfigurationLibrary
     from beivymate.configuration.skill_center import SkillCenter
-    skill_center = SkillCenter(paths.skills, registry=ResourceRegistry(paths.registry),
+    skill_center = SkillCenter(paths.skills, builtin=Path(builtin_skill_root) if builtin_skill_root is not None else paths.builtin / 'skills', registry=ResourceRegistry(paths.registry),
         guard=lambda identity: portal.resource_guard('skill', identity))
     portal.skill_root = skill_center.custom
     portal.skill_center = skill_center
     app.state.paths = paths
     app.state.migration_reports = migration_reports
-    library = ConfigurationLibrary(Path(__file__).resolve().parents[3] / 'resources', data_dir / 'configuration', skill_root=skill_center.custom)
+    library = ConfigurationLibrary(Path(__file__).resolve().parents[3] / 'resources', data_dir / 'configuration', skill_root=skill_center.custom, builtin_skill_root=skill_center.builtin)
     app.state.skill_center = skill_center
     library.guard = lambda kind, identity: portal.resource_guard(kind.rstrip('s'), identity)
     library.skill_policy = skill_center.require_published
+    library.skill_edit_policy = skill_center.require_editable
+
+    from beivymate.configuration.skill_authoring import SkillAuthoring
+    from beivymate.application.skill_authoring_api import authoring_router
+    authoring = SkillAuthoring(skill_center, model_catalog)
+    app.state.skill_authoring = authoring
+    app.include_router(authoring_router(authoring, require))
 
     @app.get('/api/v1/skill-center')
     def skill_packages(request: Request):
         require(request, 'configuration.manage')
         result = skill_center.scan()
         result['migrationReports'] = migration_reports
+        references = portal.skill_references()
         for item in result['items']:
             item['lockedTasks'] = portal.resource_locks('skill', item['id'])
+            usage = references.get(item['id'], {'workflows': [], 'tasks': []})
+            item['workflowReferences'] = usage['workflows']
+            item['taskReferences'] = usage['tasks']
         return result
 
     @app.post('/api/v1/skill-center/{identity}/state')
     async def transition_skill_package(identity: str, request: Request):
-        require(request, 'configuration.manage')
+        owner = require(request, 'configuration.manage')['user']['id']
         try:
             body = await request.json()
             if not isinstance(body, dict):
                 raise ValueError('状态操作格式无效')
+            entry, builtin = skill_center._entry(identity)
+            if skill_center.package(entry, builtin).get('authoringFormat'):
+                return authoring.transition(owner, identity, body.get('action'), body.get('revision'))
             return skill_center.transition(identity, body.get('action'), body.get('revision'))
         except PermissionError as exc:
             raise IdentityError(str(exc), 403) from None

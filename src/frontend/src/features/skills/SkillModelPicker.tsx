@@ -215,7 +215,7 @@ export default function SkillModelPicker({
                     ? "能力来源：最近一次校准"
                     : selected.capabilitySource === "unknown"
                       ? "能力信息待确认"
-                      : "能力来源：模型提供方（演示数据）"}
+                      : "能力来源：模型提供方"}
                 </small>
               </>
             )}

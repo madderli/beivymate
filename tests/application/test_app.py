@@ -39,6 +39,12 @@ def test_main(
         lambda *args, **kwargs: gateway,
     )
 
+    from functools import partial
+    from pathlib import Path
+    from beivymate.application import composition
+    monkeypatch.setattr(app, 'create_tester_agent', partial(composition.create_tester_agent,
+           builtin_skill_root=Path(__file__).resolve().parents[1]/'fixtures/legacy-resources/skills'),
+       )
     app.main([])
 
     captured = capsys.readouterr()

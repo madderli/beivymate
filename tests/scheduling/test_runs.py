@@ -28,7 +28,7 @@ def app(tmp_path, monkeypatch):
         return value
     monkeypatch.setattr('beivymate.application.run_inputs.create_gateway', gateway)
     monkeypatch.setattr('beivymate.application.app.create_gateway', gateway)
-    app = create_app(tmp_path, 'setup', worker_enabled=False)
+    app = create_app(tmp_path, 'setup', worker_enabled=False, builtin_skill_root=Path(__file__).resolve().parents[2] / 'tests/fixtures/legacy-resources/skills')
     app.state.provider = provider
     return app
 

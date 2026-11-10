@@ -261,7 +261,7 @@ npm run build
 
 ### 技能包目录与真实技能中心（2026-10-17）
 
-技能中心从 `/api/v1/skill-center` 扫描真实文件，不再加载前端 seedSkills 或 localStorage 技能缓存。内置包位于 `src/beivymate/builtin/skills/`；正常启动服务时自定义包位于仓库根 `skills/`（可通过 `BEIVYMATE_SKILLS_DIR` 覆盖）。独立测试应用使用隔离数据目录。
+技能中心从 `/api/v1/skill-center` 扫描真实文件，不再加载前端 seedSkills 或 localStorage 技能缓存。内置包位于 `src/beivymate/builtin/skills/`；默认不再附带五个旧版内置包；新技能经实际测试并由用户明确指定后，才转为只读内置包随产品版本发布。自定义包位于用户数据目录 `~/.beivymate/skills/`（可通过 `BEIVYMATE_DATA_DIR` 或 `BEIVYMATE_SKILLS_DIR` 覆盖）。独立测试应用使用隔离数据目录。
 
 新建、复制和导入通过后端保存 SKILL.md 与完整资源，保留二进制文件及原始目录名称。复制外部包到目录后，聚焦页面或等待约 10 秒即可重新发现；无效包和重复标识显示错误。内置包只读，自定义包保存检查文件修订冲突。已有浏览器演示技能不会自动转成真实包。模型库和工作流本地配置的后端接入仍是独立工作项。
 

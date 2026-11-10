@@ -12,12 +12,14 @@ from beivymate.configuration.loader import load_workflow_definition, load_model_
 
 
 class ConfigurationLibrary:
-    def __init__(self, builtin: Path, customer: Path, *, skill_root: Path | None = None):
+    def __init__(self, builtin: Path, customer: Path, *, skill_root: Path | None = None, builtin_skill_root: Path | None = None):
         self.builtin, self.customer = builtin.resolve(), customer.resolve()
         self.skill_root = skill_root
+        self.builtin_skill_root = builtin_skill_root.resolve() if builtin_skill_root is not None else None
         self.lock = RLock()
         self.guard = lambda kind, identity: nullcontext()
         self.skill_policy = None
+        self.skill_edit_policy = None
 
     def paths(self, kind):
         if kind not in ('skills', 'workflows', 'models'):
@@ -25,6 +27,8 @@ class ConfigurationLibrary:
         bundled = self.builtin / {'skills':'skills', 'workflows':'configuration/workflow', 'models':'configuration/llm/model'}[kind]
         if kind == 'skills' and self.builtin == Path(__file__).resolve().parents[3] / 'resources':
             bundled = Path(__file__).resolve().parents[1] / 'builtin/skills'
+        if kind == 'skills' and self.builtin_skill_root is not None:
+            bundled = self.builtin_skill_root
         custom = self.skill_root if kind == 'skills' and self.skill_root is not None else self.customer / kind
         pattern = '**/SKILL.md' if kind == 'skills' else '*.md'
         entries = [(p, True) for p in sorted(bundled.glob(pattern))] + [(p, False) for p in sorted(custom.glob(pattern))]
@@ -45,7 +49,7 @@ class ConfigurationLibrary:
             if kind == 'skills' and builtin:
                 from beivymate.configuration.skill_center import BUILTIN_SKILLS
                 shipped = Path(__file__).resolve().parents[3] / 'resources'
-                root = BUILTIN_SKILLS if self.builtin == shipped else self.builtin / 'skills'
+                root = self.builtin_skill_root or (BUILTIN_SKILLS if self.builtin == shipped else self.builtin / 'skills')
             elif kind == 'skills' and self.skill_root is not None:
                 root = self.skill_root
             else:
@@ -70,6 +74,8 @@ class ConfigurationLibrary:
             old = next((e for e in entries if e['id'] == identity), None)
             if old and old['builtin']:
                 raise PermissionError('系统默认配置只读，请创建自定义副本')
+            if kind == 'skills' and old and self.skill_edit_policy:
+                self.skill_edit_policy(identity)
             if old and revision != old['revision']:
                 raise FileExistsError('文件已修改，请保留草稿并对照最新版本')
             if not old and revision is not None:
@@ -157,6 +163,8 @@ class ConfigurationLibrary:
                 raise ValueError('模板不存在，请从 Skill 副本中选择模板')
             if template['builtin']:
                 raise PermissionError('系统默认模板只读，请先复制 Skill')
+            if self.skill_edit_policy:
+                self.skill_edit_policy(identity)
             if revision != template['revision']:
                 raise FileExistsError('模板已有修改，请对照最新版本')
             path = Path(template['path'])

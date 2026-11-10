@@ -1,0 +1,143 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>帮助手册</title><style>
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:88px}
+body{margin:0;background:#f7f8f6;color:#435049;font:14px/1.8 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;-webkit-font-smoothing:antialiased;overflow-wrap:break-word}
+a{color:#426e59;text-underline-offset:4px;text-decoration-thickness:1px}
+a:focus-visible{outline:2px solid #88a795;outline-offset:4px;border-radius:3px}
+.doc-top{display:flex;justify-content:space-between;align-items:center;gap:20px;min-height:60px;padding:14px 32px;border-bottom:1px solid #e6eae5;background:#fff;position:sticky;top:0;z-index:2;font-size:13px}
+.doc-top>strong{font-size:14px;font-weight:600;letter-spacing:.04em;color:#2e483a}
+.doc-actions{display:flex;align-items:center;gap:24px}
+.doc-actions a{text-decoration:none}.doc-actions a:hover{text-decoration:underline}
+.doc-layout{max-width:1200px;margin:auto;padding:28px 32px 64px;display:grid;grid-template-columns:184px minmax(0,1fr);gap:32px}
+.doc-sidebar{position:sticky;top:88px;align-self:start;padding:12px 0}
+.doc-sidebar>strong{display:block;font-size:11px;letter-spacing:.12em;font-weight:600;color:#8a948c;margin:0 0 12px 13px}
+.doc-sidebar nav{display:flex;flex-direction:column;gap:3px;border-left:1px solid #e1e7df}
+.doc-sidebar a{padding:7px 12px;text-decoration:none;font-size:13px;line-height:1.6;border-radius:0 5px 5px 0;border-left:2px solid transparent;margin-left:-1px;color:#68746b;transition:background .15s,color .15s}
+.doc-sidebar a:hover{background:#eef2ec;color:#315e48}
+.doc-sidebar a.active{background:#eaf0e7;color:#315e48;border-left-color:#638971;font-weight:500}
+.doc-content{min-width:0;background:#fff;border:1px solid #e4e9e1;border-radius:8px;padding:32px 42px;box-shadow:0 2px 8px #253c2c03}
+h1,h2,h3,h4{color:#2e4337;font-weight:600;line-height:1.5}
+h1{font-size:23px;letter-spacing:.02em;margin:0 0 18px;padding-bottom:20px;border-bottom:1px solid #e9ede6}
+h2{font-size:18px;margin:32px 0 16px;padding-bottom:9px;border-bottom:1px solid #e9ede6;scroll-margin-top:12px}
+h3{font-size:14px;margin:22px 0 8px;color:#3c5546}
+h4{font-size:13px;margin:18px 0 6px;color:#536457}
+p{margin:8px 0 12px}
+.doc-content>h1+p{font-size:13px;line-height:1.85;color:#7a857c;margin:0 0 24px}
+ul,ol{padding-left:21px;margin:8px 0 16px}
+li{padding-left:2px;margin:5px 0}
+li::marker{color:#8b9b8b;font-size:.9em}
+li ul,li ol{margin:6px 0 10px}
+strong,li strong{font-weight:600;color:#3b4e40}
+code{font:12px/1.6 ui-monospace,SFMono-Regular,Consolas,monospace;padding:2px 5px;background:#f2f5ef;border:1px solid #e9eee5;border-radius:4px;color:#4d6856}
+.table-scroll{overflow:auto;margin:12px 0 20px;border:1px solid #e1e7dd;border-radius:6px}
+table{border-collapse:collapse;width:100%;font-size:12px;line-height:1.7}
+th,td{padding:10px 12px;border-bottom:1px solid #e8ece4;text-align:left;vertical-align:top}
+th{background:#f3f6ef;color:#5a6a59;font-weight:500;white-space:nowrap}
+tbody tr:last-child td{border-bottom:0}tbody tr:nth-child(even){background:#fafbf8}
+#download-error{color:#a35033;margin:0;padding:8px 32px;background:#fff4eb;font-size:13px}
+@media(max-width:760px){.doc-top{position:static;padding:12px 18px;flex-wrap:wrap}.doc-actions{gap:16px}.doc-layout{display:block;padding:16px 14px 32px}.doc-sidebar{position:static;padding:0;margin-bottom:16px}.doc-sidebar>strong{margin-left:0}.doc-sidebar nav{flex-direction:row;flex-wrap:wrap;border-left:0;gap:4px}.doc-sidebar a{border:0;border-radius:4px;padding:5px 9px;margin:0;font-size:12px}.doc-content{padding:24px 20px}h1{font-size:21px}h2{font-size:17px}body{font-size:13px}}
+@media print{body{background:white;color:#333;font-size:11pt}.doc-top,.doc-sidebar,#download-error{display:none}.doc-layout{display:block;padding:0;max-width:none}.doc-content{border:0;padding:0;box-shadow:none}h2,h3,h4{break-after:avoid}table,li{break-inside:avoid}}
+</style></head><body><header class="doc-top"><strong>技能文档</strong><div class="doc-actions"><a href="new-skill-demo.html" data-return-editor>返回技能编辑</a><a href="skill-writing-guide.md" data-download-md download="skill-writing-guide.md">下载 Markdown</a></div></header><p id="download-error" role="alert" hidden></p><div class="doc-layout"><aside class="doc-sidebar"><strong>文档目录</strong><nav aria-label="文档目录"><a href="#section-0">工作目标</a><a href="#section-1">输入</a><a href="#section-2">工作步骤</a><a href="#section-3">输出</a><a href="#section-4">边界｜约束｜处理</a><a href="#section-5">验收要求</a><a href="#section-6">示例（可选）</a></nav></aside><main class="doc-content"><h1>帮助手册</h1><p>技能需要把您的工作经验转化为清晰、可执行的要求。本手册帮助您说明工作目标、所需资料、处理步骤和结果标准，减少遗漏和歧义，让技能更准确地按您的方法工作。</p>
+<h2 id="section-0">工作目标</h2>
+<h3 id="heading-7">编写要点</h3>
+<ul><li>范围具体、目标明确；避免“智能处理所有问题”等宽泛表述。
+</li><li>适用场景也应在文件头部的 description 中说明，便于发现技能。
+</li></ul>
+<h3 id="heading-12">应写内容</h3>
+<ul><li><strong>做什么：</strong> 一句话能力，用这个技能完成哪项具体工作。
+</li><li><strong>什么情况下用：</strong> 用熟悉的语言描述使用场景，例如：客户给了一份需求文档时。
+</li><li><strong>不用于什么：</strong> 说明不属于这个技能的工作内容，避免范围过大，建议至少写一条。例如：输入是源代码、缺陷单、会议纪要时不使用。
+</li></ul>
+<h3 id="heading-18">注意事项</h3>
+<ul><li><strong>合格标准：</strong> 换个人，不需要猜，也能判断这个技能是否适用于当前工作。
+</li><li><strong>反例：</strong> “一款强大的需求分析工具”——没说干什么、什么时候用，不能用于什么，等于广告。
+</li></ul>
+<h2 id="section-1">输入</h2>
+<h3 id="heading-25">编写要点</h3>
+<ul><li>输入可以是文字、文件、数据、工具读取的内容等，不必限定为文档。另外，需要说明缺失、无效或矛盾输入如何处理。
+</li></ul>
+<h3 id="heading-29">应写内容</h3>
+<ul><li>技能执行前需要的信息、资料、参数及前提条件；哪些必需、哪些可选；必要的格式和有效性要求。
+</li></ul>
+<h3 id="heading-33">注意事项</h3>
+<ul><li>区分每次执行提供的资料与长期参考的资料（例如规范、术语表），说明各自用途和必要性；长期参考资料可在正文中引用或放入 references/，引用时标明来源。具体附件、路径和前序结果在调用时提供，不在通用技能里绑定。参考资料是否阻塞取决于它对当前工作的必要性。
+</li><li><strong>合格标准：</strong> 缺少后无法开展工作的资料才列为必需；“有更好”的列为非必需，写清缺失影响及建议处理方式。实际调用前统一汇总缺项：必需资料须补齐才能执行，非必需资料由用户统一决定，不逐项弹窗。
+</li><li><strong>反例：</strong> 只写“需要一份文档”，没有说明文档需要包含什么。仅在确有必要时限定格式，不必填写实际来源。
+</li></ul>
+<h2 id="section-2">工作步骤</h2>
+<h3 id="heading-41">编写要点</h3>
+<ul><li>指令应可执行。顺序必须严格时写清楚；允许多种方法时保留判断空间。必要时说明中间检查和失败后的处理方式。
+</li></ul>
+<h3 id="heading-45">应写内容</h3>
+<ul><li>从接收输入到形成结果的有顺序的操作方法，包含：判断条件和分支；需要使用的工具、脚本或参考文件。
+</li><li><strong>处理动作：</strong> 每一步要完成什么。
+</li><li><strong>使用依据：</strong> 需要使用哪些输入或前面形成的结果。
+</li><li><strong>完成标准：</strong> 做到什么程度才算完成，尽量让其他人也能判断。
+</li><li><strong>中间结果（按需）：</strong> 本步形成什么，供哪些后续处理使用。
+</li><li><strong>异常处理（按需）：</strong> 不能达到完成标准时，如何说明和请求处理。
+</li></ul>
+<h3 id="heading-54">注意事项</h3>
+<ul><li><strong>执行规则：</strong> 每步围绕一个清晰目标展开。无法达到继续工作必需的完成标准时，说明原因并请求处理，不带着无依据的假设继续。后续步骤可组合原始资料和前面形成的结果，不限于紧邻上一步。技能内部步骤不自动成为独立工作流节点。
+</li><li><strong>第一类反例：</strong> “认真分析文档”、“深入理解需求”——没有动作也没有标准；
+</li><li><strong>第二类反例：</strong> “分析并输出清单”——如果分析方法和清单要求都没有说明，执行者无法判断怎样才算完成。必要时拆步，不机械要求每个动词独占一步。
+</li></ul>
+<h2 id="section-3">输出</h2>
+<h3 id="heading-62">编写要点</h3>
+<ul><li>根据输出后的用途，来约定文档可以是自然语言建议，也可以是严格的 JSON、代码或文件。需要固定格式时应明确，允许灵活表达时也应说明。不强制绑定具体交付文件或模板。
+</li></ul>
+<h3 id="heading-66">应写内容</h3>
+<ul><li>最终应返回或生成什么，以及内容、结构、格式和交付方式。
+</li><li><strong>每个产出都要写三样：</strong> 1.名称；2.内容（见下面说明）；3.格式。格式要具体，有必要时说明章节、表格结构或表达方式，例如：表格几列、文档分几节。或者依据工作本身要求的专业格式限制，例如：测试报告模板等专业模板。
+</li><li>分析类结果应区分事实（有资料依据）、判断（推断及依据）与待确认事项（疑点与不确定性），可用章节、表格列或备注表达，不强制固定三节，也不要求代码或翻译等产物采用分析报告结构。
+</li></ul>
+<h3 id="heading-72">注意事项</h3>
+<ul><li><strong>合格标准：</strong> 客户拿到输出，直接使用，不用再问“这份东西长什么样、哪部分是确定的、哪部分还得确认”。
+</li><li><strong>反例：</strong> “输出一份报告” —— 不知道要出什么内容要求、什么格式的报告。
+</li></ul>
+<h2 id="section-4">边界｜约束｜处理</h2>
+<h3 id="heading-79">编写要点</h3>
+<ul><li>写明何时可以继续、何时需要询问、何时必须停止；不能让模型自行补造关键事实或声称完成未执行的操作。
+</li><li><strong>边界：</strong> 整个技能不接什么活，至少一条，比如不写测试用例、不执行测试、不判断业务本身对不对。这是 agent 首先的范围，要一眼看清。
+</li><li><strong>约束：</strong> 接了活之后做事必须遵守的规矩，分依据类、格式类、禁止类写，比如每个结论必须有原文依据、不猜、不脑补、不改原文。
+</li><li><strong>处理：</strong> 遇到无法判断、资料不足、资料矛盾时怎么办，要选清楚。建议写成：记为待确认，不擅自选边；不冲突的部分继续做，核心资料缺失时停下来请客户补充，不要自行编造。
+</li></ul>
+<h3 id="heading-86">应写内容</h3>
+<ul><li>不适用范围、禁止行为、必须遵守的规则、权限或环境限制，以及异常、歧义和无法完成时的处理方式。
+</li></ul>
+<h3 id="heading-90">注意事项</h3>
+<ul><li><strong>必须遵守什么：</strong> 业务规则、资料依据、保密要求等。
+</li><li><strong>禁止做什么：</strong> 例如编造规则、擅自修改原文、超出授权范围。
+</li><li><strong>资料矛盾怎么办：</strong> 列明双方依据和影响，不擅自选边。
+</li><li><strong>无法判断怎么办：</strong> 区分可以记录为输出疑点的情况，以及无法继续、必须请求人工处理的情况。
+</li><li><strong>处理范围：</strong> 明确哪些内容不应扩展处理，避免重复其他章节。
+</li><li><strong>反例：</strong> 把所有规矩都塞进边界里，边界越列越长，反而看不清范围；也别在这里重复工作目标里的“不用于”，边界只在一处写全。
+</li></ul>
+<h2 id="section-5">验收要求</h2>
+<h3 id="heading-101">编写要点</h3>
+<ul><li>尽量可观察、可验证，例如字段齐全、引用可追溯、测试通过；避免只有“质量高”、“分析深入”等主观描述。
+</li><li>每条都要能由另一个人照着判断，比如：输入输出要求清晰且满足必要格式约束、每步都有判定标准、边界已声明、事实和判断和待确认没有混在一起、没有编造缺失信息、没有留着“……”没填。
+</li><li>验收要写检查方法，不只是写目标。例如：写“每条结论都能找到依据或被标为待确认”。
+</li></ul>
+<h3 id="heading-107">应写内容</h3>
+<ul><li>判断结果是否正确、完整、符合要求的检查条件，以及适用的验证方法。
+</li></ul>
+<h3 id="heading-111">注意事项</h3>
+<ul><li><strong>合格标准：</strong> 照着这张单子逐条打勾，全过才能交付；有一条过不了，回去改对应的章节，不要只改验收这一节。
+</li><li>应覆盖哪些范围，不能遗漏什么。
+</li><li>内容需要达到什么准确性、完整性和可追溯性。
+</li><li>哪些要求能够逐条检查。
+</li><li>是否明确说明资料缺失、未覆盖范围和不确定性
+</li><li><strong>反例：</strong> “质量高”、“分析深入”、“结果要准确”—— 描述过于主观，没有验证标准和方法。
+</li></ul>
+<h2 id="section-6">示例（可选）</h2>
+<h3 id="heading-122">编写要点</h3>
+<ul><li>示例应与指令一致，重点展示难以用文字说明的格式或判断方式。示例数量按需，不替代规则，也不等于实际验证。
+</li><li>建议提供示例输入或场景及期望结果，按需补充反例和原因。期望结果应符合输出要求，不强制分三节；有不确定性的案例更能展示边界。
+</li><li>示例最好用真实输入，不要编一个什么都不缺的完美例子；最好带一个有待确认项的例子，正好示范缺资料时怎么处理。
+</li></ul>
+<h3 id="heading-128">应写内容</h3>
+<ul><li>典型输入、期望输出，以及必要的边界案例或错误示例。
+</li></ul>
+<h3 id="heading-132">注意事项</h3>
+<ul><li><strong>示例可选：</strong> 没有附带示例不意味着没有做过测试；附带示例也不等于真实运行已验证。示例无需提供真实客户资料，可以使用虚构且明确标注的场景。没有示例不影响技能发布；有示例也不代表已经通过实际运行验证，所以，建议至少自己私下跑一例验证过再发布，哪怕不把示例贴进模板里。
+</li></ul></main></div><script src="skill-documents.js"></script></body></html>

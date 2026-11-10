@@ -22,7 +22,7 @@ MAX_TOTAL = 20 * 1024 * 1024
 
 
 def safe_path(name):
-    if not isinstance(name, str) or not name or '\\' in name or '\x00' in name:
+    if not isinstance(name, str) or not name or '\\' in name or '\x00' in name or ':' in name:
         raise ValueError('技能包文件路径无效')
     path = PurePosixPath(name)
     if path.is_absolute() or any(p in ('', '.', '..') or p.startswith('.') for p in name.split('/')):
@@ -47,24 +47,64 @@ class SkillCenter:
         if entry.is_symlink() or not entry.resolve().is_relative_to(root):
             raise ValueError('技能包不能引用目录外文件')
         metadata, body = read_markdown(entry)
+        header_lines = entry.read_text(encoding='utf-8').splitlines()
+        closing = next(i for i in range(1, len(header_lines)) if header_lines[i].strip() == '---')
+        raw_header = '\n'.join(header_lines[1:closing])
+        from beivymate.configuration.skill_authoring import authoring_metadata, FORMAT, SETTINGS_FILE
+        settings_path = directory / SETTINGS_FILE
+        if settings_path.is_symlink():
+            raise ValueError('技能配置不能为符号链接')
+        if settings_path.exists():
+            if settings_path.stat().st_size > 256 * 1024:
+                raise ValueError('技能应用配置过大')
+            annotations = authoring_metadata({'metadata': json.loads(settings_path.read_text(encoding='utf-8'))})
+            if annotations is None:
+                raise ValueError('技能应用配置格式无效')
+        else:
+            annotations = authoring_metadata(metadata)
+        authored = annotations is not None
+        if authored:
+            for line in raw_header.splitlines():
+                key, sep, raw = line.partition(':')
+                if sep and key in ('name', 'description'):
+                    metadata[key] = json.loads(raw.strip())
+            if metadata.get('name') != directory.name or not re.fullmatch(r'[a-z0-9]+(?:-[a-z0-9]+)*', directory.name) or len(directory.name) > 64:
+                raise ValueError('技能标识与包目录不一致或格式无效')
+            if not isinstance(metadata.get('description'), str):
+                raise ValueError('技能描述必须为文本')
+            metadata['id'] = metadata['name']
+            metadata['name'] = annotations.get('beivymate-display-name', metadata['id'])
+            metadata['roles'] = json.loads(annotations.get('beivymate-roles', '["common"]'))
+            if not isinstance(metadata['roles'], list):
+                raise ValueError('技能适用角色必须为列表')
+            metadata['role'] = next(iter(metadata['roles']), 'common')
+            metadata['icon'] = annotations.get('beivymate-icon', '🧩')
+            metadata.setdefault('model_preference', annotations.get('beivymate-model', '{"mode":"inherit","model":"","capabilities":[]}'))
         for key in ('roles', 'model_preference'):
             if isinstance(metadata.get(key), str):
                 try:
                     metadata[key] = json.loads(metadata[key])
                 except ValueError:
                     raise ValueError('技能元数据格式无效：' + key) from None
+        if authored and not isinstance(metadata.get('model_preference'), dict):
+            raise ValueError('技能模型选择格式无效')
         if not isinstance(metadata.get('roles', [metadata.get('role', 'common')]), list) or any(not isinstance(r, str) or r not in ROLES for r in metadata.get('roles', [])):
             raise ValueError('技能适用角色无效')
         identity = metadata.get('id', directory.name)
-        if not isinstance(identity, str) or not re.fullmatch(r'[a-z][a-z0-9_-]*', identity):
+        if not isinstance(identity, str) or not re.fullmatch(r'[a-z0-9][a-z0-9_-]*', identity):
             raise ValueError('技能标识只能使用小写字母、数字、下划线、短横线')
-        if not all(isinstance(metadata.get(k), str) and metadata[k].strip() for k in ('name', 'description')) or not body:
+        if not authored and (not all(isinstance(metadata.get(k), str) and metadata[k].strip() for k in ('name', 'description')) or not body):
             raise ValueError('SKILL.md 需要名称、描述和工作指令')
         role = metadata.get('role', 'common')
         if not isinstance(role, str) or role not in ROLES:
             raise ValueError('技能角色无效')
         files, digest, total = [], hashlib.sha256(), 0
         updated = entry.stat().st_mtime
+        if settings_path.exists():
+            raw_settings = settings_path.read_bytes()
+            digest.update(SETTINGS_FILE.encode()); digest.update(hashlib.sha256(raw_settings).digest())
+            total += len(raw_settings)
+            updated = max(updated, settings_path.stat().st_mtime)
         for path in sorted(directory.rglob('*')):
             if any(p.startswith('.') for p in path.relative_to(directory).parts):
                 continue
@@ -93,7 +133,6 @@ class SkillCenter:
             except UnicodeDecodeError:
                 files.append({'path': name, 'content': base64.b64encode(raw).decode(), 'size': len(raw)})
         # Preserve executable metadata exactly, including multiline lists.
-        raw_header = entry.read_text().split('---', 2)[1]
         extras, keep = [], False
         display = {'id', 'name', 'description', 'role', 'roles', 'icon', 'version', 'model_preference', 'state'}
         for line in raw_header.splitlines():
@@ -111,6 +150,10 @@ class SkillCenter:
             updated=datetime.fromtimestamp(updated, timezone.utc).isoformat(), revision=digest.hexdigest())
         if not builtin and observe:
             result['validationErrors'] = self.registry.observe('skill', identity, result['revision'])['errors']
+        if authored:
+            result['authoringFormat'] = FORMAT
+            if result['state'] == 'discovered':
+                result['state'] = 'draft'
         if metadata.get('model_preference'):
             result['modelPreference'] = metadata['model_preference']
         return result
@@ -137,7 +180,7 @@ class SkillCenter:
         return {'items': items, 'errors': errors}
 
     def save(self, identity, body):
-        if not re.fullmatch(r'[a-z][a-z0-9_-]*', identity):
+        if not re.fullmatch(r'[a-z0-9][a-z0-9_-]*', identity):
             raise ValueError('技能标识无效')
         if not isinstance(body, dict) or not isinstance(body.get('content'), str) or not isinstance(body.get('files', []), list):
             raise ValueError('技能包请求无效')
@@ -149,6 +192,12 @@ class SkillCenter:
             existing = next((s for s in self.scan()['items'] if s['id'] == identity), None)
             if existing and existing['source'] == 'builtin':
                 raise PermissionError('内置技能只读，请创建副本')
+            if existing and existing['state'] == 'published':
+                raise PermissionError('已启用技能不能编辑，请先停用技能')
+            if (existing or {}).get('authoringFormat') and body.get('authoringSettings') is None:
+                raise ValueError('请使用技能编写接口保存，避免丢失应用配置')
+            if existing and body.get('revision') is None:
+                raise FileExistsError('唯一标识已被使用，请更换。')
             if (existing or {}).get('revision') != body.get('revision'):
                 raise FileExistsError('技能包已被修改，请重新加载后核对')
             self.custom.mkdir(parents=True, exist_ok=True)
@@ -161,12 +210,22 @@ class SkillCenter:
             with tempfile.TemporaryDirectory(dir=self.custom, prefix='.draft-') as temporary:
                 staging = Path(temporary) / identity; staging.mkdir()
                 content = body['content']
-                # State lives with the package, so copied folders remain authoritative.
+                # Legacy import format remains unchanged; new instruction packages store state locally only.
                 header, sep, rest = content.removeprefix('\ufeff').partition('\n---')
                 if not header.startswith('---\n') or not sep:
                     raise ValueError('SKILL.md 元数据格式无效')
                 header = re.sub(r'^state:.*\n?', '', header, flags=re.M)
-                (staging / 'SKILL.md').write_text(header + '\nstate: ' + body['state'] + sep + rest)
+                from beivymate.markdown.metadata import parse_markdown
+                from beivymate.configuration.skill_authoring import authoring_metadata, SETTINGS_FILE
+                settings = body.get('authoringSettings')
+                if settings is not None:
+                    if authoring_metadata({'metadata': settings}) is None:
+                        raise ValueError('技能应用配置格式无效')
+                    (staging / SETTINGS_FILE).write_text(json.dumps(settings, ensure_ascii=False), encoding='utf-8')
+                authored = settings is not None or authoring_metadata(parse_markdown(content)[0]) is not None
+                if authored and body['state'] != 'draft':
+                    raise ValueError('请先保存草稿，再检查并确认发布；停用请使用状态操作')
+                (staging / 'SKILL.md').write_text(content if authored else header + '\nstate: ' + body['state'] + sep + rest, encoding='utf-8')
                 seen, total = {'SKILL.md'}, len(content.encode())
                 for item in body.get('files', []):
                     if not isinstance(item, dict):
@@ -228,6 +287,12 @@ class SkillCenter:
 
     def _validation_errors(self, item, entry, *, raise_error=False):
         errors = []
+        if item.get('authoringFormat'):
+            from beivymate.configuration.skill_authoring import writing_errors
+            errors = writing_errors(item)
+            if errors and raise_error:
+                raise ValueError('技能检查未通过：' + '；'.join(errors))
+            return errors
         try:
             from beivymate.configuration.skill_package import load_skill
             spec = load_skill(entry)
@@ -259,6 +324,10 @@ class SkillCenter:
                 raise PermissionError('内置技能只读，请创建副本')
             if item['revision'] != revision:
                 raise FileExistsError('技能包已变化，请重新加载')
+            if item['state'] == 'published' and action == 'publish':
+                return item
+            if item['state'] == 'published' and action == 'validate':
+                raise PermissionError('已启用技能不能重新检查，请先停用技能')
             if action == 'validate':
                 errors = self._validation_errors(item, entry)
                 self.registry.validate('skill',identity,revision,errors)
@@ -269,6 +338,13 @@ class SkillCenter:
             else:
                 raise ValueError('不支持的技能状态操作')
             return self.package(entry, False)
+
+    def require_editable(self, identity):
+        entry, builtin = self._entry(identity)
+        if builtin:
+            raise PermissionError('内置技能只读，请创建副本')
+        if self.package(entry, builtin)['state'] == 'published':
+            raise PermissionError('已启用技能不能编辑，请先停用技能')
 
     def require_published(self, identity):
         entry, builtin = self._entry(identity)

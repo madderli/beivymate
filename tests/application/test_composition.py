@@ -117,6 +117,7 @@ def test_create_tester_agent(
         ),
         gateway = gateway,
         model = "test-model",
+        builtin_skill_root=Path(__file__).resolve().parents[2] / 'tests/fixtures/legacy-resources/skills',
     )
 
     assert isinstance(
@@ -148,6 +149,7 @@ def test_tester_agent_executes_configured_workflow(
         ),
         gateway = gateway,
         model = "test-model",
+        builtin_skill_root=Path(__file__).resolve().parents[2] / 'tests/fixtures/legacy-resources/skills',
     )
 
     requirement = Requirement(
@@ -196,6 +198,7 @@ def test_tester_agent_uses_configured_template(
         ),
         gateway = gateway,
         model = "test-model",
+        builtin_skill_root=Path(__file__).resolve().parents[2] / 'tests/fixtures/legacy-resources/skills',
     )
 
     requirement = Requirement(
@@ -279,6 +282,7 @@ def test_tester_agent_supports_custom_template(
         ),
         gateway = gateway,
         model = "test-model",
+        builtin_skill_root=Path(__file__).resolve().parents[2] / 'tests/fixtures/legacy-resources/skills',
     )
 
     requirement = Requirement(
@@ -330,6 +334,7 @@ def test_create_tester_agent_uses_default_template(
         ),
         gateway = gateway,
         model = "test-model",
+        builtin_skill_root=Path(__file__).resolve().parents[2] / 'tests/fixtures/legacy-resources/skills',
     )
 
     requirement = Requirement(

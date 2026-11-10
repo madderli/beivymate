@@ -133,8 +133,16 @@ export type PackageFile = {
 };
 export type Skill = {
   key: string;
+  authoringFormat?: string;
   revision?: string;
   lockedTasks?: string[];
+  workflowReferences?: { id: string; name: string }[];
+  taskReferences?: {
+    id: string;
+    name: string;
+    status: string;
+    closed: boolean;
+  }[];
   validationErrors?: string[];
   id: string;
   name: string;
@@ -384,49 +392,9 @@ export async function readPackage(
   if (errors.length) throw new Error(errors.join("\n"));
   return { skill, warnings: [...new Set(warnings)] };
 }
-export function blankSkill(role: SkillRole): Skill {
-  return {
-    key: crypto.randomUUID(),
-    id: "",
-    name: "",
-    description: "",
-    role,
-    roles: [role],
-    icon: "🔍",
-    calls: 0,
-    updated: new Date().toLocaleString("zh-CN", { hour12: false }),
-    version: "1.0.0",
-    body: "# 工作目标\n\n描述技能要完成的工作。\n\n## 执行步骤\n\n1. 检查输入材料。\n2. 按业务规则处理。\n3. 输出结果与待确认事项。\n\n## 约束\n\n不编造缺失的信息。\n\n## 输出\n\n明确产物格式与保存要求。",
-    source: "custom",
-    state: "draft",
-    files: [],
-  };
-}
 export type SkillWorkflow = {
   id: string;
   name: string;
   skills: string[];
   tasks: { name: string; status: "执行中" | "待确认" | "已暂停" | "已完成" }[];
 };
-export function seedWorkflows(): SkillWorkflow[] {
-  return [
-    {
-      id: "payment",
-      name: "支付异常验证",
-      skills: ["payment_review", "requirement_understand"],
-      tasks: [
-        { name: "支付回调异常验证", status: "执行中" },
-        { name: "退款一致性复核", status: "待确认" },
-      ],
-    },
-    {
-      id: "regression",
-      name: "版本回归验证",
-      skills: ["payment_review", "test_analysis", "test_design"],
-      tasks: [
-        { name: "上个版本回归", status: "已完成" },
-        { name: "本轮兼容性验证", status: "已暂停" },
-      ],
-    },
-  ];
-}

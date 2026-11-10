@@ -1,10 +1,11 @@
+from pathlib import Path
 from fastapi.testclient import TestClient
 from beivymate.application.web import create_app
 from beivymate.documents.models import DocumentOrigin,OutputPolicy
 
 
 def test_authenticated_document_edits_and_template_conflicts(tmp_path):
-    app=create_app(tmp_path,'setup')
+    app=create_app(tmp_path,'setup', builtin_skill_root=Path(__file__).resolve().parents[2] / 'tests/fixtures/legacy-resources/skills')
     with TestClient(app,base_url='http://127.0.0.1:8000',headers={'origin':'http://127.0.0.1:5173'}) as c:
         assert c.get('/api/v1/documents').status_code==401
         c.post('/api/v1/account/initialize',json={'username':'tester','password':'Secure-Password-123!','name':'测试人员','setupToken':'setup'})
@@ -27,7 +28,6 @@ def test_authenticated_document_edits_and_template_conflicts(tmp_path):
         response=c.put('/api/v1/configuration/skills/custom_analysis',json={'content':skill['content'].replace('id: test_analysis','id: custom_analysis'),'copyFrom':'test_analysis'})
         assert response.status_code==200,response.text
         assert c.put('/api/v1/configuration/skills/custom_analysis/templates',json=body).status_code==200
-        from pathlib import Path
         copied=c.get('/api/v1/configuration/skills/custom_analysis/templates').json()['items'][0]
         Path(copied['path']).write_text(Path(copied['path']).read_text()+'\nmanual edit')
         assert c.put('/api/v1/configuration/skills/custom_analysis/templates',json=body).status_code==409

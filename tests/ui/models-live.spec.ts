@@ -641,5 +641,24 @@ test("real model management, HTTP calls, inheritance, chat and frozen skill run"
   await page.getByRole("button", { name: "保存设置", exact: true }).click();
   await expect(page.getByRole("button", { name: "保存设置", exact: true })).toBeEnabled();
   await expect(activeStat).toHaveText(String(totalEnabled - 1));
+  await page.evaluate(() => {
+    localStorage.setItem("beivymate.ui.v1.workflow-library", JSON.stringify([{
+      id: "fake-browser-flow", name: "浏览器演示工作流", description: "demo", source: "custom",
+      enabled: true, roles: ["tester"], finalOutput: "demo", updated: "刚刚",
+      skills: ["requirement_understand"],
+      steps: [{ id: "fake-step", skill: "requirement_understand", input: "workflow", output: "demo", confirmation: "human", model: "default" }],
+      tasks: [{ name: "浏览器演示任务", status: "执行中" }],
+    }]));
+  });
+  await page.getByRole("button", { name: "技能中心", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "我的技能库" })).toBeVisible();
+  const packages = await (await page.request.get("/api/v1/skill-center")).json();
+  const builtin = packages.items.find((s: { id: string }) => s.id === "requirement_understand");
+  const skillCard = page.locator(".sc-card").filter({ has: page.getByText(builtin.name, { exact: true }) });
+  await skillCard.getByRole("button", { name: `${builtin.workflowReferences.length} 个工作流引用`, exact: true }).click();
+  await expect(page.getByRole("dialog")).not.toContainText("浏览器演示工作流");
+  await expect(page.getByRole("dialog")).not.toContainText("浏览器演示任务");
+  await expect(page.getByRole("button", { name: "模拟完成任务", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("dialog")).toContainText(builtin.workflowReferences[0].name);
 
 });

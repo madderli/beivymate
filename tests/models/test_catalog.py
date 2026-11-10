@@ -116,9 +116,8 @@ def test_snapshot_rebuild_does_not_consult_new_default(tmp_path,monkeypatch):
     assert restored.snapshot['candidates'][0]['id']=='a'
 
 
-@pytest.fixture
-def api(tmp_path):
-    app=create_app(tmp_path,'setup',vault=Vault(),worker_enabled=False)
+def api_context(tmp_path, builtin_skill_root=None):
+    app=create_app(tmp_path,'setup',vault=Vault(),worker_enabled=False,builtin_skill_root=builtin_skill_root)
     with TestClient(app,base_url='http://127.0.0.1:8000',headers={'origin':'http://127.0.0.1:5173'}) as c:
         c.post('/api/v1/account/initialize',json={'username':'tester','name':'测试员','password':'Secure-Password-123!','setupToken':'setup'})
         session=c.post('/api/v1/session',json={'username':'tester','password':'Secure-Password-123!'}).json()
@@ -126,6 +125,11 @@ def api(tmp_path):
         owner=session['user']['id'];doc=document(app.state.model_catalog,owner)
         response=c.put('/api/v1/models',json=doc);assert response.status_code==200,response.text
         yield c,app,owner
+
+
+@pytest.fixture
+def api(tmp_path):
+    yield from api_context(tmp_path)
 
 
 def test_http_chat_preferences_actual_reply_idempotency_and_independence(api,monkeypatch):

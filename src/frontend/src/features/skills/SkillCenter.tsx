@@ -1,15 +1,18 @@
 import { loadModelLibrary } from "./model-api";
 import ProductSidebar from "../../ProductSidebar";
-import WorkflowLibrary from "../workflows/WorkflowLibrary";
-import {
-  migrateWorkflows,
-  isWorkflowLibrary,
-} from "../workflows/workflow-state";
+import WorkflowLibraryPage from "../workflows/WorkflowLibraryPage";
 import { api, request } from "../../api";
-import { useLocalState, readLocal } from "./local-state";
+import { useLocalState } from "./local-state";
 import SkillModelPicker from "./SkillModelPicker";
+import SkillCreate from "./SkillCreate";
 import ModelSettings from "./ModelSettings";
-import { useEffect, useRef, useState, type InputHTMLAttributes } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type InputHTMLAttributes,
+} from "react";
 import {
   Blocks,
   Plus,
@@ -32,7 +35,6 @@ import {
 } from "lucide-react";
 import { Dialog } from "../../components";
 import {
-  blankSkill,
   defaultModelPreference,
   configuredModels,
   modelPreferenceErrors,
@@ -53,6 +55,144 @@ const directory = {
   webkitdirectory: "",
   directory: "",
 } as InputHTMLAttributes<HTMLInputElement>;
+function formatSkillTime(value?: string) {
+  if (!value) return "未记录";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "未记录";
+  const pad = (v: number) => String(v).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+function CardDescription({ text, open }: { text: string; open: () => void }) {
+  const container = useRef<HTMLButtonElement>(null);
+  const [excerpt, setExcerpt] = useState({ lines: [text], clipped: false });
+  useLayoutEffect(() => {
+    const node = container.current;
+    if (!node) return;
+    let cancelled = false;
+    const context = document.createElement("canvas").getContext("2d");
+    if (!context) return;
+    const measure = () => {
+      if (cancelled) return;
+      const width = node.clientWidth;
+      if (!width) return;
+      const style = getComputedStyle(node);
+      context.font = `${style.fontStyle} ${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+      const segments = new Intl.Segmenter(undefined, {
+        granularity: "grapheme",
+      });
+      const characters = [
+        ...segments.segment(text.replace(/\r\n?/g, "\n")),
+      ].map((part) => part.segment);
+      const lines: string[] = [];
+      let position = 0;
+      let clipped = false;
+      for (let line = 0; line < 3 && position < characters.length; line++) {
+        const available = line === 2 ? width * 0.75 : width;
+        const remaining = characters.slice(position).join("");
+        const needsMore =
+          line === 2 &&
+          (remaining.includes("\n") ||
+            context.measureText(remaining).width > available);
+        const limit =
+          available - (needsMore ? context.measureText(" ···").width : 0);
+        let value = "";
+        while (position < characters.length) {
+          const char = characters[position];
+          if (char === "\n") {
+            position++;
+            break;
+          }
+          if (context.measureText(value + char).width > limit) break;
+          value += char;
+          position++;
+        }
+        lines.push(value);
+        if (line === 2) clipped = position < characters.length;
+      }
+      setExcerpt((previous) =>
+        previous.clipped === clipped &&
+        previous.lines.join("\n") === lines.join("\n")
+          ? previous
+          : { lines, clipped },
+      );
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(node);
+    void document.fonts.ready.then(measure);
+    return () => {
+      cancelled = true;
+      observer.disconnect();
+    };
+  }, [text]);
+  return (
+    <button
+      ref={container}
+      type="button"
+      className="sc-card-excerpt sc-card-description"
+      aria-label="查看完整技能描述"
+      onClick={open}
+    >
+      <span className="sc-excerpt-text">
+        {excerpt.lines.map((line, index) => (
+          <span key={index} className="sc-description-line">
+            {line}
+            {index === 2 && excerpt.clipped && (
+              <span className="sc-description-more" aria-hidden="true">
+                {" "}
+                ···
+              </span>
+            )}
+          </span>
+        ))}
+      </span>
+    </button>
+  );
+}
+function CardExcerpt({
+  text,
+  kind,
+  open,
+}: {
+  text: string;
+  kind: "description" | "issues";
+  open: () => void;
+}) {
+  const ref = useRef<HTMLSpanElement>(null);
+  const [overflow, setOverflow] = useState(false);
+  useEffect(() => {
+    const node = ref.current;
+    if (!node) return;
+    const measure = () =>
+      setOverflow(
+        node.scrollHeight > node.clientHeight + 1 ||
+          node.scrollWidth > node.clientWidth + 1,
+      );
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [text]);
+  if (kind === "description")
+    return <CardDescription text={text} open={open} />;
+  return (
+    <div className={`sc-card-excerpt sc-card-${kind}`}>
+      <span ref={ref} className="sc-excerpt-text">
+        {text}
+      </span>
+      {overflow && (
+        <button
+          type="button"
+          className="sc-excerpt-more"
+          aria-label="查看全部技能提示"
+          onClick={open}
+        >
+          ···
+        </button>
+      )}
+    </div>
+  );
+}
 export default function SkillCenter({
   embedded = false,
   page = "skills",
@@ -63,6 +203,11 @@ export default function SkillCenter({
   navigate?: (page: string) => void;
 }) {
   const [skills, setSkills] = useState<Skill[]>([]);
+  const [cardDetails, setCardDetails] = useState<{
+    title: string;
+    texts: string[];
+    skill?: Skill;
+  }>();
   const [modelIssues, setModelIssues] = useState<
     Record<string, { message: string }>
   >({});
@@ -137,27 +282,17 @@ export default function SkillCenter({
   }, []);
   const [role, setRole] = useLocalState<SkillRole>("role", () => "tester");
   const [status, setStatus] = useState("all");
-  const [workflows, setWorkflows] = useLocalState(
-    "workflow-library",
-    () => migrateWorkflows(readLocal("workflows", () => [])),
-    isWorkflowLibrary,
-  );
   const [references, setReferences] = useState<Skill>();
   const [viewing, setViewing] = useState(false);
-  const refs = (s: Skill) =>
-    workflows.filter((w) => w.steps.some((step) => step.skill === s.id));
-  const pending = (s: Skill) =>
-    s.lockedTasks
-      ? s.lockedTasks.map((id) => ({ name: id, status: "未关闭" }))
-      : refs(s)
-          .flatMap((w) => w.tasks)
-          .filter((t) => t.status !== "已完成");
+  const refs = (s: Skill) => s.workflowReferences || [];
+  const pending = (s: Skill) => s.lockedTasks || [];
   const open = (s: Skill, view = false) => {
-    setViewing(view);
+    setViewing(view || s.state === "published");
     setEditing(structuredClone(s));
   };
   const [search, setSearch] = useState("");
   const [editing, setEditing] = useState<Skill>();
+  const [creating, setCreating] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [localPage, setLocalPage] = useState(
     () => location.hash.slice(1) || page,
@@ -182,14 +317,6 @@ export default function SkillCenter({
   const [userMenu, setUserMenu] = useState(false);
   const [, refreshModels] = useState(0);
   const [notice, setNotice] = useState("");
-  useEffect(() => {
-    const failed = () =>
-      setNotice(
-        "浏览器存储不可用，当前修改仅在本次页面内保留。请导出技能备份。",
-      );
-    window.addEventListener("beivymate-storage-error", failed);
-    return () => window.removeEventListener("beivymate-storage-error", failed);
-  }, []);
   const [mobile, setMobile] = useState(false);
   const visible = skills.filter((s) =>
     (s.roles || [s.role]).some((r) => r === "common" || r === role),
@@ -204,10 +331,13 @@ export default function SkillCenter({
   const save = async (skill: Skill) => {
     const original = skills.find((s) => s.key === skill.key);
     if (
+      original?.state === "published" ||
       original?.source === "builtin" ||
       (original && pending(original).length)
     )
-      throw new Error("内置技能只读，或引用任务尚未全部完成，无法修改此技能。");
+      throw new Error(
+        "已启用或内置技能只读，引用任务尚未全部关闭时也无法修改。",
+      );
     await request(`/skill-center/${encodeURIComponent(skill.id)}`, {
       method: "PUT",
       body: JSON.stringify({
@@ -246,9 +376,11 @@ export default function SkillCenter({
       id,
       name: `${s.name}（个人副本）`,
       source: "custom",
+      lockedTasks: [],
+      workflowReferences: [],
+      taskReferences: [],
       state: "draft",
       role,
-      calls: 0,
       updated: new Date().toLocaleString("zh-CN", { hour12: false }),
       basedOn: s.id,
       imported: false,
@@ -338,13 +470,7 @@ export default function SkillCenter({
             }}
           />
         </div>
-        {workflowPage && (
-          <WorkflowLibrary
-            skills={skills}
-            workflows={workflows}
-            setWorkflows={setWorkflows}
-          />
-        )}
+        {workflowPage && <WorkflowLibraryPage skills={skills} />}
         <main
           className="sc-main homepage-main"
           hidden={settingsOpen || workflowPage}
@@ -353,7 +479,7 @@ export default function SkillCenter({
             <div>
               <span className="ad-kicker">SKILLS CENTER</span>
               <h1>我的技能库</h1>
-              <p>让智能助手学会您的工作方法，把经验变成可复用的能力。</p>
+              <p>让技能学会您的工作方法，把经验变成可复用的能力。</p>
             </div>
             <div className="sc-heading-actions">
               <button
@@ -365,7 +491,7 @@ export default function SkillCenter({
               </button>
               <button
                 className="ad-primary homepage-heading-action"
-                onClick={() => open(blankSkill(role))}
+                onClick={() => setCreating(true)}
               >
                 <Plus size={16} />
                 新建技能
@@ -422,6 +548,27 @@ export default function SkillCenter({
           <div className="sc-grid">
             {matches.map((s) => {
               const blocked = pending(s).length > 0;
+              const modelIssue = modelIssues["skill:" + s.id]?.message;
+              const issues = [
+                ...new Set([
+                  ...(s.validationErrors || []),
+                  ...(modelIssue
+                    ? [modelIssue]
+                    : modelPreferenceErrors(
+                          s.modelPreference || defaultModelPreference(),
+                        ).length
+                      ? ["模型待配置 · 启用或执行前需处理"]
+                      : []),
+                  ...(blocked
+                    ? [
+                        `${pending(s).length} 个任务未关闭 · 关闭后才能编辑或停用`,
+                      ]
+                    : []),
+                  ...(s.state === "invalid" && !s.validationErrors?.length
+                    ? ["技能验证未通过，请查看原因并修正。"]
+                    : []),
+                ]),
+              ];
               return (
                 <article className="sc-card" key={s.key}>
                   <div className="sc-card-head">
@@ -433,11 +580,6 @@ export default function SkillCenter({
                       onClick={() => open(s, true)}
                     >
                       <h2>{s.name}</h2>
-                      {modelIssues["skill:" + s.id] && (
-                        <span className="mm-resource-issue">
-                          {modelIssues["skill:" + s.id].message}
-                        </span>
-                      )}
                     </button>
                     <span className={`sc-state ${s.state}`}>
                       <i />
@@ -454,12 +596,16 @@ export default function SkillCenter({
                       ? "已发布·工作流可用"
                       : `${stateNames[s.state]}·工作流不可用`}
                   </span>
-                  <p>{s.description}</p>
-                  {!!s.validationErrors?.length && (
-                    <p role="alert" className="sc-warning">
-                      {s.validationErrors.join("；")}
-                    </p>
-                  )}
+                  <CardExcerpt
+                    text={s.description}
+                    kind="description"
+                    open={() =>
+                      setCardDetails({
+                        title: `${s.name} · 技能描述`,
+                        texts: [s.description],
+                      })
+                    }
+                  />
                   <div className="sc-card-tags">
                     <span
                       className={s.source === "builtin" ? "sc-builtin-tag" : ""}
@@ -481,36 +627,34 @@ export default function SkillCenter({
                       <GitBranch size={14} />
                       {refs(s).length} 个工作流引用
                     </button>
-                  </div>
-                  <div className="sc-card-updated">
-                    <span>
-                      {s.calls === undefined
-                        ? ""
-                        : `调用 ${s.calls.toLocaleString("zh-CN")} 次`}
-                    </span>
-                    <span>最后修改：{s.updated || "刚刚"}</span>
-                  </div>
-                  {modelPreferenceErrors(
-                    s.modelPreference || defaultModelPreference(),
-                  ).length > 0 && (
-                    <span className="sc-invalid-note">
-                      模型待配置 · 启用或执行前需处理
-                    </span>
-                  )}
-                  {blocked && (
-                    <button
-                      className="sc-lock-note"
-                      onClick={() => setReferences(s)}
+                    <time
+                      className="sc-modified-time"
+                      dateTime={s.updated}
+                      title="最后修改时间"
                     >
-                      <LockKeyhole size={12} />
-                      {pending(s).length} 个任务未完成 · 查看引用
-                    </button>
+                      最后修改：{formatSkillTime(s.updated)}
+                    </time>
+                  </div>
+                  {s.calls !== undefined && (
+                    <div className="sc-card-updated">
+                      <span>调用 {s.calls.toLocaleString("zh-CN")} 次</span>
+                    </div>
                   )}
-                  {s.state === "invalid" && (
-                    <span className="sc-invalid-note">
-                      工作指令为空，请编辑后重新校验。
-                    </span>
-                  )}
+                  <div className="sc-card-note-slot" aria-label="技能备注">
+                    {!!issues.length && (
+                      <CardExcerpt
+                        text={issues.join("；")}
+                        kind="issues"
+                        open={() =>
+                          setCardDetails({
+                            title: `${s.name} · 技能提示`,
+                            texts: issues,
+                            skill: blocked ? s : undefined,
+                          })
+                        }
+                      />
+                    )}
+                  </div>
                   <footer>
                     <button onClick={() => open(s, true)}>
                       查看技能
@@ -524,9 +668,13 @@ export default function SkillCenter({
                     ) : (
                       <>
                         <button
-                          disabled={blocked}
+                          disabled={blocked || s.state === "published"}
                           title={
-                            blocked ? "引用任务全部完成后才能编辑" : "编辑技能"
+                            blocked
+                              ? "引用任务全部关闭后才能编辑"
+                              : s.state === "published"
+                                ? "请先停用技能后再编辑"
+                                : "编辑技能"
                           }
                           onClick={() => open(s)}
                         >
@@ -552,14 +700,12 @@ export default function SkillCenter({
                             disabled={blocked}
                             title={
                               blocked
-                                ? "引用任务全部完成后才能停用"
+                                ? "引用任务全部关闭后才能停用"
                                 : "停用技能"
                             }
                             onClick={() => {
                               if (pending(s).length) return;
-                              void save({ ...s, state: "paused" }).catch((e) =>
-                                setNotice((e as Error).message),
-                              );
+                              void transition(s, "pause");
                             }}
                           >
                             <Pause size={13} />
@@ -578,21 +724,38 @@ export default function SkillCenter({
               <Blocks size={32} />
               <h2>还没有匹配的技能</h2>
               <p>调整筛选条件，或创建适合当前角色的新技能。</p>
-              <button
-                className="ad-primary"
-                onClick={() => open(blankSkill(role))}
-              >
+              <button className="ad-primary" onClick={() => setCreating(true)}>
                 新建技能
               </button>
             </div>
           )}
         </main>
       </div>
-      {editing && (
+      {(creating || editing?.authoringFormat === "instructions-v1") && (
+        <SkillCreate
+          initial={editing}
+          readOnly={
+            !!editing &&
+            (viewing ||
+              editing.state === "published" ||
+              pending(editing).length > 0)
+          }
+          close={() => {
+            setCreating(false);
+            setEditing(undefined);
+          }}
+          changed={loadSkills}
+        />
+      )}
+      {editing && !editing.authoringFormat && (
         <SkillEditor
           key={editing.key}
           initial={editing}
-          viewOnly={viewing || pending(editing).length > 0}
+          viewOnly={
+            viewing ||
+            editing.state === "published" ||
+            pending(editing).length > 0
+          }
           role={role}
           existing={skills}
           close={() => setEditing(undefined)}
@@ -611,57 +774,63 @@ export default function SkillCenter({
           }}
         />
       )}
+      {cardDetails && (
+        <Dialog
+          title={cardDetails.title}
+          className="sc-card-details"
+          close={() => setCardDetails(undefined)}
+        >
+          <div className="sc-card-details-content">
+            {cardDetails.texts.map((text, index) => (
+              <p key={index}>{text}</p>
+            ))}
+            {cardDetails.skill && (
+              <button
+                type="button"
+                onClick={() => {
+                  setReferences(cardDetails.skill);
+                  setCardDetails(undefined);
+                }}
+              >
+                查看任务与工作流引用 <ChevronRight size={14} />
+              </button>
+            )}
+          </div>
+        </Dialog>
+      )}
       {references && (
         <Dialog
           title={`${references.name} · 工作流引用`}
           close={() => setReferences(undefined)}
         >
           <div className="sc-reference-list">
+            <p>
+              {pending(references).length
+                ? "以下未关闭任务会锁定技能的编辑与停用。"
+                : "没有未关闭任务引用此技能。"}
+            </p>
             {refs(references).length === 0 ? (
               <p>暂无工作流引用。</p>
             ) : (
-              <>
-                <p>
-                  {pending(references).length
-                    ? "以下未完成任务会锁定技能的编辑与停用。"
-                    : "所有引用任务均已完成，自定义技能可编辑或停用。"}
-                </p>
+              <section>
+                <h3>引用工作流</h3>
                 {refs(references).map((w) => (
-                  <section key={w.id}>
-                    <h3>{w.name}</h3>
-                    {w.tasks.map((t, i) => (
-                      <div className="sc-reference-task" key={t.name}>
-                        <span>
-                          {t.name}
-                          <small>{t.status}</small>
-                        </span>
-                        {t.status !== "已完成" && (
-                          <button
-                            onClick={() =>
-                              setWorkflows((xs) =>
-                                xs.map((x) =>
-                                  x.id === w.id
-                                    ? {
-                                        ...x,
-                                        tasks: x.tasks.map((task, j) =>
-                                          j === i
-                                            ? { ...task, status: "已完成" }
-                                            : task,
-                                        ),
-                                      }
-                                    : x,
-                                ),
-                              )
-                            }
-                          >
-                            模拟完成任务
-                          </button>
-                        )}
-                      </div>
-                    ))}
-                  </section>
+                  <div key={w.id}>{w.name}</div>
                 ))}
-              </>
+              </section>
+            )}
+            {!!references.taskReferences?.length && (
+              <section>
+                <h3>引用任务</h3>
+                {references.taskReferences.map((task) => (
+                  <div className="sc-reference-task" key={task.id}>
+                    <span>
+                      {task.name}
+                      <small>{task.closed ? "已关闭" : "未关闭"}</small>
+                    </span>
+                  </div>
+                ))}
+              </section>
             )}
           </div>
         </Dialog>
@@ -827,7 +996,8 @@ function SkillEditor({
                 <button
                   key={label}
                   className={step === i ? "active" : ""}
-                  onClick={() => setStep(i)}
+                  disabled
+                  aria-current={step === i ? "step" : undefined}
                 >
                   <span>{i + 1}</span>
                   {label}
@@ -1371,7 +1541,7 @@ function SkillImport({
             仅导入入口文件
           </button>
         </div>
-        <small>支持本地文件夹与入口文件；当前演示不支持压缩包。</small>
+        <small>支持文件夹和入口文件；暂不支持直接导入压缩包。</small>
         <input
           {...directory}
           ref={folder}

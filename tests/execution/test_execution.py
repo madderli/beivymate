@@ -59,7 +59,7 @@ def test_skill_checkpoint_handoff(tmp_path):
     s=ExecutionService(tmp_path/'out','T');p=plan();s.start_round(p)
     a=s.begin(1,p.items[0].id,executor='human');s.record_step(1,a.id,StepObservation(step=1,actual='blocked',result='blocked'));s.finish(1)
     root=Path(__file__).resolve().parents[2]
-    agent=create_tester_agent(str(root/'resources/configuration/workflow/m8_test_execution.md'),None,'offline',execution_service=s)
+    agent=create_tester_agent(str(root/'resources/configuration/workflow/m8_test_execution.md'),None,'offline',execution_service=s, builtin_skill_root=Path(__file__).resolve().parents[2] / 'tests/fixtures/legacy-resources/skills')
     c=AgentContext();c.set('execution_round_number',1)
     state=agent.start(Requirement(id='R',title='T',content='C'),tmp_path/'checkpoint.json',task_id='T',context=c)
     assert state.status=='waiting_review'
@@ -126,7 +126,7 @@ def test_script_defect_reuse_and_handoff_snapshot(tmp_path):
 def test_default_plan_template_is_runnable(tmp_path):
     from beivymate.application.execute import load_plan
     root=Path(__file__).resolve().parents[2]
-    p=load_plan(root/'src/beivymate/builtin/skills/tester/test_execution/templates/zh-CN/DefaultExecutionPlanTemplate.md')
+    p=load_plan(root/'tests/fixtures/legacy-resources/skills/tester/test_execution/templates/zh-CN/DefaultExecutionPlanTemplate.md')
     assert ExecutionService(tmp_path,p.task_id).start_round(p).round_number==1
     bad=tmp_path/'bad.md';bad.write_text('# empty template')
     with pytest.raises(ValueError,match='json'):load_plan(bad)

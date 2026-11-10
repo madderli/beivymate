@@ -21,3 +21,158 @@
   padding: 0;
   max-width: none;
 }
+/* Search owns one outer border; the text input must not inherit field decoration. */
+.skill-center-demo .sc-search input:not([type="checkbox"]):not([type="radio"]),
+.skill-center-demo
+  .sc-search
+  input:not([type="checkbox"]):not([type="radio"]):focus {
+  border: 0;
+  outline: none;
+  box-shadow: none;
+  background: transparent;
+  border-radius: 0;
+}
+.skill-center-demo .sc-search:focus-within {
+  border-color: #83a58c;
+}
+.skill-center-demo .sc-card-metrics {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.skill-center-demo .sc-modified-time {
+  margin-left: auto;
+  text-align: right;
+  white-space: nowrap;
+  color: #98a28e;
+  font-size: 11px;
+  font-weight: 400;
+}
+
+.sc-editor-steps button:disabled {
+  opacity: 1;
+  cursor: default;
+}
+
+/* Keep full text in the backend; cards show bounded excerpts only. */
+.skill-center-demo .sc-card-excerpt {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  min-width: 0;
+}
+.skill-center-demo .sc-excerpt-text {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+.skill-center-demo .sc-card button.sc-card-description {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 0;
+  width: 100%;
+  text-align: left;
+  font-weight: 400;
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1.8;
+  color: #849079;
+  margin: 14px 0 18px;
+  min-height: 5.4em;
+  display: block;
+}
+.skill-center-demo .sc-card-description .sc-excerpt-text {
+  display: block;
+  overflow: visible;
+}
+.skill-center-demo .sc-card-description .sc-description-line {
+  display: block;
+  min-height: 1.8em;
+  white-space: pre;
+}
+.skill-center-demo .sc-card-description .sc-description-line:nth-child(3) {
+  width: 75%;
+}
+.skill-center-demo .sc-description-more {
+  color: #6d9168;
+}
+.skill-center-demo .sc-card button.sc-card-description:focus-visible {
+  outline: 2px solid #83a58c;
+  outline-offset: 3px;
+}
+.skill-center-demo .sc-card-issues {
+  font-size: 10px;
+  line-height: 1.7;
+  padding: 7px 9px;
+  margin: 0;
+  width: 100%;
+  color: #b26254;
+  background: #faf0ed;
+  border-radius: 5px;
+}
+.skill-center-demo .sc-card-issues .sc-excerpt-text {
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.skill-center-demo .sc-card .sc-excerpt-more {
+  flex: none;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  padding: 0 3px;
+  font-size: 18px;
+  line-height: 1.2;
+  cursor: pointer;
+  letter-spacing: 1px;
+  border-radius: 3px;
+}
+.skill-center-demo .sc-card .sc-excerpt-more:hover {
+  background: #e6eddf;
+  color: #386147;
+}
+.skill-center-demo .sc-card .sc-excerpt-more:focus-visible {
+  outline: 2px solid #83a58c;
+  outline-offset: 2px;
+}
+.sc-card-details {
+  width: min(640px, calc(100vw - 32px));
+  max-height: calc(100dvh - 48px);
+  padding: 0;
+}
+.sc-card-details-content {
+  padding: 18px 24px 24px;
+  max-height: calc(100dvh - 150px);
+  overflow: auto;
+  overscroll-behavior: contain;
+  font-size: 13px;
+  line-height: 1.85;
+  overflow-wrap: anywhere;
+}
+.sc-card-details-content p {
+  white-space: pre-wrap;
+  margin: 0 0 12px;
+}
+.sc-card-details-content p:last-child {
+  margin-bottom: 0;
+}
+.sc-card-details-content button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.skill-center-demo .sc-card-note-slot {
+  min-height: 31px;
+  margin: auto 0 6px;
+  padding-top: 10px;
+  box-sizing: content-box;
+  display: flex;
+  align-items: center;
+}
+.skill-center-demo .sc-card-note-slot + footer {
+  margin-top: 0;
+}

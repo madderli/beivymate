@@ -92,6 +92,7 @@ def test_tester_agent_uses_runtime_knowledge(
         gateway = gateway,
         model = "test-model",
         locale = "zh-CN",
+        builtin_skill_root=Path(__file__).resolve().parents[2] / 'tests/fixtures/legacy-resources/skills',
     )
 
     requirement = Requirement(

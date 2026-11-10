@@ -38,7 +38,7 @@ class Provider:
 
 
 def agent(provider):
-    return create_tester_agent(str(WORKFLOW), LLMGateway(provider), 'fake')
+    return create_tester_agent(str(WORKFLOW), LLMGateway(provider), 'fake', builtin_skill_root=Path(__file__).resolve().parents[2] / 'tests/fixtures/legacy-resources/skills')
 
 
 def waiting(provider, tmp_path):

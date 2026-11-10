@@ -4,7 +4,12 @@ from datetime import date, timedelta
 import json
 from pathlib import Path
 import pytest
-from test_catalog import api, clean
+from test_catalog import api_context, clean
+
+
+@pytest.fixture
+def api(tmp_path):
+    yield from api_context(tmp_path, Path(__file__).resolve().parents[1]/"fixtures/legacy-resources/skills")
 
 
 def directory(monkeypatch, entries=None):
@@ -197,7 +202,7 @@ def test_workflow_step_replacement_and_package_independence(api,monkeypatch):
     from beivymate.application.composition import create_tester_agent
     resolved=[]
     def resolve(spec):resolved.append(spec.model);return object(),spec.model
-    agent=create_tester_agent(str(path),object(),'fallback',skill_model_resolver=resolve)
+    agent=create_tester_agent(str(path),object(),'fallback',skill_model_resolver=resolve, builtin_skill_root=Path(__file__).resolve().parents[2] / 'tests/fixtures/legacy-resources/skills')
     assert resolved==['b']
     assert agent._workflow.skills[0].snapshot['resolved_model']=='b'
 

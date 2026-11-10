@@ -197,6 +197,25 @@ class PortalService:
         with self.db() as db:
             self._backfill_references(db)
 
+    def skill_references(self):
+        """Actual workflow definitions and persisted tasks, never browser state."""
+        result = {}
+        for workflow in self.workflows():
+            for identity in {step['skill'] for step in workflow['steps']}:
+                result.setdefault(identity, {'workflows': [], 'tasks': []})['workflows'].append(
+                    {'id': workflow['id'], 'name': workflow['name']})
+        with self.db() as db:
+            self._backfill_references(db)
+            rows = db.execute("""SELECT e.*, r.resource, l.closed_at FROM resource_reference r
+                JOIN entity e ON e.id=r.task LEFT JOIN task_lifecycle l ON l.task=e.id
+                WHERE r.kind='skill' AND e.deleted=0 ORDER BY e.id""").fetchall()
+            for row in rows:
+                draft, _ = self._read(row)
+                result.setdefault(row['resource'], {'workflows': [], 'tasks': []})['tasks'].append(
+                    {'id': row['id'], 'name': draft.title, 'status': row['status'],
+                     'closed': row['closed_at'] is not None})
+        return result
+
     def resource_locks(self, kind, identity):
         with self.db() as db:
             self._backfill_references(db)

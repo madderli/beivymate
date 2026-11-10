@@ -51,7 +51,7 @@ def test_three_stage_pipeline(tmp_path,bad,overlap):
     provider=Provider(bad,overlap)
     def agent():
         return create_tester_agent(str(ROOT/'resources/configuration/workflow/m7_test_design.md'),
-                                  LLMGateway(provider),'fake',design_store=store)
+                                  LLMGateway(provider),'fake',design_store=store, builtin_skill_root=Path(__file__).resolve().parents[2] / 'tests/fixtures/legacy-resources/skills')
     context=AgentContext()
     context.set('actor','author'); context.set('maintainer','owner')
     context.set('target_versions',{'p':'1'}); context.set('design_output_directory',str(tmp_path))
@@ -126,7 +126,7 @@ def test_existing_case_pipeline(tmp_path,action,target):
     provider=ExistingProvider()
     def agent():
         return create_tester_agent(str(ROOT/'resources/configuration/workflow/m7_test_design.md'),
-            LLMGateway(provider),'fake',design_store=store)
+            LLMGateway(provider),'fake',design_store=store, builtin_skill_root=Path(__file__).resolve().parents[2] / 'tests/fixtures/legacy-resources/skills')
     context=AgentContext()
     for key,value in {'actor':'author','maintainer':'owner','target_versions':{'p':target},
                       'project_id':'hospital-a','design_output_directory':str(tmp_path),'candidate_case_ids':[old.id]}.items():
@@ -176,7 +176,7 @@ def test_accepted_cases_archive_by_actual_product_and_function(tmp_path,project)
                 response.content=json.dumps(data,ensure_ascii=False)
             return response
     provider=Multiple()
-    agent=create_tester_agent(str(ROOT/'resources/configuration/workflow/m7_test_design.md'),LLMGateway(provider),'fake',design_store=cases)
+    agent=create_tester_agent(str(ROOT/'resources/configuration/workflow/m7_test_design.md'),LLMGateway(provider),'fake',design_store=cases, builtin_skill_root=Path(__file__).resolve().parents[2] / 'tests/fixtures/legacy-resources/skills')
     context=AgentContext()
     for key,value in {'actor':'author','maintainer':'owner','project_id':project,'target_versions':{'p':'1','p2':'1'},'design_output_directory':str(tmp_path/'customer')}.items():context.set(key,value)
     checkpoint=tmp_path/'run.json'

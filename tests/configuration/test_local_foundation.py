@@ -10,7 +10,7 @@ from beivymate.configuration.skill_center import SkillCenter, BUILTIN_SKILLS
 
 def copy_skill(root, identity='shared_analysis'):
     target = root / identity
-    shutil.copytree(BUILTIN_SKILLS/'tester/test_analysis', target)
+    shutil.copytree(Path(__file__).resolve().parents[1]/'fixtures/legacy-resources/skills/tester/test_analysis', target)
     entry = target/'SKILL.md'
     entry.write_text(entry.read_text().replace('id: test_analysis', 'id: '+identity))
     return entry
@@ -19,14 +19,14 @@ def copy_skill(root, identity='shared_analysis'):
 def test_shared_package_requires_local_validation_and_publication(tmp_path):
     a, b = tmp_path/'a', tmp_path/'b'
     entry = copy_skill(a)
-    center = SkillCenter(a)
+    center = SkillCenter(a, builtin=Path(__file__).resolve().parents[1]/'fixtures/legacy-resources/skills')
     item = next(s for s in center.scan()['items'] if s['id']=='shared_analysis')
     assert item['state'] == 'discovered'
     with pytest.raises(ValueError, match='验证'):
         center.transition(item['id'], 'publish', item['revision'])
     assert center.transition(item['id'], 'validate', item['revision'])['state'] == 'validated'
     assert center.transition(item['id'], 'publish', item['revision'])['state'] == 'published'
-    assert SkillCenter(a).require_published(item['id'])['state'] == 'published'
+    assert SkillCenter(a, builtin=Path(__file__).resolve().parents[1]/'fixtures/legacy-resources/skills').require_published(item['id'])['state'] == 'published'
     shutil.copytree(entry.parent, b/'shared_analysis')
     receiver = SkillCenter(b)
     assert next(s for s in receiver.scan()['items'] if s['id']==item['id'])['state'] == 'discovered'

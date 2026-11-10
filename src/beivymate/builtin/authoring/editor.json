@@ -1,0 +1,74 @@
+{
+  "icons": [
+    "🧩",
+    "🔍",
+    "📝",
+    "🧪",
+    "📊",
+    "📚",
+    "🛡️"
+  ],
+  "roles": [
+    {
+      "id": "common",
+      "name": "通用"
+    },
+    {
+      "id": "tester",
+      "name": "测试"
+    },
+    {
+      "id": "product",
+      "name": "产品"
+    },
+    {
+      "id": "developer",
+      "name": "研发"
+    },
+    {
+      "id": "operations",
+      "name": "运维"
+    }
+  ],
+  "directories": [
+    {
+      "path": "references",
+      "name": "参考资料",
+      "description": "工作规则、产品说明、业务参考"
+    },
+    {
+      "path": "assets/templates",
+      "name": "静态模板",
+      "description": "Excel、Word 或 Markdown 模板"
+    },
+    {
+      "path": "assets",
+      "name": "其他素材",
+      "description": "图片、图标等静态素材"
+    },
+    {
+      "path": "scripts",
+      "name": "执行脚本",
+      "description": "仅在技能确有程序处理需要时添加"
+    },
+    {
+      "path": "examples",
+      "name": "使用示例",
+      "description": "示例输入、输出与使用说明"
+    }
+  ],
+  "help": {
+    "name": {
+      "title": "技能名称·错误写法",
+      "html": "<p>不要只写“智能助手” —— 从名称上看不出具体能做什么。技能名称应明确说明它做什么。例如“需求理解”、“会议纪要整理”。</p>"
+    },
+    "description": {
+      "title": "怎样写好技能描述",
+      "html": "<p>技能描述用于说明：<strong>这个技能能做什么，以及什么时候应该使用它。</strong>用几句话写清楚即可，不需要包含完整操作步骤。</p><h3>1. 推荐格式</h3><blockquote>用于【完成什么任务】，输出【主要成果】。当用户需要【使用场景】时使用。输入需要包含【必要信息】，可通过【文档、文字说明等形式】提供；也可补充【可选资料】。</blockquote><h3>2. 填写要点</h3><ul><li><strong>写具体任务</strong>：例如“分析软件需求”，避免“帮助用户提高效率”等宽泛表述。</li><li><strong>写清使用时机</strong>：描述用户的任务意图，不要只写“上传某类文件时使用”。</li><li><strong>区分信息和文件</strong>：必需的是完成任务所需的信息，不一定是某种固定名称的文档。</li><li><strong>说明可选材料</strong>：用“例如”“等”“可补充”表达支持范围，避免让用户误以为每项都必须提供。</li><li><strong>保持简洁</strong>：详细步骤、判断规则和异常处理放到技能正文中。</li></ul><h3>3. 示例：周报编写技能</h3><blockquote><strong>用于</strong>整理本周工作情况，生成包含工作进展、主要成果、问题与风险及下周计划的周报。<strong>当用户需要</strong>编写周报，或将零散工作记录整理为周报时使用。<strong>输入需包含</strong>本周实际工作信息，<strong>可通过</strong>用户文字说明、工作日志、任务清单、会议纪要等形式提供；<strong>也可补充</strong>上周周报、项目目标、团队周报模板等参考资料。</blockquote><h3>4. 写完后检查</h3><p>读完描述，是否能回答三个问题：<strong>它做什么？什么时候用？需要提供什么？</strong>能清楚回答，描述就基本合格。</p>"
+    },
+    "descriptionMistake": {
+      "title": "技能描述 · 反例",
+      "html": "<p>“一款强大的需求分析工具” —— 没说清技能能干什么、什么时候用。</p>"
+    }
+  }
+}

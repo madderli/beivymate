@@ -25,7 +25,7 @@ def test_report_after_three_rounds(tmp_path):
     def read(cls,name):return cls.model_validate_json((tmp_path/name).read_text())
     u=read(UnderstandingArtifact,'requirement_understand.json');a=read(AnalysisArtifact,'analysis.json');d=read(DesignArtifact,'design.json')
     rounds=[read(ExecutionArtifact,f'execution-round-{n}.json') for n in (1,2,3)]
-    service=ReportService(LLMGateway(Provider()),'synthetic',ROOT/'src/beivymate/builtin/skills/tester/test_report/templates/zh-CN/DefaultBriefTestReportTemplate.docx')
+    service=ReportService(LLMGateway(Provider()),'synthetic',ROOT/'tests/fixtures/legacy-resources/skills/tester/test_report/templates/zh-CN/DefaultBriefTestReportTemplate.docx')
     report=service.generate(u,a,d,rounds,simulation=True)
     assert report.facts['counts']=={'pass':3,'failed':0,'blocked':0,'not_run':0}
     assert len(report.facts['attempt_history'])==9
@@ -61,7 +61,7 @@ def test_report_after_three_rounds(tmp_path):
     (tmp_path/'historical.md').write_text('---\nid: inputs.previous_execution\ncheckpoint: execution-checkpoint-3.json\nsource_key: steps.execute.test_execution\n---\n')
     flow=tmp_path/'company-process.md'
     flow.write_text('---\nid: company-process\nname: 公司自定义过程\nimports:\n  - historical.md\n---\n\n## 步骤：delivery_summary\n- 技能：test_report\n- 输入：inputs.previous_execution\n- 执行授权：auto\n- 结果确认：manual\n')
-    agent=create_tester_agent(str(flow),LLMGateway(Provider()),'synthetic',template_path='does-not-exist.md')
+    agent=create_tester_agent(str(flow),LLMGateway(Provider()),'synthetic',template_path='does-not-exist.md', builtin_skill_root=Path(__file__).resolve().parents[2] / 'tests/fixtures/legacy-resources/skills')
     c=AgentContext();c.set('simulation',True);c.set('report_output_directory',str(tmp_path/'independent'))
     state=agent.start(None,tmp_path/'independent-run.json',task_id=d.task_id,context=c)
     result=AgentContext.restore(state.context).get('test_report_artifact')
@@ -111,7 +111,7 @@ def test_report_after_three_rounds(tmp_path):
     flow=tmp_path/'complete-report-workflow.md'
     flow.write_text('---\nid: complete-report\nname: 五阶段离线验证\nimports:\n'+
         ''.join(f'  - import-{name}.md\n' for name,_,_ in bindings)+'---\n\n## 步骤：final_report\n- 技能：test_report\n- 输入：'+'、'.join(f'inputs.{name}' for name,_,_ in bindings)+'\n- 执行授权：auto\n- 结果确认：manual\n')
-    agent=create_tester_agent(str(flow),LLMGateway(Provider()),'synthetic')
+    agent=create_tester_agent(str(flow),LLMGateway(Provider()),'synthetic', builtin_skill_root=Path(__file__).resolve().parents[2] / 'tests/fixtures/legacy-resources/skills')
     c=AgentContext();c.set('simulation',True);c.set('task_output_directory',str(tmp_path/'final-reports'))
     state=agent.start(None,tmp_path/'final-report-checkpoint.json',task_id=d.task_id,context=c)
     assert state.status=='waiting_review'

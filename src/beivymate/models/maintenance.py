@@ -12,6 +12,7 @@ import tempfile
 import uuid
 from beivymate.identity.service import IdentityError
 from beivymate.markdown.metadata import read_markdown
+from beivymate.configuration.skill_authoring import SETTINGS_FILE
 from beivymate.scheduling.locking import exclusive_file
 
 
@@ -97,7 +98,7 @@ class ModelMaintenance:
             locks = self.portal.resource_locks('skill', item['id'])
             reason = '内置技能只读；默认引用由默认设置解析' if builtin else '被未关闭任务引用：'+'、'.join(locks) if locks else ''
             add('skill:'+item['id'], 'skill', item['name'], selected, inherited=not explicit, dependency=dependency,
-                reason=reason, path=entry, resource=item['id'], revision=item['revision'], required=set(pref.get('capabilities', [])) | ({'structured'} if meta.get('executor') else set()),minimum=pref.get('minTier'))
+                reason=reason, path=entry, resource=item['id'], revision=item['revision'], required=set(pref.get('capabilities', [])) | ({'structured'} if meta.get('executor') else {'text'} if item.get('authoringFormat') else set()),minimum=pref.get('minTier'))
             skill_details[item['id']]={'required':list(set(pref.get('capabilities', [])) | ({'structured'} if meta.get('executor') else set())),'minimum':pref.get('minTier')}
             if selected:skill_refs[item['id']] = selected
         for flow in self.library.list('workflows'):
@@ -250,8 +251,18 @@ class ModelMaintenance:
                         if path.is_symlink(): raise ValueError('配置文件不能为符号链接')
                         content=new_files.get(str(path),path.read_text())
                         value=replacement if apply else source
-                        content=self.skill_content(content,value) if kind=='skill' else self.workflow_content(content,ref['id'].rsplit(':',1)[1],value)
-                        new_files[str(path)]=content
+                        settings_path = path.parent / SETTINGS_FILE
+                        if kind == 'skill' and settings_path.exists():
+                            if settings_path.is_symlink():
+                                raise ValueError('技能配置不能为符号链接')
+                            settings = json.loads(new_files.get(str(settings_path), settings_path.read_text(encoding='utf-8')))
+                            pref = json.loads(settings['beivymate-model'])
+                            pref.update(mode='specific', model=value)
+                            settings['beivymate-model'] = json.dumps(pref, ensure_ascii=False)
+                            new_files[str(settings_path)] = json.dumps(settings, ensure_ascii=False)
+                        else:
+                            content=self.skill_content(content,value) if kind=='skill' else self.workflow_content(content,ref['id'].rsplit(':',1)[1],value)
+                            new_files[str(path)]=content
                         changed_resource.add((kind,resource,str(path)))
                     elif ref['kind']=='default': setattr(doc.defaults,ref['id'].split(':',1)[1],replacement if apply else source)
                     elif ref['kind']=='tier': doc.tiers[ref['id'].split(':',1)[1]]=replacement
@@ -269,7 +280,7 @@ class ModelMaintenance:
                 if self.catalog._read(owner)[1]!=revision: raise FileExistsError('模型配置已变化')
                 for ref in preview['items']:
                     if ref['path'] and ref['kind']=='workflow' and hashlib.sha256(Path(ref['path']).read_bytes()).hexdigest()!=ref['revision']:raise FileExistsError('工作流文件已变化')
-                    if ref['kind']=='skill' and ref['path'] in new_files and self.portal.skill_center.package(Path(ref['path']),False,observe=False)['revision']!=ref['revision']:raise FileExistsError('技能包已变化')
+                    if ref['kind']=='skill' and (ref['path'] in new_files or str(Path(ref['path']).parent/SETTINGS_FILE) in new_files) and self.portal.skill_center.package(Path(ref['path']),False,observe=False)['revision']!=ref['revision']:raise FileExistsError('技能包已变化')
                 new_files[str(self.catalog.path(owner))]=doc.model_dump_json(indent=2)
                 journal={'id':mutation,'files':[{'path':path,'before':base64.b64encode(Path(path).read_bytes()).decode(),'after':hashlib.sha256(new_files[path].encode()).hexdigest()} for path in new_files]}
                 atomic_write(self.journal,json.dumps(journal).encode());self.journal.chmod(0o600)

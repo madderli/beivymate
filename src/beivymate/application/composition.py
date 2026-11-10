@@ -47,11 +47,12 @@ def create_tester_agent(
     model_resolver=None,
     skill_policy=None,
     skill_model_resolver=None,
+    builtin_skill_root: Path | None = None,
 ) -> TesterAgent:
 
     from beivymate.configuration.skill_package import SkillCatalog
     from beivymate.runtime.configured_skill import ConfiguredSkill
-    catalog = SkillCatalog(PROJECT_ROOT / 'src/beivymate/builtin/skills', custom_skill_root or Path(workflow_path).resolve().parent.parent / 'skills', publication_policy=skill_policy)
+    catalog = SkillCatalog(builtin_skill_root if builtin_skill_root is not None else TEMPLATE_ROOT, custom_skill_root or Path(workflow_path).resolve().parent.parent / 'skills', publication_policy=skill_policy)
     definition = load_workflow_definition(Path(workflow_path))
     skill_registry = SkillRegistry()
     resolved_steps=definition.resolved_steps()
@@ -161,6 +162,7 @@ def create_agent_factory(
     model_resolver=None,
     skill_policy=None,
     skill_model_resolver=None,
+    builtin_skill_root: Path | None = None,
 ) -> AgentFactory:
 
     tester_agent = create_tester_agent(
@@ -177,6 +179,7 @@ def create_agent_factory(
         execution_service=execution_service,
         custom_skill_root=custom_skill_root,
         model_resolver=model_resolver,
+        builtin_skill_root=builtin_skill_root,
     )
 
     return AgentFactory(

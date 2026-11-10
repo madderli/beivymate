@@ -1,0 +1,142 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>技能示例</title><style>
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:88px}
+body{margin:0;background:#f7f8f6;color:#435049;font:14px/1.8 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;-webkit-font-smoothing:antialiased;overflow-wrap:break-word}
+a{color:#426e59;text-underline-offset:4px;text-decoration-thickness:1px}
+a:focus-visible{outline:2px solid #88a795;outline-offset:4px;border-radius:3px}
+.doc-top{display:flex;justify-content:space-between;align-items:center;gap:20px;min-height:60px;padding:14px 32px;border-bottom:1px solid #e6eae5;background:#fff;position:sticky;top:0;z-index:2;font-size:13px}
+.doc-top>strong{font-size:14px;font-weight:600;letter-spacing:.04em;color:#2e483a}
+.doc-actions{display:flex;align-items:center;gap:24px}
+.doc-actions a{text-decoration:none}.doc-actions a:hover{text-decoration:underline}
+.doc-layout{max-width:1200px;margin:auto;padding:28px 32px 64px;display:grid;grid-template-columns:184px minmax(0,1fr);gap:32px}
+.doc-sidebar{position:sticky;top:88px;align-self:start;padding:12px 0}
+.doc-sidebar>strong{display:block;font-size:11px;letter-spacing:.12em;font-weight:600;color:#8a948c;margin:0 0 12px 13px}
+.doc-sidebar nav{display:flex;flex-direction:column;gap:3px;border-left:1px solid #e1e7df}
+.doc-sidebar a{padding:7px 12px;text-decoration:none;font-size:13px;line-height:1.6;border-radius:0 5px 5px 0;border-left:2px solid transparent;margin-left:-1px;color:#68746b;transition:background .15s,color .15s}
+.doc-sidebar a:hover{background:#eef2ec;color:#315e48}
+.doc-sidebar a.active{background:#eaf0e7;color:#315e48;border-left-color:#638971;font-weight:500}
+.doc-content{min-width:0;background:#fff;border:1px solid #e4e9e1;border-radius:8px;padding:32px 42px;box-shadow:0 2px 8px #253c2c03}
+h1,h2,h3,h4{color:#2e4337;font-weight:600;line-height:1.5}
+h1{font-size:23px;letter-spacing:.02em;margin:0 0 18px;padding-bottom:20px;border-bottom:1px solid #e9ede6}
+h2{font-size:18px;margin:32px 0 16px;padding-bottom:9px;border-bottom:1px solid #e9ede6;scroll-margin-top:12px}
+h3{font-size:14px;margin:22px 0 8px;color:#3c5546}
+h4{font-size:13px;margin:18px 0 6px;color:#536457}
+p{margin:8px 0 12px}
+.doc-content>h1+p{font-size:13px;line-height:1.85;color:#7a857c;margin:0 0 24px}
+ul,ol{padding-left:21px;margin:8px 0 16px}
+li{padding-left:2px;margin:5px 0}
+li::marker{color:#8b9b8b;font-size:.9em}
+li ul,li ol{margin:6px 0 10px}
+strong,li strong{font-weight:600;color:#3b4e40}
+code{font:12px/1.6 ui-monospace,SFMono-Regular,Consolas,monospace;padding:2px 5px;background:#f2f5ef;border:1px solid #e9eee5;border-radius:4px;color:#4d6856}
+.table-scroll{overflow:auto;margin:12px 0 20px;border:1px solid #e1e7dd;border-radius:6px}
+table{border-collapse:collapse;width:100%;font-size:12px;line-height:1.7}
+th,td{padding:10px 12px;border-bottom:1px solid #e8ece4;text-align:left;vertical-align:top}
+th{background:#f3f6ef;color:#5a6a59;font-weight:500;white-space:nowrap}
+tbody tr:last-child td{border-bottom:0}tbody tr:nth-child(even){background:#fafbf8}
+#download-error{color:#a35033;margin:0;padding:8px 32px;background:#fff4eb;font-size:13px}
+@media(max-width:760px){.doc-top{position:static;padding:12px 18px;flex-wrap:wrap}.doc-actions{gap:16px}.doc-layout{display:block;padding:16px 14px 32px}.doc-sidebar{position:static;padding:0;margin-bottom:16px}.doc-sidebar>strong{margin-left:0}.doc-sidebar nav{flex-direction:row;flex-wrap:wrap;border-left:0;gap:4px}.doc-sidebar a{border:0;border-radius:4px;padding:5px 9px;margin:0;font-size:12px}.doc-content{padding:24px 20px}h1{font-size:21px}h2{font-size:17px}body{font-size:13px}}
+@media print{body{background:white;color:#333;font-size:11pt}.doc-top,.doc-sidebar,#download-error{display:none}.doc-layout{display:block;padding:0;max-width:none}.doc-content{border:0;padding:0;box-shadow:none}h2,h3,h4{break-after:avoid}table,li{break-inside:avoid}}
+</style></head><body><header class="doc-top"><strong>技能文档</strong><div class="doc-actions"><a href="new-skill-demo.html" data-return-editor>返回技能编辑</a><a href="skill-writing-example.md" data-download-md download="skill-writing-example.md">下载 Markdown</a></div></header><p id="download-error" role="alert" hidden></p><div class="doc-layout"><aside class="doc-sidebar"><strong>文档目录</strong><nav aria-label="文档目录"><a href="#section-0">工作目标</a><a href="#section-1">输入</a><a href="#section-2">工作步骤</a><a href="#section-3">输出</a><a href="#section-4">边界和约束处理</a><a href="#section-5">验收要求</a><a href="#section-6">示例（可选）</a></nav></aside><main class="doc-content"><h1>技能示例</h1><h2 id="section-0">工作目标</h2>
+<ul><li>将会议记录整理为清晰、准确、可追溯的会议纪要，帮助参会人员了解讨论结果和后续行动。
+</li><li>适用于根据会议转写文本、人工笔记或相关资料整理纪要。
+</li><li>不用于补造会议内容、代替参会人员作出决策，也不将讨论中的建议直接认定为已经通过的决定。
+</li></ul>
+<h2 id="section-1">输入</h2>
+<h3 id="heading-9">1. 必需信息</h3>
+<ul><li>会议记录：包含会议讨论内容，可以是转写文本或人工笔记。
+</li><li>若未提供会议记录，或记录无法读取，应说明问题并请求补充，不凭会议标题生成纪要。
+</li></ul>
+<h3 id="heading-12">2. 可选信息</h3>
+<ul><li>会议名称、时间、参会人员：用于补充会议基本信息；未提供且记录中无法确定时，标注“未提供”。
+</li><li>议程：用于组织讨论主题；未提供时，按实际讨论内容归纳主题。
+</li><li>相关背景资料：用于理解术语和讨论背景；不得将背景资料中的内容写成会议已经讨论或决定的事项。
+</li><li>记录中出现冲突、说话人不明确或转写疑似错误时，保留不确定性，不自行选择一种说法作为事实。
+</li></ul>
+<h2 id="section-2">工作步骤</h2>
+<ol><li>阅读记录，识别会议范围和基本信息。
+<ul><li>确定会议讨论了哪些主题。
+</li><li>识别明显缺失、重复或无法理解的片段。
+</li><li>完成标准：能够列出主要主题，并说明记录的明显限制。
+</li></ul>
+</li><li>按主题整理讨论内容。
+<ul><li>提取关键观点、分歧和必要背景。
+</li><li>合并重复表达，删除不影响含义的口头语。
+</li><li>不改变原意，不把个人观点写成全体共识。
+</li><li>完成标准：主要讨论内容得到覆盖，观点归属没有被混淆。
+</li></ul>
+</li><li>提取决定和行动项。
+<ul><li>只有明确达成的结论才列为“已确认决定”。
+</li><li>建议、设想和未定方案分别标注。
+</li><li>行动项提取具体事项、负责人和截止时间。
+</li><li>未明确的负责人或时间标注“未明确”，不得自行分配。
+</li><li>完成标准：决定与建议分开，行动项均有记录依据。
+</li></ul>
+</li><li>生成纪要并核对原始记录。
+<ul><li>检查是否遗漏重要决定、分歧和行动项。
+</li><li>检查名称、数字、日期和责任人是否准确。
+</li><li>将无法确定的内容汇总到“待确认事项”。
+</li><li>完成标准：关键结论可对应到原始记录，不包含没有依据的新事实。
+</li></ul>
+</li></ol>
+<h2 id="section-3">输出</h2>
+<p>生成一份会议纪要，包含以下内容：</p>
+<h3 id="heading-47">会议基本信息</h3>
+<ul><li>会议名称
+</li><li>会议时间
+</li><li>参会人员
+</li><li>记录范围或完整性说明（存在明显限制时填写）
+</li></ul>
+<h3 id="heading-52">讨论摘要</h3>
+<p>按主题概括关键讨论内容，保留影响结论的重要分歧。</p>
+<h3 id="heading-54">已确认决定</h3>
+<p>逐条列出会议明确通过的决定。没有明确决定时，写“记录中未发现明确通过的决定”。</p>
+<h3 id="heading-56">行动项</h3>
+<p>使用表格列出：</p>
+<div class="table-scroll"><table><thead><tr><th>事项</th><th>负责人</th><th>截止时间</th><th>来源依据</th></tr></thead><tbody></tbody></table></div>
+<p>来源依据优先使用原记录中的时间戳或段落编号；没有定位信息时，使用能够核对的简短原文。</p>
+<h3 id="heading-63">待确认事项</h3>
+<ul><li>列出影响理解或执行的未决问题，并说明需要确认什么。没有待确认事项时，写“无”。
+</li><li>默认使用简洁的中文 Markdown。
+</li><li>用户明确要求其他语言或结构时，可以调整表达形式，但不得遗漏决定、行动项和重要的不确定性。
+</li></ul>
+<h2 id="section-4">边界和约束处理</h2>
+<ul><li>不编造记录中没有的事实、决定、责任人或截止时间。
+</li><li>不把“可以考虑”“建议”“再讨论”等表达写成确定决定。
+</li><li>只有记录明确说明已经达成共识时，才使用“会议一致同意”等表述。
+</li><li>相对日期只有在会议日期和语境均明确时才转换为具体日期；否则保留原表达并标注待确认。
+</li><li>同一事项存在相互矛盾的说法时，列出差异及依据。
+</li><li>个别片段无法理解时，可以整理其余可靠内容并说明限制；若核心记录无法读取或无法理解，应请求补充，不生成虚构纪要。
+</li><li>纪要中的行动项仅表示记录了安排，不表示已经执行，不自动发送消息、创建任务或修改外部系统。
+</li></ul>
+<h2 id="section-5">验收要求</h2>
+<ul><li>主要讨论主题、明确决定和行动项没有重要遗漏。
+</li><li>个人观点、建议、已确认决定和未决问题得到区分。
+</li><li>每项决定及行动项都有可核对的记录依据。
+</li><li>负责人、时间、数字和名称与原记录一致。
+</li><li>缺失信息明确标注，没有用推测补齐。
+</li><li>内容简洁、无重复，未改变原意。
+</li><li>没有声称执行任何实际未执行的操作。
+</li></ul>
+<h2 id="section-6">示例（可选）</h2>
+<h3 id="heading-88">示例输入或场景</h3>
+<p>会议日期：2026年10月12日</p>
+<p>[00:10] 主持人：今天确认上线安排。</p>
+<p>[00:25] 张琳：建议周五上线，但要先看支付回归结果。</p>
+<p>[00:40] 主持人：上线日期先不定。李明负责支付回归，10月14日下班前给结果。</p>
+<p>[00:55] 李明：可以。</p>
+<p>[01:10] 王芳：上线说明也需要准备，负责人下次再定。</p>
+<h3 id="heading-97">期望结果</h3>
+<h4 id="heading-98">讨论摘要</h4>
+<p>会议讨论了上线时间、支付回归和上线说明准备。周五上线属于建议，尚未确定。</p>
+<h4 id="heading-100">已确认决定</h4>
+<p>暂不确定上线日期，待支付回归结果出来后再讨论。依据：[00:40]。</p>
+<h4 id="heading-102">行动项</h4>
+<div class="table-scroll"><table><thead><tr><th>事项</th><th>负责人</th><th>截止时间</th><th>来源依据</th></tr></thead><tbody><tr><td>完成支付回归并提供结果</td><td>李明</td><td>2026年10月14日下班前</td><td>[00:40]、[00:55]</td></tr></tbody></table></div>
+<h4 id="heading-108">待确认事项</h4>
+<ul><li>最终上线日期尚未确定。
+</li><li>上线说明的负责人和完成时间尚未明确。
+</li></ul>
+<h3 id="heading-112">反例及原因</h3>
+<p>错误：会议决定周五上线，由王芳在周四前完成上线说明。</p>
+<p>原因：记录没有确定上线日期，也没有指定上线说明的负责人或截止时间；该表述把建议变成决定，并补造了责任分配。</p></main></div><script src="skill-documents.js"></script></body></html>

@@ -52,7 +52,8 @@ def prepare(portal, data_dir, owner, task_id, directory, run_id):
     from beivymate.configuration.skill_package import SkillCatalog
     from beivymate.application.composition import PROJECT_ROOT
     policy = portal.skill_center.require_published if hasattr(portal, 'skill_center') else None
-    catalog_specs = SkillCatalog(PROJECT_ROOT / 'src/beivymate/builtin/skills', getattr(portal, 'skill_root', data_dir / 'configuration/skills'), publication_policy=policy)
+    builtin_root = portal.skill_center.builtin if hasattr(portal, 'skill_center') else PROJECT_ROOT / 'src/beivymate/builtin/skills'
+    catalog_specs = SkillCatalog(builtin_root, getattr(portal, 'skill_root', data_dir / 'configuration/skills'), publication_policy=policy)
     specs = [catalog_specs.get(step.skill) for step in load_workflow_definition(path).resolved_steps()]
     gateway, model_name = None, ''
     if any(spec.executor != 'test_execution' and not spec.model for spec in specs):
@@ -88,7 +89,7 @@ def prepare(portal, data_dir, owner, task_id, directory, run_id):
             return portal.model_catalog.gateway(owner,purpose='skill',selection={**(preference or {}),'mode':'specific','model':spec.model} if spec.model else preference,
                 task=task_id,required=['structured'])
         return None
-    agent = create_tester_agent(str(path), gateway, model_name, locale=task['locale'], skill_policy=policy, skill_model_resolver=resolve_skill_model,
+    agent = create_tester_agent(str(path), gateway, model_name, builtin_skill_root=builtin_root, locale=task['locale'], skill_policy=policy, skill_model_resolver=resolve_skill_model,
         model_resolver=lambda identity: resolve_model(identity, PROJECT_ROOT / 'resources/configuration/llm/model', data_dir / 'configuration/models'),
         custom_skill_root=getattr(portal, 'skill_root', data_dir / 'configuration/skills'), design_store=case_store, execution_service=execution)
     context = AgentContext()

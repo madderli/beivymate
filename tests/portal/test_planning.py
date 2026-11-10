@@ -15,7 +15,7 @@ ROOT = Path(__file__).resolve().parents[2] / 'resources/configuration/workflow'
 
 @pytest.fixture
 def portal(tmp_path):
-    app = create_app(tmp_path, 'setup')
+    app = create_app(tmp_path, 'setup', builtin_skill_root=Path(__file__).resolve().parents[2] / 'tests/fixtures/legacy-resources/skills')
     with TestClient(app, base_url='http://127.0.0.1:8000', headers={'origin':'http://127.0.0.1:5173'}) as c:
         assert c.post('/api/v1/account/initialize',json={'username':'tester','password':'Secure-Password-123!','name':'测试人员','setupToken':'setup'}).status_code==201
         session = c.post('/api/v1/session',json={'username':'tester','password':'Secure-Password-123!'}).json()
@@ -287,7 +287,6 @@ def test_skill_center_http_uses_files_not_browser_data(portal):
     assert (service.skill_root/'http_skill/references/rules.md').read_text() == 'business rules'
     assert next(s for s in c.get('/api/v1/skill-center').json()['items'] if s['id']=='http_skill')['state'] == 'draft'
     assert c.put('/api/v1/skill-center/http_skill',json=body).status_code == 409
-    assert c.put('/api/v1/skill-center/test_analysis',json=body).status_code == 403
     c.headers.pop('x-csrf-token')
     assert c.put('/api/v1/skill-center/http_skill',json=body).status_code == 403
 
@@ -301,6 +300,9 @@ def test_open_task_locks_skill_workflow_and_legacy_template_routes_until_closed(
     skill = task['steps'][0]['skill']
     assert task_id in service.resource_locks('skill',skill)
     assert task_id in service.resource_locks('workflow',task['workflow'])
+    package = next(s for s in c.get('/api/v1/skill-center').json()['items'] if s['id']==skill)
+    assert any(w['id']==task['workflow'] for w in package['workflowReferences'])
+    assert any(t['id']==task_id and t['name']=='支付需求' and not t['closed'] for t in package['taskReferences'])
     # Guards are shared with old configuration and template endpoints.
     definitions = c.get('/api/v1/configuration/skills').json()['items']
     entry = next(s for s in definitions if s['id']==skill)
@@ -312,13 +314,46 @@ def test_open_task_locks_skill_workflow_and_legacy_template_routes_until_closed(
     with service.db() as db:
         db.execute("UPDATE entity SET status='completed' WHERE id=?", (task_id,))
     assert task_id in service.resource_locks('skill',skill)  # Completion is not business closure.
+    package = next(s for s in c.get('/api/v1/skill-center').json()['items'] if s['id']==skill)
+    assert task_id in package['lockedTasks']
     closed = action(c,task,'close',key='close-resource-test')
     assert closed.status_code==200,closed.text
     assert action(c,task,'close',key='close-resource-test').json()==closed.json()
     assert service.resource_locks('skill',skill)==[]
     assert service.resource_locks('workflow',task['workflow'])==[]
+    package = next(s for s in c.get('/api/v1/skill-center').json()['items'] if s['id']==skill)
+    assert any(t['id']==task_id and t['closed'] for t in package['taskReferences'])
     latest = next(t for t in c.get('/api/v1/workbench').json()['tasks'] if t['id']==task_id)
     assert latest['closedAt']
     assert c.post(f'/api/v1/tasks/{task_id}/runs',json={'expectedRevision':latest['revision']},headers={'idempotency-key':'closed-run'}).status_code==409
     # Closing retains task, attachments and audit history.
     assert latest['attachments'] and any('关闭任务' in e for e in latest['history'])
+
+
+def test_enabled_skill_blocks_source_template_and_state_bypasses(portal):
+    c, service, owner = portal
+    source = next(item for item in c.get('/api/v1/configuration/skills').json()['items'] if item['id'] == 'test_analysis')
+    identity = 'readonly_analysis'
+    source_endpoint = '/api/v1/configuration/skills/' + identity
+    content = source['content'].replace('id: test_analysis', 'id: ' + identity)
+    copied = c.put(source_endpoint, json={'content': content, 'copyFrom': source['id']})
+    assert copied.status_code == 200, copied.text
+    def item():
+        return next(row for row in c.get('/api/v1/skill-center').json()['items'] if row['id'] == identity)
+    endpoint = '/api/v1/skill-center/' + identity + '/state'
+    revision = item()['revision']
+    assert c.post(endpoint, json={'action': 'validate', 'revision': revision}).json()['state'] == 'validated'
+    assert c.post(endpoint, json={'action': 'publish', 'revision': revision}).json()['state'] == 'published'
+    assert not item()['lockedTasks']
+    template = c.get(source_endpoint + '/templates').json()['items'][0]
+    template_body = {key: template[key] for key in ('name', 'content', 'revision')}
+    assert c.put(source_endpoint, json={'content': content, 'revision': copied.json()['revision']}).status_code == 403
+    assert c.put(source_endpoint + '/templates', json=template_body).status_code == 403
+    assert c.post(endpoint, json={'action': 'validate', 'revision': revision}).status_code == 403
+    raw = item()
+    assert c.put('/api/v1/skill-center/' + identity, json={'content': content, 'files': raw['files'], 'state': 'draft', 'revision': revision}).status_code == 403
+    assert item()['state'] == 'published'
+    assert c.post(endpoint, json={'action': 'pause', 'revision': revision}).json()['state'] == 'paused'
+    assert c.put(source_endpoint + '/templates', json=template_body).status_code == 200
+    current = next(row for row in c.get('/api/v1/configuration/skills').json()['items'] if row['id'] == identity)
+    assert c.put(source_endpoint, json={'content': content, 'revision': current['revision']}).status_code == 200

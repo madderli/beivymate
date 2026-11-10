@@ -42,7 +42,7 @@ def test_full_pipeline_three_rounds(tmp_path):
     provider=SyntheticProvider()
     catalog=ProductCatalog(products={'payment':'Func01'},functions=[{'id':'pay','product_id':'payment','name':'支付'}])
     store=CaseStore(tmp_path/'cases.db',catalog)
-    agent=create_tester_agent(str(ROOT/'resources/configuration/workflow/m7_test_design.md'),LLMGateway(provider),'synthetic',design_store=store)
+    agent=create_tester_agent(str(ROOT/'resources/configuration/workflow/m7_test_design.md'),LLMGateway(provider),'synthetic',design_store=store, builtin_skill_root=Path(__file__).resolve().parents[2] / 'tests/fixtures/legacy-resources/skills')
     requirement=Requirement(id='R',title='支付需求（离线模拟）',content='支付成功更新状态并生成流水号；失败提示并保持状态。')
     (tmp_path/'requirement.md').write_text(requirement.content)
     context=AgentContext()
@@ -83,7 +83,7 @@ def test_full_pipeline_three_rounds(tmp_path):
         if number==3:
             workflow=tmp_path/'auto-workflow.md'
             workflow.write_text('---\nid: simulated-auto\nname: 模拟自动确认\n---\n\n## 步骤：execute\n- 技能：test_execution\n- 执行授权：auto\n- 结果确认：auto\n')
-        execution_agent=create_tester_agent(str(workflow),None,'synthetic',execution_service=service)
+        execution_agent=create_tester_agent(str(workflow),None,'synthetic',execution_service=service, builtin_skill_root=Path(__file__).resolve().parents[2] / 'tests/fixtures/legacy-resources/skills')
         context=AgentContext();context.set('execution_round_number',number)
         path=tmp_path/f'execution-checkpoint-{number}.json'
         state=execution_agent.start(requirement,path,task_id='SIMULATED',context=context)
@@ -131,7 +131,7 @@ def test_design_directly_from_accepted_understanding(tmp_path):
         functions=[{'id':'pay','product_id':'payment','name':'支付'}]))
     workflow=tmp_path/'direct.md'
     workflow.write_text('---\nid: direct\nname: 简单需求\n---\n\n## 步骤：understand\n- 技能：requirement_understand\n- 输入：requirement\n- 执行授权：auto\n- 结果确认：manual\n\n## 步骤：design\n- 技能：test_design\n- 输入：steps.understand.requirement_understanding\n- 执行授权：auto\n- 结果确认：manual\n')
-    agent=create_tester_agent(str(workflow),LLMGateway(provider),'synthetic',design_store=store)
+    agent=create_tester_agent(str(workflow),LLMGateway(provider),'synthetic',design_store=store, builtin_skill_root=Path(__file__).resolve().parents[2] / 'tests/fixtures/legacy-resources/skills')
     context=AgentContext()
     for key,value in {'actor':'tester','maintainer':'tester','project_id':'demo',
         'target_versions':{'payment':'1'},'design_output_directory':str(tmp_path)}.items():context.set(key,value)

@@ -8,7 +8,9 @@ from beivymate.runtime.llm.models import LLMResponse
 from beivymate.runtime.context import AgentContext
 
 
-def test_requirement_to_saved_result_then_restore(tmp_path):
+def test_requirement_to_saved_result_then_restore(tmp_path, monkeypatch):
+    from pathlib import Path
+    monkeypatch.setattr("beivymate.application.understand.TEMPLATE_ROOT", Path(__file__).resolve().parents[1]/"fixtures/legacy-resources/skills")
     class Provider:
         calls = 0
         def chat(self, request):
