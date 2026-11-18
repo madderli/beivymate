@@ -14,6 +14,7 @@ class ResourceRegistry:
                 kind TEXT NOT NULL, id TEXT NOT NULL, revision TEXT NOT NULL,
                 state TEXT NOT NULL, validated TEXT, errors TEXT NOT NULL DEFAULT '[]',
                 PRIMARY KEY(kind,id))''')
+            db.execute('CREATE TABLE IF NOT EXISTS resource_content_time (kind TEXT NOT NULL, id TEXT NOT NULL, revision TEXT NOT NULL, updated REAL NOT NULL, PRIMARY KEY(kind,id))')
         database.chmod(0o600)
 
     @contextmanager
@@ -22,6 +23,17 @@ class ResourceRegistry:
             db.row_factory = sqlite3.Row
             db.execute('BEGIN IMMEDIATE')
             yield db
+
+    def content_time(self, kind, identity, revision, file_time):
+        """File touches and state transitions are not content edits."""
+        import time
+        with self.db() as db:
+            row = db.execute('SELECT revision,updated FROM resource_content_time WHERE kind=? AND id=?', (kind, identity)).fetchone()
+            if row is not None and row['revision'] == revision:
+                return row['updated']
+            updated = file_time if row is None else max(file_time, time.time())
+            db.execute('INSERT OR REPLACE INTO resource_content_time VALUES (?,?,?,?)', (kind, identity, revision, updated))
+            return updated
 
     def observe(self, kind, identity, revision):
         with self.db() as db:

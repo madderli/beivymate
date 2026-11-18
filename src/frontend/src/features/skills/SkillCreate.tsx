@@ -554,7 +554,8 @@ export default function SkillCreate({
           </div>
           {error && (
             <div className="sa-alert" role="alert">
-              {error}
+              <CircleAlert size={18} aria-hidden="true" />
+              <span>{error}</span>
             </div>
           )}
           {!form || !options ? (

@@ -90,6 +90,10 @@ test("create skill against real local API, resume draft, resources, validation a
     .getByLabel("技能描述", { exact: true })
     .fill("当用户提供会议记录时，整理决定和行动项；不编造会议结论。");
   await expect(dialog.getByLabel("技能使用模型")).toContainText("尚未配置");
+  await expect(
+    dialog.getByRole("checkbox", { name: "实施", exact: true }),
+  ).toBeVisible();
+
   await dialog.getByRole("button", { name: "下一步 →", exact: true }).click();
   await expect(dialog.getByLabel("技能内容", { exact: true })).toHaveValue(
     /^# Meeting Notes\n/,
@@ -198,6 +202,12 @@ test("create skill against real local API, resume draft, resources, validation a
   ).toBeEnabled();
   await dialog.getByRole("button", { name: "检查技能", exact: true }).click();
   await expect(dialog.getByRole("alert")).toContainText("模型");
+  await expect(dialog.getByRole("alert")).toHaveCSS(
+    "color",
+    "rgb(155, 41, 41)",
+  );
+  await expect(dialog.getByRole("alert").locator("svg")).toBeVisible();
+
   await expect(
     dialog.getByRole("button", { name: "发布技能", exact: true }),
   ).toBeDisabled();

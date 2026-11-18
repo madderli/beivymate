@@ -59,7 +59,7 @@ class Draft(BaseModel):
     id: str = Field(min_length=1, max_length=64)
     name: str = Field(min_length=1, max_length=120)
     description: str = Field(default='', max_length=1024)
-    roles: list[str] = Field(default_factory=lambda: ['common'], max_length=5)
+    roles: list[str] = Field(default_factory=lambda: ['common'], max_length=6)
     icon: str = Field(default='🧩', max_length=32)
     modelPreference: Preference = Field(default_factory=Preference)
     body: str = Field(default='', max_length=100000)

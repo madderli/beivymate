@@ -17,7 +17,7 @@ BUILTIN_SKILLS = Path(__file__).resolve().parents[1] / 'builtin/skills'
 from beivymate.foundation.paths import data_directory
 CUSTOM_SKILLS = data_directory() / 'skills'
 STATES = {'draft', 'published', 'paused'}
-ROLES = {'tester', 'developer', 'product', 'operations', 'common'}
+ROLES = {'tester', 'developer', 'product', 'operations', 'implementation', 'common'}
 MAX_TOTAL = 20 * 1024 * 1024
 
 
@@ -142,6 +142,8 @@ class SkillCenter:
             if keep:
                 extras.append(line)
         state = 'published' if builtin else self.registry.observe('skill', identity, digest.hexdigest())['state'] if observe else 'draft'
+        if observe:
+            updated = self.registry.content_time('skill', identity, digest.hexdigest(), updated)
         from datetime import datetime, timezone
         result = dict(key=identity, id=identity, name=metadata['name'], description=metadata['description'],
             role=role, roles=metadata.get('roles', [role]), version=str(metadata.get('version', '1')),
@@ -252,6 +254,9 @@ class SkillCenter:
                     self._validation_errors(value, staging / 'SKILL.md', raise_error=True)
                 if value['id'] != identity:
                     raise ValueError('技能标识与路径标识不一致')
+                if existing and value['revision'] == existing['revision']:
+                    # Keep original bytes, timestamps and validation when nothing changed.
+                    return existing
                 # Keep a rollback copy until the complete package has been installed.
                 backup = Path(temporary) / 'previous'
                 if existing:

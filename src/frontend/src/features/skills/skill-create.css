@@ -645,9 +645,12 @@
   font-size: 13px;
 }
 .sa-alert {
-  background: #fcf2e7;
-  color: #a17644;
-  border: 1px solid #f0deca;
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  background: #fff2f0;
+  color: #9b2929;
+  border: 1px solid #ebc3be;
   border-radius: 8px;
   padding: 12px 14px;
   margin-bottom: 18px;
@@ -1044,4 +1047,9 @@
   background: #f5f8f1;
   color: #52654f;
   line-height: 1.9;
+}
+
+.sa-alert > svg {
+  flex-shrink: 0;
+  margin-top: 2px;
 }

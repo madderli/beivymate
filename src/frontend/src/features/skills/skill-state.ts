@@ -10,7 +10,12 @@ export const backupModels: Record<string, string[]> = {
   速度优先: [],
 };
 export type SkillRole =
-  "tester" | "developer" | "product" | "operations" | "common";
+  | "tester"
+  | "developer"
+  | "product"
+  | "operations"
+  | "implementation"
+  | "common";
 export type SkillState =
   "discovered" | "validated" | "draft" | "published" | "paused" | "invalid";
 export type ModelPreference = {
@@ -168,6 +173,7 @@ export const roleNames: Record<SkillRole, string> = {
   product: "产品",
   common: "通用",
   operations: "运维",
+  implementation: "实施",
 };
 export const stateNames: Record<SkillState, string> = {
   discovered: "待验证",
@@ -230,9 +236,14 @@ export function parseMarkdown(
     if (!fields[field])
       throw new Error(`缺少必要元数据：${field}（请使用单行字段）`);
   if (
-    !["tester", "developer", "product", "operations", "common"].includes(
-      fields.role,
-    )
+    ![
+      "tester",
+      "developer",
+      "product",
+      "operations",
+      "implementation",
+      "common",
+    ].includes(fields.role)
   )
     throw new Error("所属角色必须是测试、开发、产品、运维或通用。");
   const rolesLine = match[1].match(/^roles:\s*(.+)$/m);
@@ -359,7 +370,15 @@ export async function readPackage(
   const parsed = parseMarkdown(raw);
   const folderRole = root
     .split("/")
-    .find((p) => ["tester", "developer", "product", "operations"].includes(p));
+    .find((p) =>
+      [
+        "tester",
+        "developer",
+        "product",
+        "operations",
+        "implementation",
+      ].includes(p),
+    );
   if (folderRole && folderRole !== parsed.role)
     throw new Error("目录角色与 SKILL.md 的 role 不一致，请修正后导入。");
   const loaded: PackageFile[] = await Promise.all(

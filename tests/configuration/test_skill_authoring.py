@@ -302,3 +302,40 @@ def test_editable_description_template_cannot_be_published_as_real_content(api):
     changed = save(c, value)
     assert action(c, changed, 'validate').json()['state'] == 'validated'
     assert c.get('/api/v1/skill-authoring/meeting-notes').json()['description'] == value['description']
+
+
+def test_implementation_role_persists_across_edit(api):
+    c, app, owner = api
+    assert {'id': 'implementation', 'name': '实施'} in c.get('/api/v1/skill-authoring/options').json()['roles']
+    value = draft(); value['roles'] = ['implementation']
+    saved = save(c, value)
+    assert saved['roles'] == ['implementation']
+    value['revision'] = saved['revision']; value['description'] = '实施检查及交付核对'
+    assert save(c, value)['roles'] == ['implementation']
+
+
+def test_content_modified_time_ignores_save_touch_and_state_changes(api):
+    import os
+    c, app, owner = api
+    model(c)
+    value = draft(); saved = save(c, value)
+    entry = app.state.paths.skills / saved['id'] / 'SKILL.md'
+    original_stat = entry.stat().st_mtime_ns
+    value['revision'] = saved['revision']
+    unchanged = save(c, value)
+    assert unchanged['updated'] == saved['updated']
+    assert entry.stat().st_mtime_ns == original_stat
+    checked = action(c, saved, 'validate').json()
+    assert checked['updated'] == saved['updated']
+    assert save(c, value)['state'] == 'validated'
+    published = action(c, checked, 'publish').json()
+    paused = action(c, published, 'pause').json()
+    assert paused['updated'] == saved['updated']
+    os.utime(entry, (entry.stat().st_atime, entry.stat().st_mtime + 10))
+    assert c.get('/api/v1/skill-authoring/'+saved['id']).json()['updated'] == saved['updated']
+    for field, change in [('name', '新名称'), ('description', '新的技能描述'), ('body', '# 新正文\n核对资料并整理结果。'), ('roles', ['implementation']), ('files', [{'path':'references/rules.md','text':'业务规则','size':12}])]:
+        before = c.get('/api/v1/skill-authoring/'+saved['id']).json()
+        value.update(revision=before['revision']); value[field] = change
+        after = save(c, value)
+        assert after['revision'] != before['revision']
+        assert after['updated'] > before['updated']
