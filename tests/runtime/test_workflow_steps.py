@@ -81,3 +81,40 @@ def test_legacy_repeated_skills_get_unique_step_ids(tmp_path):
     workflow.write_text("---\nid: f\nname: F\nsteps:\n  - same\n  - same\n---\n")
     with pytest.raises(ValueError, match="单文件步骤"):
         load_workflow_definition(workflow)
+
+
+def test_next_step_receives_all_immediate_outputs_and_task_input(tmp_path):
+    class MultiOutputSkill(RecordingSkill):
+        supplements = []
+
+        def execute(self, context):
+            self.supplements.append(context.step_supplement_prompt())
+            super().execute(context)
+            if context.get("step_id") == "first":
+                context.set("steps.first.risks", "risks")
+                context.set("steps.first.coverage", "coverage")
+
+    path = files(tmp_path)
+    path.write_text(path.read_text().replace(
+        "- 输入：result", "- 输入：requirement\n- 上一步：first"
+    ))
+    path.write_text(path.read_text().replace(
+        "- 分析策略：simple", '- 分析策略：simple\n- 补充说明："重点核对重复提交"'
+    ))
+    registry = SkillRegistry()
+    skill = MultiOutputSkill()
+    registry.register("recording", skill)
+    runtime = Runtime(registry)
+    context = AgentContext()
+    context.set("requirement", "task material")
+    context.set("steps.older.notes", "unrelated output")
+
+    runtime.start(runtime.load_workflow(str(path)), context, tmp_path / "run.json")
+
+    assert "重点核对重复提交" in skill.supplements[0]
+    assert skill.supplements[1] == ""
+    assert skill.records[1][1] == {
+        "requirement": "task material",
+        "steps.first.risks": "risks",
+        "steps.first.coverage": "coverage",
+    }

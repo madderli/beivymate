@@ -77,6 +77,7 @@ class TestAnalysisSkill(Skill):
                   'Do not generate executable cases, steps, scripts or release decisions. '
                   'simple: concise relevant conditions; standard: all dimensions; deep: dependencies and cross-product risks. '
                   'Never invent business rules or claim unexamined scope is covered.')
+        prompt += context.step_supplement_prompt()
         context.set('context_usage_estimate', budget.check_request(system + '\n' + prompt))
         request = LLMRequest(model=self._model, messages=[ChatMessage(role='system', content=system),
             ChatMessage(role='user', content=prompt)], response_schema=AnalysisData.model_json_schema(),

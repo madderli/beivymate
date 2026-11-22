@@ -187,6 +187,7 @@ export function TaskForm({
               name="analysisStrategy"
               defaultValue={draft?.analysisStrategy}
             >
+              <option value="inherit">使用工作流或技能设置</option>
               <option value="standard">标准</option>
               <option value="simple">简要</option>
               <option value="deep">深入</option>

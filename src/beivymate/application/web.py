@@ -139,6 +139,9 @@ def create_app(data_dir: Path, setup_token: str, *, origins=None, vault=None, wo
             request.headers.get('x-csrf-token', '') if request.method != 'GET' else None,
             capability)
 
+    from beivymate.application.knowledge_sources import knowledge_source_router
+    app.include_router(knowledge_source_router(paths.work, portal, require))
+
     from beivymate.models.catalog import ModelCatalog
     from beivymate.models.api import model_router
     model_catalog = ModelCatalog(paths.root, vault, portal)
@@ -222,6 +225,11 @@ def create_app(data_dir: Path, setup_token: str, *, origins=None, vault=None, wo
     model_catalog.lifecycle = ModelLifecycle(model_catalog, conversations)
 
     portal.custom_workflow_root = paths.workflows
+    from beivymate.workflows.service import Workflows
+    from beivymate.workflows.api import workflow_router
+    workflows = Workflows(paths.workflows, skill_center, skill_center.registry, portal, model_catalog)
+    app.state.workflow_center = workflows
+    app.include_router(workflow_router(workflows, require))
     try:
         portal.initialize_references()
         app.state.reference_warning = ''

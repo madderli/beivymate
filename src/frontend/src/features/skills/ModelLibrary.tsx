@@ -1,3 +1,4 @@
+import { Search } from "lucide-react";
 import { Fragment, useEffect, useState } from "react";
 import { ModelMaintenanceDialog, type Lifecycle } from "./ModelMaintenance";
 import { request } from "../../api";
@@ -232,25 +233,29 @@ export default function ModelLibrary({
             </button>
           </div>
         ))}
-      <div className="ms-library-tools">
-        <input
-          aria-label="搜索模型管理"
-          placeholder="按模型 ID / 厂商名过滤"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-        />
-        <select
-          aria-label="来源筛选"
-          value={filter}
-          onChange={(e) => setFilter(e.target.value)}
-        >
-          <option>全部来源</option>
-          {sourceKinds.map((k) => (
-            <option key={k} value={k}>
-              {sourceLabels[k]}
-            </option>
+      <div className="sc-toolbar">
+        <label className="sc-search">
+          <Search size={16} aria-hidden="true" />
+          <input
+            aria-label="搜索模型或厂商"
+            placeholder="搜索模型 ID 或厂商名称…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+        </label>
+        <div className="sc-source-filter" role="group" aria-label="来源筛选">
+          {(["全部来源", ...sourceKinds] as const).map((source) => (
+            <button
+              key={source}
+              type="button"
+              aria-pressed={filter === source}
+              className={filter === source ? "active" : ""}
+              onClick={() => setFilter(source)}
+            >
+              {source === "全部来源" ? source : sourceLabels[source]}
+            </button>
           ))}
-        </select>
+        </div>
       </div>
       {groups.map((g) => (
         <section className="mr-group" key={g.id}>

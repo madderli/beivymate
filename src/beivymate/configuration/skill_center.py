@@ -156,6 +156,10 @@ class SkillCenter:
             result['authoringFormat'] = FORMAT
             if result['state'] == 'discovered':
                 result['state'] = 'draft'
+        strategies = metadata.get('analysis_strategies', [])
+        if isinstance(strategies, list):
+            result['analysisStrategies'] = [key for key in strategies if key in ('simple', 'standard', 'deep')]
+        result['defaultAnalysisStrategy'] = metadata.get('default_analysis_strategy')
         if metadata.get('model_preference'):
             result['modelPreference'] = metadata['model_preference']
         return result

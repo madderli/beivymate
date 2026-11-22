@@ -134,19 +134,58 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 20px;
+  flex-wrap: wrap;
+  gap: 8px 16px;
 }
-.ms-advanced-heading p { margin: 0; }
-
-/* Keep the advanced heading clear of its first configuration card. */
-.ms-content .mr-mapping > .ms-advanced-heading {
-  margin-top: -10px;
-  margin-bottom: 24px;
-  min-height: 40px;
+.ms-content .model-advanced > .ms-advanced-heading {
+  margin: 0 0 12px;
 }
-.ms-content .mr-mapping > .ms-advanced-heading p {
+.model-advanced .ms-advanced-heading p {
   margin: 0;
 }
-.ms-content .mr-mapping > .ms-advanced-heading + section {
-  margin-top: 0;
+.ms-content .model-advanced > section {
+  padding: 16px 20px;
+  margin: 0 0 12px;
+}
+.model-advanced h3,
+.model-advanced h4 {
+  margin: 0 0 4px;
+}
+.model-advanced section > p {
+  margin: 0 0 10px;
+}
+.skill-center-demo .model-advanced .mr-tier-options button {
+  padding: 8px 12px;
+}
+.model-advanced .mr-tier-options small {
+  margin-top: 4px;
+  overflow-wrap: anywhere;
+}
+.model-advanced .mf-tier {
+  padding: 12px;
+  margin: 0;
+}
+.model-advanced .mf-tier + .mf-tier {
+  margin-top: 8px;
+}
+.model-advanced .mf-tier h4 {
+  margin: 6px 0;
+}
+.model-advanced .mr-mapping-row,
+.model-advanced .mf-chain {
+  padding-block: 8px;
+}
+.model-advanced .mf-backup {
+  padding: 6px 8px;
+}
+.model-advanced .mf-add,
+.model-advanced .mf-controls {
+  margin: 10px 0;
+}
+.skill-center-demo .model-advanced .mf-trigger {
+  margin: 4px 12px 8px 0;
+}
+.model-advanced .mf-log {
+  margin-top: 10px;
+  padding: 12px;
 }

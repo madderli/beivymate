@@ -152,6 +152,7 @@ export type Skill = {
   id: string;
   name: string;
   description: string;
+  analysisStrategies?: string[];
   role: SkillRole;
   roles?: SkillRole[];
   icon?: string;

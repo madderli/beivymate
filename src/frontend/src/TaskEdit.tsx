@@ -105,9 +105,10 @@ export function TaskEdit({
             分析策略
             <select
               name="analysisStrategy"
-              defaultValue={task.analysisStrategy || "standard"}
+              defaultValue={task.analysisStrategy || "inherit"}
             >
               <option value="simple">简要</option>
+              <option value="inherit">使用工作流或技能设置</option>
               <option value="standard">标准</option>
               <option value="deep">深入</option>
             </select>

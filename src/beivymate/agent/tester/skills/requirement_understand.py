@@ -129,7 +129,7 @@ class RequirementUnderstandSkill(Skill):
                 ),
                 ChatMessage(
                     role = "user",
-                    content = prompt,
+                    content = prompt + context.step_supplement_prompt(),
                 ),
             ],
             temperature = 0.0,

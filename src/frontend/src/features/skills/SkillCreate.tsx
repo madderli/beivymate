@@ -1,3 +1,7 @@
+import {
+  BuiltinResourceIcon,
+  ResourceIconPicker,
+} from "../../BuiltinResourceIcon";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
@@ -569,17 +573,11 @@ export default function SkillCreate({
                   <div className="sa-identity">
                     <label className="sa-field">
                       图标
-                      <select
-                        aria-label="图标"
+                      <ResourceIconPicker
                         value={form.icon}
-                        onChange={(e) => patch({ icon: e.target.value })}
-                      >
-                        {Array.from(new Set([form.icon, ...options.icons])).map(
-                          (v) => (
-                            <option key={v}>{v}</option>
-                          ),
-                        )}
-                      </select>
+                        options={options.icons}
+                        onChange={(icon) => patch({ icon })}
+                      />
                     </label>
                     <div className="sa-field">
                       <div className="sa-field-heading">
@@ -949,7 +947,9 @@ export default function SkillCreate({
               {step === 3 && (
                 <>
                   <div className="sa-summary">
-                    <span className="sa-skill-icon">{form.icon}</span>
+                    <span className="sa-skill-icon">
+                      <BuiltinResourceIcon value={form.icon} />
+                    </span>
                     <div>
                       <strong>{form.name || "未命名技能"}</strong>
                       <p>{form.id || "尚未填写标识"} · 技能正文统一编写</p>

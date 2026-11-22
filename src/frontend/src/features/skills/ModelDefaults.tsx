@@ -92,15 +92,19 @@ export default function ModelDefaults({
           <span><b>分别设置模型</b><small>为对话和技能各选一个默认模型。</small></span>
         </label>
       </fieldset>
-      <div className="model-defaults-main">
-        {choice("general", "通用默认模型")}
-        <small>{custom ? "当前使用分别设置，此项不生效。" : "修改此项，对话和技能的默认模型一起更新。"}</small>
+      <div className="model-defaults-fields">
+        <div>
+          {choice("general", "通用默认模型")}
+          <small>{custom ? "当前使用分别设置，此项不生效。" : "修改此项，对话和技能的默认模型一起更新。"}</small>
+        </div>
+        <div>
+          <div className="model-defaults-row">
+            {choice("chat", "默认对话模型")}
+            {choice("skill", "默认技能模型")}
+          </div>
+          <small>{custom ? "两项都需选择，保存后生效。" : "当前统一使用通用默认模型。"}</small>
+        </div>
       </div>
-      <div className="model-defaults-row">
-        {choice("chat", "默认对话模型")}
-        {choice("skill", "默认技能模型")}
-      </div>
-      <small>{custom ? "两项都需选择，保存后生效。" : "当前统一使用上方模型，无需分别设置。"}</small>
       <div className="model-defaults-footer">
         <small>
           保存后，新的对话和技能调用将使用这些默认设置；单独选过模型的仍用原设置。

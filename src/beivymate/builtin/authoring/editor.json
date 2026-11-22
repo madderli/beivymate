@@ -1,12 +1,15 @@
 {
   "icons": [
-    "🧩",
-    "🔍",
-    "📝",
-    "🧪",
-    "📊",
-    "📚",
-    "🛡️"
+    "sk:analysis",
+    "sk:search",
+    "sk:writing",
+    "sk:testing",
+    "sk:coding",
+    "sk:review",
+    "sk:knowledge",
+    "sk:tools",
+    "sk:creation",
+    "sk:ideas"
   ],
   "roles": [
     {

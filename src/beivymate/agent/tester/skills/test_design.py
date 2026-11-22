@@ -97,6 +97,7 @@ class TestDesignSkill(Skill):
                   'No author, case number or automation state is model-generated.')
         prompt = json.dumps(payload, ensure_ascii=False)
         budget = context.get('context_budget', ContextBudget())
+        prompt += context.step_supplement_prompt()
         context.set('context_usage_estimate', budget.check_request(system+'\n'+prompt))
         request = LLMRequest(model=self.model, messages=[ChatMessage(role='system',content=system),ChatMessage(role='user',content=prompt)],
                              response_schema=DesignData.model_json_schema(), max_output_tokens=budget.output_reserve or None)

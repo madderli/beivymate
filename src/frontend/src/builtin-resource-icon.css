@@ -1,0 +1,91 @@
+.resource-line-icon {
+  display: inline-block;
+  vertical-align: middle;
+  flex: none;
+  color: inherit;
+}
+.resource-legacy-icon {
+  display: inline-grid;
+  place-items: center;
+  line-height: 1;
+}
+.resource-icon-picker {
+  position: relative;
+  margin: 0;
+  min-width: 0;
+}
+.resource-icon-picker > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  list-style: none;
+  cursor: pointer;
+  padding: 9px 10px;
+  border: 1px solid #dfe6d9;
+  border-radius: 8px;
+  background: white;
+  color: #63815c;
+  min-height: 43px;
+  box-sizing: border-box;
+}
+.resource-icon-picker > summary::-webkit-details-marker {
+  display: none;
+}
+.resource-icon-picker > summary[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+.resource-icon-picker .resource-icon-grid {
+  position: absolute;
+  left: 0;
+  top: calc(100% + 6px);
+  width: 286px;
+  max-width: calc(100vw - 52px);
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 5px;
+  padding: 10px;
+  border: 1px solid #dfe6d9;
+  border-radius: 10px;
+  background: white;
+  box-shadow: 0 8px 28px #293f351f;
+  z-index: 20;
+}
+.resource-icon-picker .resource-icon-grid button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  margin: 0;
+  padding: 8px 3px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  min-width: 0;
+  background: white;
+  color: #6c865f;
+  cursor: pointer;
+  font-family: inherit;
+  line-height: 1.5;
+}
+.resource-icon-picker .resource-icon-grid button span {
+  font-size: 9px;
+  font-weight: 400;
+  white-space: nowrap;
+}
+.resource-icon-picker .resource-icon-grid button:hover,
+.resource-icon-picker .resource-icon-grid button[aria-pressed="true"] {
+  background: #edf4e8;
+  border-color: #b6cbaa;
+  color: #36765f;
+}
+.resource-icon-grid button:focus-visible {
+  outline: 2px solid #85a78b;
+  outline-offset: 1px;
+}
+.resource-icon-picker .resource-icon-grid button {
+  min-height: 44px;
+  padding: 9px 5px;
+  gap: 0;
+}

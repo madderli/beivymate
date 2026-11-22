@@ -31,7 +31,8 @@ class TestReportSkill(Skill):
             if hashes.get(artifact.id)!=digest(artifact):raise ValueError('Report input is not accepted or has changed')
         if context.get('task_id')!=(design.task_id if design is not None else rounds[0].plan.task_id):raise ValueError('Report task mismatch')
         try:
-            result=self.service.generate(understanding,analysis,design,rounds,simulation=context.get('simulation',False),previous=context.get('previous_report_artifact'))
+            result=self.service.generate(understanding,analysis,design,rounds,simulation=context.get('simulation',False),previous=context.get('previous_report_artifact'),
+                step_supplement=context.step_supplement_prompt())
         finally:
             metric=getattr(self.service.gateway,'last_metric',None)
             if metric:context.set('llm_calls',context.get('llm_calls',[])+[{**metric.model_dump(mode='json'),'step_id':context.get('step_id')}])

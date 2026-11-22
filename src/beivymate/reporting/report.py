@@ -18,7 +18,7 @@ class ReportService:
     def validate_template(self):
         WordReportExporter(self.template).validate_template()
 
-    def generate(self,understanding,analysis,design,rounds,*,simulation=False,previous=None):
+    def generate(self,understanding,analysis,design,rounds,*,simulation=False,previous=None,step_supplement=""):
         self.validate_template()
         template_hash=hashlib.sha256(self.template.read_bytes()).hexdigest()
         for upstream in (understanding,analysis,design):
@@ -103,6 +103,7 @@ class ReportService:
         payload=json.dumps({'facts':facts,'limitations':limitations,'simulation':simulation},ensure_ascii=False)
         system='根据给定过程事实用中文评估需求符合性、已发现缺陷对客户的影响和风险。不得编造数字、关闭状态、工具或环境。没有准入标准不能声称满足上线标准。仅提供建议，人类决定发布。返回指定 JSON。'
         system += "\n" + getattr(self, "skill_instructions", "")
+        payload += step_supplement
         budget=ContextBudget();budget.check_request(system+payload)
         response=self.gateway.chat(LLMRequest(model=self.model,messages=[ChatMessage(role='system',content=system),ChatMessage(role='user',content=payload)],response_schema=ReportAssessment.model_json_schema(),max_output_tokens=budget.output_reserve))
         assessment=ReportAssessment.model_validate_json(response.content)

@@ -1,3 +1,8 @@
+import { formatModifiedTime } from "../formatModifiedTime";
+import {
+  BuiltinResourceIcon,
+  ResourceIconPicker,
+} from "../../BuiltinResourceIcon";
 import { loadModelLibrary } from "./model-api";
 import ProductSidebar from "../../ProductSidebar";
 import WorkflowLibraryPage from "../workflows/WorkflowLibraryPage";
@@ -55,13 +60,6 @@ const directory = {
   webkitdirectory: "",
   directory: "",
 } as InputHTMLAttributes<HTMLInputElement>;
-function formatSkillTime(value?: string) {
-  if (!value) return "未记录";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "未记录";
-  const pad = (v: number) => String(v).padStart(2, "0");
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
-}
 function CardDescription({ text, open }: { text: string; open: () => void }) {
   const container = useRef<HTMLButtonElement>(null);
   const [excerpt, setExcerpt] = useState({ lines: [text], clipped: false });
@@ -305,6 +303,10 @@ export default function SkillCenter({
   }, [embedded]);
   const activePage = embedded ? page : localPage;
   const workflowPage = activePage === "workflows";
+  const [workflowVisited, setWorkflowVisited] = useState(workflowPage);
+  useEffect(() => {
+    if (workflowPage) setWorkflowVisited(true);
+  }, [workflowPage]);
   const go = (target: string) => {
     setMobile(false);
     if (embedded) navigate?.(target);
@@ -471,7 +473,16 @@ export default function SkillCenter({
             }}
           />
         </div>
-        {workflowPage && <WorkflowLibraryPage skills={skills} />}
+        {(workflowVisited || workflowPage) && (
+          <div hidden={!workflowPage}>
+            <WorkflowLibraryPage
+              skills={skills}
+              activeRole={role}
+              active={workflowPage}
+              onOpenSkills={() => go("skills")}
+            />
+          </div>
+        )}
         <main
           className="sc-main homepage-main"
           hidden={settingsOpen || workflowPage}
@@ -574,7 +585,7 @@ export default function SkillCenter({
                 <article className="sc-card" key={s.key}>
                   <div className="sc-card-head">
                     <span className={`sc-skill-icon ${s.source}`}>
-                      {s.icon || "🧩"}
+                      <BuiltinResourceIcon value={s.icon || "🧩"} />
                     </span>
                     <button
                       className="sc-card-title"
@@ -633,7 +644,7 @@ export default function SkillCenter({
                       dateTime={s.updated}
                       title="最后修改时间"
                     >
-                      最后修改：{formatSkillTime(s.updated)}
+                      最后修改：{formatModifiedTime(s.updated)}
                     </time>
                   </div>
                   {s.calls !== undefined && (
@@ -869,6 +880,20 @@ function SkillEditor({
   const [advanced, setAdvanced] = useState(false);
   const [raw, setRaw] = useState(markdown(initial));
   const [error, setError] = useState("");
+  const [skillIconOptions, setSkillIconOptions] = useState<string[]>([]);
+  useEffect(() => {
+    let active = true;
+    void request<{ icons: string[] }>("/skill-authoring/options")
+      .then((r) => {
+        if (active) setSkillIconOptions(r.icons);
+      })
+      .catch((e) => {
+        if (active) setError(e.message);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
   const [saving, setSaving] = useState(false);
   const [checked, setChecked] = useState(false);
   const [leave, setLeave] = useState(false);
@@ -1054,38 +1079,12 @@ function SkillEditor({
                 <div className="sc-identity-row">
                   <label>
                     图标
-                    <select
-                      aria-label="图标"
+                    <ResourceIconPicker
+                      value={draft.icon || "sk:analysis"}
+                      options={skillIconOptions}
                       disabled={readOnly}
-                      value={draft.icon || "🔍"}
-                      onChange={(e) => patch({ icon: e.target.value })}
-                    >
-                      {Array.from(
-                        new Set([
-                          draft.icon || "🔍",
-                          "🔍",
-                          "📝",
-                          "📚",
-                          "🐞",
-                          "🧪",
-                          "📊",
-                          "🚦",
-                          "⚙️",
-                          "🧭",
-                          "🧠",
-                          "✍️",
-                          "🛡️",
-                          "🧰",
-                          "💬",
-                          "📦",
-                          "🌱",
-                        ]),
-                      ).map((icon) => (
-                        <option key={icon} value={icon}>
-                          {icon}
-                        </option>
-                      ))}
-                    </select>
+                      onChange={(icon) => patch({ icon })}
+                    />
                   </label>
                   <label>
                     技能名称
@@ -1294,7 +1293,7 @@ function SkillEditor({
               <div className="sc-form">
                 <div className="sc-publish-summary">
                   <span className="sc-skill-icon custom">
-                    {draft.icon || "🧩"}
+                    <BuiltinResourceIcon value={draft.icon || "🧩"} />
                   </span>
                   <div>
                     <h3>{draft.name || "未命名技能"}</h3>

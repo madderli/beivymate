@@ -65,7 +65,10 @@ class ConfiguredSkill(Skill):
     def _execute(self, context):
         strategy = context.get('analysis_strategy')
         if self.definition.analysis_strategies:
-            strategy = strategy or context.get('default_analysis_strategy') or self.definition.default_analysis_strategy
+            task_strategy = context.get('default_analysis_strategy')
+            if task_strategy == 'inherit':
+                task_strategy = None
+            strategy = task_strategy or strategy or self.definition.default_analysis_strategy
             if strategy not in self.definition.analysis_strategies:
                 raise ValueError('该 Skill 不支持指定分析策略')
         elif strategy is not None:

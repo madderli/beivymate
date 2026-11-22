@@ -94,7 +94,7 @@ export default function ModelFailover({
     ]);
   }
   return (
-    <div className="mr-mapping">
+    <div className="mr-mapping model-advanced">
       {error && (
         <div className="sc-warning" role="alert">
           {error}

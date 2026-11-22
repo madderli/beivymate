@@ -65,15 +65,22 @@ class Runtime:
             if missing:
                 raise ValueError(f"Step {step.id} is missing inputs: {', '.join(missing)}")
             context.set("step_id", step.id)
-            context.set("step_inputs", {ref: context.get(ref) for ref in step.inputs})
+            inputs = {ref: context.get(ref) for ref in step.inputs}
+            if step.previous_step:
+                inputs = {**context.step_outputs(step.previous_step), **inputs}
+            context.set("step_inputs", inputs)
             document_refs=[]
             for reference in step.inputs:
                 parts=reference.split('.')
                 if len(parts)==3 and parts[0]=='steps':
                     ref=context.get('document_outputs',{}).get(parts[1],{}).get(parts[2])
                     if ref is not None:document_refs.append(ref)
+            if step.previous_step:
+                previous_refs = context.get('document_outputs', {}).get(step.previous_step, {})
+                document_refs.extend(ref for ref in previous_refs.values() if ref not in document_refs)
             context.set('document_input_refs',document_refs)
             context.set("analysis_strategy", step.analysis_strategy)
+            context.set("step_supplement", step.supplement)
             context.set("review_mode", step.review_mode)
             context.set("authorization_mode", step.authorization_mode)
             if context.has("context_items"):

@@ -176,3 +176,19 @@
 .skill-center-demo .sc-card-note-slot + footer {
   margin-top: 0;
 }
+/* Skill availability belongs to the skill library, independent of workflow preview CSS. */
+.skill-center-demo .sc-workflow-availability {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  padding: 4px 8px;
+  border-radius: 5px;
+  margin-top: 12px;
+  background: #f4f5f1;
+  color: #8d9686;
+}
+.skill-center-demo .sc-workflow-availability.published {
+  background: #edf4e8;
+  color: #4f7b55;
+}

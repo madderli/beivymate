@@ -1,0 +1,179 @@
+.knowledge-settings .ks-card {
+  min-width: 0;
+  gap: 10px;
+  padding-bottom: 8px;
+}
+.ks-card-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ks-card-heading h2 {
+  flex: 1;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.ks-status {
+  flex: none;
+  background: #edf4e8;
+  color: #527259;
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-size: 12px;
+}
+.ks-path {
+  color: #65766a;
+  overflow-wrap: anywhere;
+  font-size: 13px;
+}
+.ks-card .sc-card-tags {
+  margin: 0;
+}
+.ks-card footer {
+  margin-top: auto;
+  align-items: center;
+  padding-block: 8px 0;
+}
+.ks-card footer button:last-child {
+  margin-left: auto;
+}
+.ks-error {
+  color: #99483b;
+  font-size: 12px;
+}
+.ks-status.ks-error {
+  background: #fbefea;
+}
+.ks-empty {
+  grid-column: 1 / -1;
+  color: #65766a;
+  font-size: 12px;
+}
+.ks-feedback {
+  color: #36765f;
+}
+.ks-entry {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid #e2e8dc;
+  border-radius: 8px;
+}
+.ks-entry legend {
+  color: #596c51;
+  padding-inline: 4px;
+  font-size: 12px;
+}
+.ks-path-actions {
+  display: flex;
+  align-items: center;
+  border: 1px solid #dce4d5;
+  border-radius: 8px;
+  background: #f8faf7;
+}
+.ks-path-actions > input {
+  flex: 1;
+  min-width: 0;
+}
+.knowledge-settings .ks-path-actions > button {
+  display: grid;
+  place-items: center;
+  flex: 0 0 36px;
+  height: 36px;
+  padding: 0;
+  color: #72886a;
+}
+.ks-card details summary {
+  cursor: pointer;
+}
+.ks-card details li {
+  overflow-wrap: anywhere;
+}
+
+.mr-dialog .ks-editor-form {
+  gap: 10px;
+}
+.ks-entry-controls {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.ks-card .ks-card-preview {
+  margin: 0;
+  color: #65766a;
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ks-path-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  border: 1px solid #e2e8dc;
+  border-radius: 9px;
+}
+.ks-path-list li {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) 64px;
+  align-items: start;
+  gap: 10px;
+  padding: 10px 12px;
+  overflow-wrap: anywhere;
+}
+.ks-path-list li + li {
+  border-top: 1px solid #e2e8dc;
+}
+.ks-path-icon {
+  display: grid;
+  place-items: center;
+  height: 32px;
+  border-radius: 7px;
+  background: #edf4e8;
+  color: #527259;
+}
+.ks-path-list strong {
+  font-size: 13px;
+}
+.ks-path-list .ks-path,
+.ks-path-list small {
+  font-size: 11px;
+  color: #65766a;
+}
+.ks-reference-names,
+.ks-access-result {
+  color: #65766a;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.ks-access-result {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.ks-card footer {
+  flex-wrap: wrap;
+}
+
+.ks-access-result:empty {
+  display: none;
+}
+
+
+.ks-path-list li > small {
+  align-self: center;
+  justify-self: end;
+  white-space: nowrap;
+}
+.ks-reference-list li {
+  grid-template-columns: 32px minmax(0, 1fr);
+}
+.ks-reference-empty {
+  margin: 0;
+  padding: 12px;
+  color: #65766a;
+  font-size: 13px;
+}

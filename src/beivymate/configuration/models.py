@@ -7,7 +7,10 @@ class WorkflowStepDefinition(BaseModel):
     id: str = Field(min_length=1)
     skill: str = Field(min_length=1)
     model: str | None = None
+    supplement: str = Field(default="", max_length=4000)
+    previous_step: str | None = None
     inputs: list[str] = Field(default_factory=list)
+    output_requirements: str = ""
     analysis_strategy: Literal["simple", "standard", "deep"] | None = None
     review_mode: Literal["manual", "auto"] = "manual"
     authorization_mode: Literal["manual", "auto"] = "manual"
@@ -47,6 +50,7 @@ class WorkflowDefinition(BaseModel):
     name: str = Field(min_length = 1)
     description: str = ""
     steps: list[str] = Field(min_length = 1)
+    input_requirements: str = ""
     imports: list[str] = Field(default_factory=list)
     step_definitions: list[WorkflowStepDefinition] = Field(default_factory=list)
 

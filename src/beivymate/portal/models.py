@@ -59,6 +59,6 @@ class TaskDraft(Draft):
     environment: str = Field(default='', max_length=500)
     locale: Literal['zh-CN', 'en-US'] = 'zh-CN'
     taskType: Literal['requirement', 'incremental', 'defect', 'regression'] = 'requirement'
-    analysisStrategy: Literal['simple', 'standard', 'deep'] = 'standard'
+    analysisStrategy: Literal['inherit', 'simple', 'standard', 'deep'] = 'inherit'
     reviewMode: Literal['manual', 'auto'] = 'manual'
     testCasesPath: str = Field(default='', max_length=500)

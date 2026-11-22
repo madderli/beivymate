@@ -29,6 +29,20 @@ class AgentContext:
     def get(self, key: str, default: Any = None) -> Any:
         return self._data.get(key, default)
 
+    def step_supplement_prompt(self) -> str:
+        supplement = self.get("step_supplement", "").strip()
+        if not supplement:
+            return ""
+        return (
+            "\n\n工作流步骤补充说明（仅适用于本步）：\n" + supplement
+            + "\n执行时以本次任务的明确要求为先，并遵守技能的强制规则和必需资料要求。"
+            "发现冲突时，在结果中明确列出待确认事项，不自行裁决。"
+        )
+
+    def step_outputs(self, step_id: str) -> dict[str, Any]:
+        prefix = f'steps.{step_id}.'
+        return {key: value for key, value in self._data.items() if key.startswith(prefix)}
+
     # Check if a key exists in the context.
     def has(self, key: str) -> bool:
         return key in self._data

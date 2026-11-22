@@ -1,0 +1,1149 @@
+.wfc {
+  --wfc-ink: var(--sa-ink, var(--ad-ink, #293f35));
+  --wfc-muted: var(--sa-muted, #839087);
+  --wfc-hint: var(--sa-hint, #919b89);
+  --wfc-green: var(--sa-green, #36765f);
+  color: var(--wfc-ink);
+  font-size: 14px;
+}
+.wfc button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 1px solid #dce4d4;
+  border-radius: 8px;
+  background: white;
+  padding: 8px 13px;
+  color: var(--wfc-green);
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+}
+.wfc button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.wfc button.wfc-primary {
+  background: var(--wfc-green);
+  border-color: var(--wfc-green);
+  color: white;
+}
+.wfc-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin: 0 0 24px;
+}
+.wfc-heading small {
+  letter-spacing: 3px;
+  color: #89a08a;
+  font-size: 11px;
+  font-weight: 600;
+}
+.wfc-heading h1 {
+  font-size: 30px;
+  margin: 10px 0;
+}
+.wfc-heading p {
+  color: #8b978e;
+  margin: 0;
+  font-size: 14px;
+}
+.wfc-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 20px;
+}
+.wfc-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 150px;
+  border: 1px solid #dce4d4;
+  border-radius: 9px;
+  padding: 7px 12px;
+  color: #99a58e;
+}
+.wfc .wfc-search input {
+  border: 0 !important;
+  box-shadow: none !important;
+  outline: none !important;
+  background: none;
+  flex: 1;
+  width: 100%;
+  padding: 4px;
+  font-size: 14px;
+}
+.wfc-tabs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.wfc-tabs button {
+  white-space: nowrap;
+}
+.wfc-tabs small {
+  color: #8f9d87;
+  margin-left: 5px;
+}
+.wfc-tabs .selected {
+  background: #eaf2e6;
+  border-color: #a9c49c;
+}
+.wfc-card {
+  border: 1px solid #dce4d4;
+  border-radius: 13px;
+  background: white;
+  padding: 18px 20px;
+  margin-bottom: 14px;
+}
+.wfc-cardtop {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.wfc-icon {
+  height: 40px;
+  width: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: #eef3e8;
+  font-size: 23px;
+  flex: none;
+}
+.wfc-cardtop > div:first-of-type {
+  flex: 1;
+  min-width: 0;
+}
+.wfc-card h2 {
+  margin: 0;
+  font-size: 17px;
+}
+.wfc-card p {
+  margin: 5px 0 0;
+  color: var(--wfc-muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.wfc-status {
+  font-size: 11px;
+  background: #f2f3ed;
+  color: var(--wfc-hint);
+  padding: 4px 9px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+.wfc-status.on {
+  background: #e7f2e9;
+  color: #467653;
+}
+.wfc-actions {
+  display: flex;
+  gap: 7px;
+}
+.wfc-actions button {
+  font-size: 12px;
+  padding: 6px 10px;
+}
+.wfc-chain {
+  padding: 10px 12px;
+  background: #f8faf5;
+  border: 1px solid #e7ecdf;
+  border-radius: 8px;
+  margin: 13px 0 10px;
+  display: flex;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+.wfc-chain span {
+  font-size: 12px;
+  color: #a0ac96;
+}
+.wfc-chain b {
+  font-weight: 500;
+  background: white;
+  border: 1px solid #dce4d4;
+  border-radius: 5px;
+  padding: 3px 8px;
+  display: inline-block;
+  color: #52634a;
+}
+.wfc-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--wfc-muted);
+  font-size: 11px;
+}
+.wfc-edithead {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+.wfc-edithead h2 {
+  font-size: 23px;
+  margin: 0;
+}
+.wfc-edithead > span {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--wfc-muted);
+}
+.wfc-basics {
+  display: grid;
+  grid-template-columns: 90px minmax(0, 1fr) 210px;
+  gap: 14px 18px;
+  padding: 20px;
+  border: 1px solid #dce4d4;
+  border-radius: 12px;
+}
+.wfc label {
+  font-size: 12px;
+}
+.wfc-basics > label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.wfc input:not([type="checkbox"]),
+.wfc select,
+.wfc textarea {
+  box-sizing: border-box;
+  min-width: 0;
+  width: 100%;
+  border: 1px solid #dce4d4;
+  border-radius: 7px;
+  background: white;
+  color: var(--wfc-ink);
+  padding: 9px 10px;
+  font: inherit;
+  font-size: 13px;
+}
+.wfc textarea {
+  min-height: 62px;
+  resize: vertical;
+}
+.wfc select {
+  padding-right: 30px;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='m1 1 5 5 5-5' fill='none' stroke='%23809077' stroke-width='1.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+}
+.wfc input[type="checkbox"] {
+  accent-color: #5d8961;
+}
+.wfc-full {
+  grid-column: 1/-1;
+}
+.wfc-roles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  margin-top: 10px;
+}
+.wfc-roles label {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+}
+.wfc-basics b {
+  font-size: 12px;
+  font-weight: 500;
+}
+.wfc-stephead {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin: 20px 0 12px;
+}
+.wfc-stephead h3 {
+  font-size: 15px;
+  margin: 0;
+}
+.wfc-stephead small {
+  font-size: 11px;
+  color: var(--wfc-muted);
+  font-weight: 400;
+  margin-left: 8px;
+}
+.wfc-stephead > span {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--wfc-muted);
+}
+.wfc-step {
+  padding: 11px 14px;
+  border: 1px solid #dce4d4;
+  border-radius: 10px;
+  margin-bottom: 10px;
+}
+.wfc-steprow {
+  display: grid;
+  grid-template-columns:
+    25px minmax(130px, 1.5fr) minmax(120px, 1fr) minmax(135px, 1fr)
+    100px;
+  gap: 10px;
+  align-items: center;
+}
+.wfc-steprow > span {
+  color: #88a078;
+  font-size: 12px;
+}
+.wfc-controls {
+  display: flex;
+  gap: 4px;
+}
+.wfc-controls button {
+  padding: 5px;
+}
+.wfc-stepmore {
+  padding: 9px 0 0 35px;
+  font-size: 11px;
+  color: var(--wfc-muted);
+}
+.wfc-stepmore > label {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  font-size: 11px;
+}
+.wfc-stepmore small {
+  color: var(--wfc-hint);
+  font-size: 10px;
+}
+.wfc-stepmore details {
+  margin-top: 8px;
+}
+.wfc-stepmore summary {
+  cursor: pointer;
+}
+.wfc-stepmore details > div {
+  padding-top: 10px;
+}
+.wfc-stepmore details label {
+  display: block;
+  margin: 7px 0;
+}
+.wfc-stepmore textarea {
+  display: block;
+  margin-top: 5px;
+}
+.wfc-save {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  gap: 9px;
+  justify-content: flex-end;
+  background: white;
+  padding: 14px 0;
+}
+.wfc-help {
+  font-size: 11px;
+  color: var(--wfc-muted);
+}
+.wfc-alert {
+  border: 1px solid #e6c7bf;
+  background: #fbf0ed;
+  color: #9e4234;
+  border-radius: 8px;
+  padding: 12px 15px;
+  margin-bottom: 16px;
+  font-size: 13px;
+  line-height: 1.8;
+}
+.wfc-notice {
+  background: #edf4e9;
+  color: #59774c;
+  border-radius: 8px;
+  padding: 11px 14px;
+  margin-bottom: 16px;
+  font-size: 13px;
+}
+.wfc-empty {
+  padding: 35px;
+  border: 1px dashed #dce4d4;
+  border-radius: 12px;
+  text-align: center;
+  color: #93a087;
+}
+.wfc-viewstep {
+  border: 1px solid #dce4d4;
+  border-radius: 9px;
+  padding: 12px;
+  margin: 10px 0;
+}
+.wfc-viewstep p {
+  font-size: 12px;
+  color: var(--wfc-muted);
+}
+.wfc :focus-visible {
+  outline: 2px solid #9bb991;
+  outline-offset: 2px;
+}
+@media (max-width: 1100px) {
+  .wfc-toolbar,
+  .wfc-cardtop {
+    flex-wrap: wrap;
+  }
+  .wfc-actions {
+    margin-left: 52px;
+  }
+  .wfc-steprow {
+    grid-template-columns: 25px 1fr 1fr;
+  }
+  .wfc-steprow select:nth-of-type(3) {
+    grid-column: 2;
+  }
+  .wfc-stephead {
+    flex-wrap: wrap;
+  }
+}
+@media (max-width: 650px) {
+  .wfc-heading {
+    flex-wrap: wrap;
+  }
+  .wfc-basics {
+    grid-template-columns: 80px 1fr;
+    padding: 14px;
+  }
+  .wfc-basics > label:nth-child(3) {
+    grid-column: 1/-1;
+  }
+  .wfc-steprow {
+    grid-template-columns: 22px minmax(0, 1fr);
+  }
+  .wfc-steprow select {
+    grid-column: 2;
+  }
+  .wfc-controls {
+    grid-column: 2;
+  }
+  .wfc-stepmore {
+    padding-left: 0;
+  }
+  .wfc-meta {
+    flex-wrap: wrap;
+  }
+  .wfc-actions {
+    margin-left: 0;
+    flex-wrap: wrap;
+  }
+  .wfc-stephead > span {
+    margin-left: 0;
+  }
+  .wfc-edithead {
+    flex-wrap: wrap;
+  }
+  .wfc-stepmore > label {
+    flex-wrap: wrap;
+  }
+}
+/* Isolate the editor from legacy skill-form label spacing. */
+.wfc {
+  padding: 24px 30px;
+  box-sizing: border-box;
+  min-width: 0;
+}
+.wfc label {
+  margin: 0;
+  font-weight: 500;
+}
+.wfc input:not([type="checkbox"]),
+.wfc select,
+.wfc textarea {
+  margin: 0;
+  font-weight: 400;
+}
+.wfc-basics > label {
+  margin: 0;
+}
+.wfc-stepmore details label {
+  margin: 7px 0;
+}
+.wfc-basics .wfc-roles label {
+  margin: 0;
+}
+.wfc-stepmore > label {
+  margin: 0;
+}
+@media (max-width: 650px) {
+  .wfc {
+    padding: 18px 14px;
+  }
+}
+/* Match the skill library's shared heading, query controls and authoring shell. */
+.wfc-home .sc-search input {
+  border: 0 !important;
+  outline: none !important;
+  box-shadow: none !important;
+  background: transparent;
+  font: inherit;
+}
+.wfc-home .sc-source-filter button {
+  font: inherit;
+}
+.wfc-home .homepage-heading-action {
+  font: inherit;
+}
+.wfc-dialog .sa-body {
+  grid-template-columns: 210px minmax(0, 1fr) 270px;
+}
+.wfc-dialog .sa-content.wfc {
+  padding: 16px 24px 26px;
+}
+.wfc-dialog [hidden] {
+  display: none !important;
+}
+.wfc-dialog .wfc-basics {
+  padding: 16px;
+  gap: 14px;
+}
+.wfc-dialog .wfc-save {
+  position: static;
+  justify-content: flex-end;
+  margin: 0;
+  padding: 13px 24px;
+}
+.wfc-dialog .wfc-review p {
+  font-size: 13px;
+  color: var(--wfc-muted);
+}
+.wfc-dialog .sa-aside .wfc-viewstep {
+  background: white;
+  font-size: 12px;
+  padding: 10px;
+}
+.wfc-dialog .sa-aside h3 {
+  font-size: 14px;
+}
+.wfc-dialog .sa-aside p {
+  overflow-wrap: anywhere;
+}
+.wfc-dialog .wfc-stephead {
+  flex-wrap: wrap;
+}
+.wfc-dialog .sa-footer button {
+  font: inherit;
+}
+.wfc-dialog .sa-footer .wfc-primary {
+  background: #36765f;
+  border-color: #36765f;
+  color: white;
+}
+.wfc-dialog .sa-footer .wfc-primary:hover {
+  background: #2d6551;
+  color: white;
+}
+@media (max-width: 1100px) {
+  .wfc-dialog .sa-body {
+    grid-template-columns: 180px minmax(0, 1fr);
+  }
+  .wfc-dialog .sa-aside {
+    display: none;
+  }
+}
+@media (max-width: 700px) {
+  .wfc-dialog .sa-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .wfc-dialog .sa-steps {
+    display: none;
+  }
+  .wfc-dialog .sa-content.wfc {
+    padding: 16px;
+  }
+  .wfc-dialog .wfc-basics {
+    grid-template-columns: 75px minmax(0, 1fr);
+  }
+  .wfc-dialog .wfc-basics > label:nth-child(3) {
+    grid-column: 1/-1;
+  }
+  .wfc-dialog .sa-page-heading {
+    grid-template-columns: 68px minmax(0, 1fr);
+  }
+}
+/* Match row actions to the state badge and give the preview a shared content inset. */
+.wfc-home .wfc-actions {
+  align-items: center;
+  gap: 6px;
+}
+.wfc-home .wfc-actions button {
+  height: 28px;
+  min-height: 28px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 18px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+.wfc-home .wfc-status {
+  box-sizing: border-box;
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  line-height: 18px;
+  font-size: 11px;
+}
+.wfc-dialog .sa-aside.wfc-preview {
+  padding: 20px 18px;
+  gap: 0;
+  overflow: auto;
+}
+.wfc-dialog .wfc-preview > h3 {
+  margin: 0 0 18px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.wfc-dialog .wfc-preview > p {
+  padding: 0;
+  margin: 0 0 8px;
+  text-align: left;
+  font-size: 13px;
+  line-height: 1.7;
+}
+.wfc-dialog .wfc-preview > small {
+  display: block;
+  margin: 0 0 16px;
+  color: var(--wfc-muted);
+  font-size: 11px;
+  line-height: 1.6;
+}
+.wfc-dialog .wfc-preview > .wfc-viewstep {
+  display: block;
+  padding: 12px;
+  margin: 0 0 10px;
+  border-radius: 9px;
+  font-size: 12px;
+}
+.wfc-dialog .wfc-preview .wfc-viewstep > b {
+  display: block;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.wfc-dialog .wfc-preview .wfc-viewstep p {
+  padding: 0;
+  margin: 5px 0 0;
+  font-size: 11px;
+  line-height: 1.65;
+}
+.wfc-dialog .wfc-preview > p.wfc-help {
+  padding: 12px 0 0;
+  margin: 4px 0 0;
+  border-top: 1px solid #e2e8dc;
+  font-size: 11px;
+  color: var(--wfc-muted);
+}
+
+/* Typography follows the skill library; geometry and interaction stay unchanged. */
+.wfc {
+  font-family: inherit;
+  line-height: 1.6;
+  font-weight: 400;
+}
+.wfc-card h2 {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--wfc-ink);
+}
+.wfc-card p,
+.wfc-meta {
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.8;
+  color: var(--wfc-muted);
+}
+.wfc-chain b {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--wfc-ink);
+}
+.wfc button,
+.wfc input,
+.wfc select,
+.wfc textarea {
+  font-family: inherit;
+  letter-spacing: normal;
+}
+.wfc-dialog .wfc label,
+.wfc-dialog .wfc-basics b {
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.6;
+  color: var(--sa-ink);
+}
+.wfc-dialog .wfc input:not([type="checkbox"]),
+.wfc-dialog .wfc select,
+.wfc-dialog .wfc textarea {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--sa-ink);
+  line-height: 1.6;
+}
+.wfc-dialog .wfc textarea {
+  line-height: 1.8;
+}
+.wfc-dialog .wfc-stepmore > label {
+  font-size: 12px;
+  font-weight: 400;
+}
+.wfc-dialog .wfc-help,
+.wfc-dialog .wfc-stepmore small,
+.wfc-dialog .wfc-stephead > span {
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.8;
+  color: var(--sa-muted);
+}
+.wfc-dialog .wfc input::placeholder,
+.wfc-dialog .wfc textarea::placeholder {
+  color: var(--sa-hint);
+  font-weight: 400;
+  opacity: 1;
+}
+.wfc-dialog .wfc-stephead h3 {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+.wfc-dialog .wfc-stephead small {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--sa-muted);
+}
+.wfc-dialog .wfc button {
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.6;
+  color: var(--sa-ink);
+}
+.wfc-dialog .wfc-preview > h3 {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--sa-ink);
+}
+.wfc-dialog .wfc-preview > p,
+.wfc-dialog .wfc-preview > small,
+.wfc-dialog .wfc-preview .wfc-viewstep p,
+.wfc-dialog .wfc-preview > p.wfc-help {
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.8;
+  color: var(--sa-muted);
+}
+.wfc-dialog .wfc-preview .wfc-viewstep > b {
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.6;
+  color: var(--sa-ink);
+}
+.wfc .wfc-alert {
+  font-size: 13px;
+  line-height: 1.8;
+}
+.wfc .wfc-alert b {
+  font-weight: 600;
+}
+.wfc-home {
+  --wfc-muted: #849079;
+}
+.wfc-home .wfc-actions button {
+  color: #678257;
+  font-weight: 400;
+}
+.wfc-home .wfc-cardtop h2 {
+  font-weight: 600;
+}
+.wfc-skill-availability {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 12px;
+  line-height: 1.8;
+  color: var(--wfc-muted);
+  margin: 0 0 12px;
+}
+.wfc-skill-availability a {
+  color: var(--wfc-green);
+  text-decoration: underline;
+}
+.wfc-skill-availability button {
+  font-size: 12px;
+  padding: 4px 9px;
+}
+.wfc-steprow {
+  grid-template-columns:
+    56px minmax(130px, 1.5fr) minmax(120px, 1fr) minmax(135px, 1fr)
+    100px;
+}
+.wfc-steprow > span {
+  white-space: nowrap;
+}
+.wfc-stepmore {
+  padding-left: 66px;
+}
+@media (max-width: 1100px) {
+  .wfc-steprow {
+    grid-template-columns: 56px minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
+@media (max-width: 650px) {
+  .wfc-steprow {
+    grid-template-columns: 56px minmax(0, 1fr);
+  }
+  .wfc-stepmore {
+    padding-left: 0;
+  }
+}
+.wfc-dialog .wfc-basics .wfc-description {
+  height: 88px;
+  min-height: 88px;
+  line-height: 1.8;
+}
+.wfc-dialog .wfc-stephead > button {
+  margin-left: auto;
+}
+/* Secondary dialogs share the skill editor's typography, spacing and green actions. */
+.wfc .wfc-subdialog {
+  box-sizing: border-box;
+  width: min(680px, calc(100vw - 36px));
+  max-height: calc(100dvh - 48px);
+  padding: 0;
+  border: 1px solid #dfe6d9;
+  border-radius: 14px;
+  background: white;
+  color: #293f35;
+  font:
+    14px/1.6 -apple-system,
+    BlinkMacSystemFont,
+    "PingFang SC",
+    "Microsoft YaHei",
+    sans-serif;
+  box-shadow: 0 16px 60px #24382b22;
+  overflow: auto;
+}
+.wfc .wfc-detail-dialog {
+  width: min(820px, calc(100vw - 36px));
+}
+.wfc .wfc-subdialog::backdrop {
+  background: #24382b55;
+}
+.wfc .wfc-subdialog .dialog-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 24px;
+  margin: 0;
+  border-bottom: 1px solid #dfe6d9;
+  background: white;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+.wfc .wfc-subdialog .dialog-head h2 {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.5;
+  font-weight: 600;
+}
+.wfc .wfc-subdialog .dialog-head .icon-button {
+  border: 0;
+  background: transparent;
+  padding: 5px;
+  color: #74836e;
+  flex: none;
+}
+.wfc .wfc-subbody {
+  padding: 22px 24px;
+}
+.wfc .wfc-subbody p {
+  padding: 0;
+  margin: 6px 0;
+  color: #839087;
+  font-size: 13px;
+  line-height: 1.8;
+}
+.wfc .wfc-detail-heading {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.wfc .wfc-detail-heading > div {
+  flex: 1;
+  min-width: 0;
+}
+.wfc .wfc-detail-heading h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.wfc .wfc-detail-heading .wfc-status {
+  margin-top: 5px;
+}
+.wfc .wfc-detail-meta {
+  padding: 13px 16px;
+  background: #f8faf5;
+  border: 1px solid #e6ecdf;
+  border-radius: 9px;
+  margin: 0 0 20px;
+  display: grid;
+  gap: 9px;
+}
+.wfc .wfc-detail-meta > div {
+  display: grid;
+  grid-template-columns: 80px minmax(0, 1fr);
+  gap: 12px;
+  font-size: 12px;
+  line-height: 1.8;
+}
+.wfc .wfc-detail-meta dt {
+  color: #839087;
+}
+.wfc .wfc-detail-meta dd {
+  margin: 0;
+  color: #425641;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.wfc .wfc-subsection {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0 0 12px;
+}
+.wfc .wfc-subdialog .wfc-viewstep {
+  padding: 14px 16px;
+  margin: 0 0 11px;
+  border: 1px solid #dfe6d9;
+  border-radius: 9px;
+}
+.wfc .wfc-subdialog .wfc-viewstep b {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.6;
+}
+.wfc .wfc-subdialog .wfc-viewstep p {
+  font-size: 12px;
+  margin: 7px 0 0;
+  line-height: 1.8;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.wfc .wfc-subdialog .wfc-subfooter {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  padding: 14px 24px;
+  border-top: 1px solid #dfe6d9;
+  background: white;
+  position: sticky;
+  bottom: 0;
+}
+.wfc .wfc-subdialog .wfc-subfooter button {
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.6;
+  border: 1px solid #dfe6d9;
+  background: white;
+  color: #293f35;
+  padding: 8px 16px;
+  min-height: 38px;
+  border-radius: 8px;
+  box-shadow: none;
+}
+.wfc .wfc-subdialog .wfc-subfooter .wfc-subprimary {
+  background: #36765f;
+  border-color: #36765f;
+  color: white;
+}
+.wfc .wfc-subdialog .wfc-subfooter .wfc-subprimary:hover {
+  background: #2d6551;
+  color: white;
+}
+.wfc .wfc-confirm-summary {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+.wfc .wfc-confirm-symbol {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: #edf3e8;
+  color: #66875b;
+}
+.wfc .wfc-confirm-symbol.danger {
+  background: #fbefeb;
+  color: #aa5846;
+}
+.wfc .wfc-confirm-summary > div {
+  min-width: 0;
+}
+.wfc .wfc-confirm-summary h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.wfc .wfc-confirm-summary p {
+  margin: 6px 0 0;
+  font-size: 12px;
+}
+.wfc .wfc-confirm-impact {
+  padding: 15px 17px;
+  border: 1px solid #e3e9dc;
+  border-radius: 9px;
+  background: #f8faf5;
+  font-size: 12px;
+  color: #71836a;
+  line-height: 1.8;
+}
+.wfc .wfc-confirm-impact > b {
+  font-weight: 500;
+  color: #425641;
+}
+.wfc .wfc-confirm-impact ul {
+  margin: 8px 0 0;
+  padding-left: 18px;
+}
+.wfc .wfc-confirm-impact li + li {
+  margin-top: 4px;
+}
+.wfc .wfc-subdialog .wfc-alert {
+  margin: 14px 0 0;
+}
+@media (max-width: 600px) {
+  .wfc .wfc-subdialog .dialog-head {
+    padding: 15px 18px;
+  }
+  .wfc .wfc-subbody {
+    padding: 18px;
+  }
+  .wfc .wfc-detail-meta > div {
+    grid-template-columns: 64px minmax(0, 1fr);
+    gap: 8px;
+  }
+  .wfc .wfc-subdialog .wfc-subfooter {
+    padding: 12px 18px;
+  }
+  .wfc .wfc-confirm-summary {
+    align-items: flex-start;
+  }
+}
+.wfc-dialog .wfc-input-guidance {
+  padding: 0 0 5px;
+}
+.wfc-dialog .wfc-input-guidance b {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--sa-ink);
+}
+.wfc-dialog .wfc-input-guidance p {
+  margin: 6px 0;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.8;
+  color: var(--sa-muted);
+}
+/* Card heading and description must match the skill cards, even under app-wide h2/p rules. */
+.skill-center-demo .wfc-home .wfc-cardtop h2 {
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.5;
+  letter-spacing: normal;
+  color: var(--ad-ink, #293b36);
+}
+.skill-center-demo .wfc-home .wfc-cardtop p {
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.8;
+  letter-spacing: normal;
+  color: #849079;
+}
+/* Match the skill card's modification-time typography for workflow metadata. */
+.skill-center-demo .wfc-home .wfc-meta > span {
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 400;
+  color: #98a28e;
+}
+.wfc-dialog .wfc-stepmore .wfc-supplement-input {
+  margin-top: 8px;
+}
+.wfc-dialog .wfc-stepmore summary small {
+  margin-inline-start: 10px;
+}
+.wfc-card-settings {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+}
+.wfc-card-settings .sc-card-tags {
+  margin: 0;
+}
+.wfc-dialog .wfc-stepmore summary small {
+  font: inherit;
+  color: inherit;
+}
+.wfc-dialog .wfc-step-invalid {
+  border-color: #c47c70;
+}
+.wfc-dialog .wfc-step-error {
+  margin: 0 0 8px;
+  color: #9e4234;
+  font-size: 12px;
+}
+.wfc-alert {
+  white-space: pre-line;
+}
+
+.wfc-dialog .wfc-review .wfc-viewstep {
+  padding: 12px 14px;
+}
+.wfc-review-step-heading {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 6px 12px;
+}
+.wfc-dialog .wfc-review .wfc-viewstep > p {
+  margin: 8px 0 0;
+}
+.wfc-review-pass {
+  color: #36765f;
+  background: #e7f2e9;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+}
+
+.wfc-meta {
+  flex-wrap: wrap;
+  align-items: center;
+}

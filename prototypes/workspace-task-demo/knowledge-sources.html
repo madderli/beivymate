@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>知识库管理 · OmniAlba Demo</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+body{background:#fafbf8}.knowledge-shell{display:grid;grid-template-columns:218px minmax(0,1fr);min-height:100vh}.knowledge-nav{background:white;border-right:1px solid var(--line);padding:24px 16px}.knowledge-nav img{width:158px}.knowledge-nav p{padding:12px;margin:18px 0 0}.knowledge-nav strong{display:block;background:#edf4e8;border-radius:8px;padding:10px 12px}.knowledge-main{padding:34px clamp(18px,4vw,54px);max-width:1400px;width:100%}.knowledge-head,.source-head,.source-actions,.source-tags{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.knowledge-head,.source-head{justify-content:space-between}.knowledge-main h1{margin:6px 0}.knowledge-head p{margin:0;color:#6e7b72}.knowledge-toolbar{display:flex;gap:10px;margin:25px 0 16px;flex-wrap:wrap}.knowledge-toolbar input{flex:1;min-width:180px}.knowledge-toolbar>*{border:1px solid var(--line);border-radius:8px;background:white;padding:9px 12px}.source-card{background:white;border:1px solid var(--line);border-radius:13px;padding:16px 20px;margin-bottom:12px}.source-card h2{font-size:16px;margin:0}.source-path{overflow-wrap:anywhere;color:#69796d;margin:8px 0}.source-tags{font-size:12px}.source-tag{border-radius:6px;padding:3px 8px;background:#eff3eb;color:#527259}.source-tag.error{background:#fbefea;color:#924e41}.source-actions{margin-top:13px}.source-actions button{padding:5px 10px}.knowledge-dialog{width:min(560px,calc(100vw - 28px));border:1px solid var(--line);border-radius:14px;padding:22px}.knowledge-dialog h2{margin:0 0 12px}.knowledge-dialog label{display:block;margin:12px 0}.knowledge-dialog input,.knowledge-dialog select{display:block;width:100%;margin-top:5px;padding:8px}.knowledge-dialog footer{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}.source-scope{padding:9px 0;border-bottom:1px solid var(--line)}#feedback{color:var(--green)}@media(max-width:620px){.knowledge-shell{display:block}.knowledge-nav{border-right:0;border-bottom:1px solid var(--line);padding:12px}.knowledge-nav p,.knowledge-nav strong{display:none}}
+.knowledge-search{display:flex;align-items:center;gap:9px;flex:1;min-width:180px;color:#728778}.knowledge-search input{border:0;outline:none;width:100%;padding:0;background:transparent}.knowledge-search:focus-within{border-color:#83a58c}.knowledge-toolbar .knowledge-filters{display:flex;gap:5px;flex-wrap:wrap;padding:0;border:0;background:transparent}.knowledge-filters button[aria-pressed=true]{background:#eaf2e8;border-color:#a7c4ab}.knowledge-filters small{font-size:11px}.source-card{padding:12px 16px;margin-bottom:9px}.source-path{margin:4px 0 7px;font-size:13px}.source-actions{margin-top:8px}.source-issue{color:#924e41}
+#sources{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;align-items:stretch;justify-content:start;margin:0}#sources .source-card{display:flex;flex-direction:column;min-width:0;margin:0}.source-head{flex-wrap:nowrap;align-items:flex-start}.source-heading{display:flex;align-items:center;gap:8px;min-width:0}.source-heading h2{font-size:14px;overflow-wrap:anywhere}.source-icon{display:grid;place-items:center;flex:none;width:28px;height:28px;border-radius:7px;background:#edf4e8;color:var(--green);font-size:17px}.source-head>.source-tag{flex:none}.source-path{margin:8px 0;color:#6e7b72}.source-tags{gap:6px;margin-bottom:8px}.source-actions{border-top:1px solid var(--line);padding-top:8px;margin-top:auto}#sources>p{grid-column:1/-1;margin:0}#feedback:empty{display:none}@media(max-width:1150px){#sources{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:760px){#sources{grid-template-columns:minmax(0,1fr)}}
+.knowledge-main{margin:0;align-self:start}.knowledge-search #query{border:0;box-shadow:none;background:transparent;padding:0;border-radius:0}.source-issue{display:block;margin:0 0 8px}.source-actions .source-check{margin-left:auto;color:var(--green)}
+</style>
+<div class="knowledge-shell">
+<aside class="knowledge-nav"><img src="assets/logo.svg" alt="OmniAlba"><p>设置</p><strong>知识库管理</strong></aside>
+<main class="knowledge-main">
+<header class="knowledge-head"><div><small>SETTINGS · 独立 Demo</small><h1>知识库管理</h1><p>登记常用资料，供工作空间按需引用。</p></div><button class="primary" id="add">＋ 添加知识</button></header>
+<div class="knowledge-toolbar"><label class="knowledge-search"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/></svg><input id="query" aria-label="搜索知识" placeholder="搜索名称或路径…"></label><div id="filters" class="knowledge-filters" aria-label="访问状态"></div></div>
+<p id="feedback" role="status"></p><section id="sources" aria-label="知识来源列表"></section>
+</main></div>
+<dialog id="editor" class="knowledge-dialog"><form id="source-form"><h2 id="editor-title"></h2><label>名称<input name="name" maxlength="80" required placeholder="例如：公司测试规范"></label><label>来源类型<select name="kind"><option>文件夹</option><option>文件</option></select></label><label>存储位置<select name="storage"><option>本机存储</option><option>共享存储</option></select></label><label>访问路径<input name="path" required placeholder="例如：/资料/测试规范"></label><small>共享存储请填写本机可访问的挂载路径。打开页面或保存路径后自动检查访问状态，此处使用模拟结果。</small><footer><button type="button" data-close>取消</button><button class="primary">保存</button></footer></form></dialog>
+<dialog id="detail" class="knowledge-dialog"><h2 id="detail-title"></h2><div id="detail-body"></div><footer><button data-close>关闭</button></footer></dialog>
+<script>
+const sources = [
+ {name:'公司测试规范',kind:'文件夹',storage:'共享存储',path:'/Volumes/质量管理/测试规范',status:'可访问',available:true,refs:[['HIS 工作空间','全部目录','无'],['LIS 工作空间','通用规范','历史版本']]},
+ {name:'HIS 需求与原型',kind:'文件夹',storage:'本机存储',path:'/资料/项目/HIS',status:'可访问',available:true,refs:[['HIS 工作空间','当前版本/需求与原型','草稿']]},
+ {name:'历史回归用例',kind:'文件',storage:'共享存储',path:'/Volumes/历史资料/回归用例.xlsx',status:'不可访问',available:false,refs:[]},
+];
+const $ = id => document.getElementById(id);
+const escape = value => String(value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let editing = null;
+let filter = '';
+const accessStates = ['', '可访问', '不可访问', '待检查'];
+function checkAccess(source) {
+ const path = source.path;
+ source.status = '待检查';
+ setTimeout(() => {
+  if (source.path !== path || !sources.includes(source)) return;
+  source.status = source.available ? '可访问' : '不可访问';
+  if(source.checking) $('feedback').textContent=`「${source.name}」访问验证完成（模拟）：${source.status}。`;
+  source.checking = false;
+  render();
+ }, 300);
+}
+function render(){
+ const query = $('query').value.trim().toLowerCase();
+ const cards = sources.map((source,index)=>({source,index})).filter(({source})=>
+  (!query || (source.name+' '+source.path).toLowerCase().includes(query)) &&
+  (!filter || source.status===filter || (source.checking && source.previousStatus===filter)));
+ $('filters').innerHTML = accessStates.map(state =>
+  `<button type="button" data-status="${state}" aria-pressed="${filter===state}">${state||'全部'} <small>${sources.filter(source=>!state||source.status===state).length}</small></button>`
+ ).join('');
+ $('sources').innerHTML = cards.map(({source:s,index:i})=>`<article class="source-card">
+ <header class="source-head"><div class="source-heading"><span class="source-icon" aria-hidden="true">${s.kind==='文件夹'?'▱':'▤'}</span><h2>${escape(s.name)}</h2></div><span class="source-tag ${s.status==='不可访问'?'error':''}">${s.status}</span></header>
+ <p class="source-path">${escape(s.path)}</p><div class="source-tags"><span class="source-tag">${escape(s.kind)}</span><span class="source-tag">${escape(s.storage)}</span><span>${s.refs.length} 个工作空间引用</span></div>
+ ${s.status==='不可访问'?'<small class="source-issue">路径暂不可读，请确认目录已挂载及读取权限。</small>':''}<div class="source-actions"><button data-action="refs" data-index="${i}">查看引用</button><button data-action="edit" data-index="${i}">编辑</button><button class="source-check" data-action="check" data-index="${i}" ${s.checking?'disabled':''}>${s.checking?'验证中…':'访问验证'}</button></div></article>`).join('') || '<p>没有符合条件的知识来源。</p>';
+}
+function openEditor(index){
+ editing=index;
+ const source=sources[index];
+ $('editor-title').textContent=source?'编辑知识':'添加知识';
+ const form=$('source-form');
+ form.reset();
+ if(source) for(const key of ['name','kind','storage','path']) form.elements[key].value=source[key];
+ $('editor').showModal();
+}
+$('add').onclick=()=>openEditor(null);
+$('query').oninput=render;
+$('filters').onclick=event=>{
+ const button=event.target.closest('[data-status]');
+ if(button){filter=button.dataset.status;render();$('filters').querySelector('[aria-pressed="true"]').focus({preventScroll:true});}
+};
+document.querySelectorAll('[data-close]').forEach(button=>button.onclick=()=>button.closest('dialog').close());
+$('source-form').onsubmit=event=>{
+ event.preventDefault();
+ const form=event.currentTarget;
+ const name=form.elements.name.value.trim(),path=form.elements.path.value.trim();
+ if(!name || !path){$('editor-title').textContent='请填写名称和路径';return;}
+ const old=sources[editing];
+ const pathChanged=!old || old.path!==path || old.kind!==form.elements.kind.value || old.storage!==form.elements.storage.value;
+ const source={...old,name,path,kind:form.elements.kind.value,storage:form.elements.storage.value,status:pathChanged?'待检查':old.status,available:pathChanged?!path.startsWith('/Volumes/历史资料/'):old.available,refs:old?.refs||[]};
+ if(old)sources[editing]=source;else sources.unshift(source);
+ if(pathChanged) checkAccess(source);
+ $('editor').close();$('feedback').textContent=old?'来源已更新，原有引用保留。':'来源已登记，可供工作空间引用。';render();
+};
+$('sources').onclick=event=>{
+ const button=event.target.closest('[data-action]');
+ if(!button)return;
+ const i=Number(button.dataset.index),source=sources[i];
+ if(button.dataset.action==='check'){
+  source.previousStatus=source.status;
+  source.checking=true;
+  $('feedback').textContent=`正在验证「${source.name}」的访问状态…`;
+  checkAccess(source);
+  render();
+  return;
+ }
+ if(button.dataset.action==='edit'){openEditor(i);return;}
+ $('detail-title').textContent=source.name;
+  $('detail-body').innerHTML=source.refs.map(([space,scope,excluded])=>`<div class="source-scope"><strong>${escape(space)}</strong><div>引用范围：${escape(scope)}</div><div>排除项：${escape(excluded)}</div></div>`).join('') || '<p>目前没有工作空间引用。</p>';
+ $('detail').showModal();
+};
+sources.forEach(checkAccess);
+render();
+</script></html>

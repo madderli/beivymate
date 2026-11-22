@@ -1,3 +1,4 @@
+import KnowledgeSettings from "./features/skills/KnowledgeSettings";
 import ChatModelPicker from "./ChatModelPicker";
 import { WorkspaceCard } from "./WorkspaceCard";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -159,7 +160,7 @@ export default function AgentApp() {
       ? `workspace:${workspace.id}`
       : "global";
   const isLanding =
-    landingPages.includes(route.page) || route.page === "models";
+    landingPages.includes(route.page) || ["models", "knowledge"].includes(route.page);
   const isChat = ["workspace", "task", "start"].includes(route.page);
   const defaultId = board.defaultWorkspace || board.workspaces[0]?.id;
   useEffect(() => {
@@ -939,6 +940,7 @@ export default function AgentApp() {
                 </div>
               </>
             )}
+            {route.page === "knowledge" && can("configuration.manage") && <KnowledgeSettings />}
             {["skills", "models", "workflows"].includes(route.page) && (
               <SkillCenter embedded page={route.page} navigate={go} />
             )}
@@ -1212,6 +1214,9 @@ export default function AgentApp() {
               }}
             >
               模型配置
+            </button>
+            <button disabled={!can("configuration.manage")} onClick={() => { setDialog(""); go("knowledge"); }}>
+              知识库管理
             </button>
             <button
               disabled={!can("documents.manage")}
