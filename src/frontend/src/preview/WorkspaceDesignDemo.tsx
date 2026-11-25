@@ -8,8 +8,6 @@ const samples: WorkspaceDraft[] = [
     id: "HIS",
     name: "医院业务协同工作区",
     description: "围绕挂号、收费与医保结算，统一管理业务验证和跨产品协作。",
-    products: ["HIS · 医院信息系统", "CIS · 临床信息系统"],
-    projects: ["市一院 · 智慧医院建设", "市二院 · 门诊升级"],
     directories: [
       "/knowledge/hospital/requirements",
       "/knowledge/hospital/product-guides",
@@ -25,8 +23,6 @@ const samples: WorkspaceDraft[] = [
     id: "LIS",
     name: "检验业务工作区",
     description: "管理检验业务相关需求、项目资料与验证任务。",
-    products: ["LIS · 检验信息系统"],
-    projects: ["市一院 · 智慧医院建设"],
     directories: ["/knowledge/laboratory"],
     isDefault: false,
     pending: [],
@@ -78,8 +74,6 @@ export default function WorkspaceDesignDemo() {
               <h2>{w.name}</h2>
               <p>{w.description || "还没有添加描述"}</p>
               <div className="wsd-workspace-meta">
-                <span>{w.products.length} 个产品</span>
-                <span>{w.projects.length} 个项目</span>
                 <span>{w.directories.length} 个知识目录</span>
               </div>
               <footer>

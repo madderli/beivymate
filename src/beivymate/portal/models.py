@@ -24,6 +24,9 @@ class Draft(BaseModel):
 
 
 class WorkspaceDraft(Draft):
+    shortName: str = Field(default='', pattern=r'^(?:[A-Z0-9]{1,4})?$')
+    knowledgeSourceIds: list[Annotated[str, Field(pattern=r'^[0-9a-f]{32}$')]] = Field(default_factory=list, max_length=100)
+
     description: str = Field(default='', max_length=2000)
     products: list[Annotated[str, Field(min_length=1, max_length=120)]] = Field(default_factory=list, max_length=100)
     projects: list[Annotated[str, Field(min_length=1, max_length=120)]] = Field(default_factory=list, max_length=100)

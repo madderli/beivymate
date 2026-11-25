@@ -49,7 +49,7 @@ export function TaskEdit({
         }}
       >
         <p>
-          当前修改只用于后续新运行，不影响已有运行快照。关联任务可分别配置；标识和工作区归属保持不变。
+          当前修改只用于后续新运行，不影响已有运行快照。关联任务可分别配置；标识和工作空间归属保持不变。
         </p>
         <fieldset disabled={busy}>
           <label>
@@ -131,7 +131,7 @@ export function TaskEdit({
             <input
               name="outputDirectory"
               defaultValue={task.outputDirectory}
-              placeholder="留空继承工作区或个人设置"
+              placeholder="留空继承工作空间或个人设置"
             />
           </label>
           <label>

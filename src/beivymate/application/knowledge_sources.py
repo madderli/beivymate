@@ -13,7 +13,7 @@ from typing import Literal
 from uuid import uuid4
 
 from fastapi import APIRouter, Request
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from beivymate.identity.service import IdentityError
 
 
@@ -38,8 +38,56 @@ class SourceDraft(SourcePath):
     additional: list[SourcePath] = Field(default_factory=list, max_length=99)
 
 
+class KnowledgeSubgroup(BaseModel):
+    model_config = ConfigDict(extra='forbid', str_strip_whitespace=True)
+    name: str = Field(min_length=1, max_length=80)
+    paths: list[SourcePath] = Field(default_factory=list, max_length=100)
+
+
+class KnowledgeGroup(KnowledgeSubgroup):
+    children: list[KnowledgeSubgroup] = Field(default_factory=list, max_length=100)
+
+
+class GroupedSourceDraft(BaseModel):
+    model_config = ConfigDict(extra='forbid', str_strip_whitespace=True)
+    name: str = Field(min_length=1, max_length=80)
+    revision: int | None = None
+    groups: list[KnowledgeGroup] = Field(min_length=1, max_length=100)
+
+    @model_validator(mode='after')
+    def validate_groups(self):
+        def validate_siblings(groups):
+            if len({group.name.casefold() for group in groups}) != len(groups):
+                raise ValueError('同级分组名称不能重复')
+
+        validate_siblings(self.groups)
+        count = 0
+        for group in self.groups:
+            validate_siblings(group.children)
+            if not group.paths and not group.children:
+                raise ValueError('请为分组添加资料或子分组')
+            if any(not child.paths for child in group.children):
+                raise ValueError('请为子分组添加资料')
+            count += len(group.paths) + sum(len(child.paths) for child in group.children)
+        if count > 100:
+            raise ValueError('每个知识库最多登记 100 条资料路径')
+        return self
+
+
 class PathSelection(BaseModel):
     kind: Literal['file', 'directory']
+
+
+_picker_lock = Lock()
+
+
+def pick_local_path(kind):
+    if not _picker_lock.acquire(blocking=False):
+        raise IdentityError('已有文件选择窗口打开', 409)
+    try:
+        return select_path(kind)
+    finally:
+        _picker_lock.release()
 
 
 def select_path(kind):
@@ -103,8 +151,10 @@ def knowledge_source_router(root, portal, require):
             UNIQUE(owner, path)
         )""")
 
-        if not any(column['name'] == 'additional' for column in connection.execute('PRAGMA table_info(source)')):
-            connection.execute("ALTER TABLE source ADD COLUMN additional TEXT NOT NULL DEFAULT '[]'")
+        columns = {column['name'] for column in connection.execute('PRAGMA table_info(source)')}
+        for name, default in (('additional', '[]'), ('groups', '[]'), ('checked', '{}')):
+            if name not in columns:
+                connection.execute(f"ALTER TABLE source ADD COLUMN {name} TEXT NOT NULL DEFAULT '{default}'")
 
     def owner(request):
         return require(request, 'configuration.manage')['user']['id']
@@ -117,9 +167,30 @@ def knowledge_source_router(root, portal, require):
             raise IdentityError('知识来源不存在', 404)
         return row
 
+    def path_entries(row):
+        return [{'path': row['path'], 'kind': row['kind'], 'storage': row['storage']},
+                *json.loads(row['additional'])]
+
+    def access_result(row):
+        checked = json.loads(row['checked'])
+        results = [
+            {'path': entry['path'], **checked[entry['path']]}
+            for entry in path_entries(row) if entry['path'] in checked
+        ]
+        failures = [{'path': result['path'], 'message': result['message']}
+                    for result in results if not result['accessible']]
+        complete = len(results) == len(path_entries(row))
+        accessible = False if failures else True if complete else None
+        message = (f'{len(failures)} 条路径不可访问' if failures else
+                   '全部路径可读取' if complete else '有路径待验证')
+        return {'revision': row['revision'], 'accessible': accessible, 'message': message,
+                'failures': failures, 'results': results}
+
     def public(row):
-        return {**{key: row[key] for key in row.keys() if key != 'owner'},
-                'additional': json.loads(row['additional'])}
+        return {**{key: row[key] for key in row.keys() if key not in ('owner', 'checked')},
+                'additional': json.loads(row['additional']),
+                'groups': json.loads(row['groups']),
+                'access': access_result(row)}
 
     @router.get('')
     def listing(request: Request):
@@ -129,25 +200,24 @@ def knowledge_source_router(root, portal, require):
                 'SELECT * FROM source WHERE owner=? ORDER BY updated DESC, id', (actor,)
             )]}
 
-    picker_lock = Lock()
-
     @router.post('/pick-path')
     def pick_path(request: Request, draft: PathSelection):
         owner(request)
-        if not picker_lock.acquire(blocking=False):
-            raise IdentityError('已有文件选择窗口打开', 409)
-        try:
-            return {'path': select_path(draft.kind)}
-        finally:
-            picker_lock.release()
+        return {'path': pick_local_path(draft.kind)}
 
     def save(actor, draft, identity=None):
         now = datetime.now(timezone.utc).isoformat()
-        paths = [os.path.normcase(entry.path) for entry in [draft, *draft.additional]]
-        if len(set(paths)) != len(paths):
-            raise IdentityError('同一知识中不能重复添加路径', 409)
-        values = (draft.name, draft.kind, draft.storage, draft.path, now,
-                  json.dumps([entry.model_dump() for entry in draft.additional], ensure_ascii=False))
+        groups = draft.groups if isinstance(draft, GroupedSourceDraft) else []
+        entries = ([entry for group in groups for node in [group, *group.children] for entry in node.paths]
+                   if groups else [SourcePath(kind=draft.kind, storage=draft.storage, path=draft.path),
+                                   *draft.additional])
+        paths = {os.path.normcase(entry.path) for entry in entries}
+        if len(paths) != len(entries):
+            raise IdentityError('同一知识库不能重复添加路径', 409)
+        first, *additional = entries
+        values = (draft.name, first.kind, first.storage, first.path, now,
+                  json.dumps([entry.model_dump() for entry in additional], ensure_ascii=False),
+                  json.dumps([group.model_dump() for group in groups], ensure_ascii=False))
         try:
             with db() as connection:
                 connection.execute('BEGIN IMMEDIATE')
@@ -155,19 +225,25 @@ def knowledge_source_router(root, portal, require):
                     if row['id'] != identity and any(
                         os.path.normcase(entry) in paths for entry in source_paths(row)
                     ):
-                        raise IdentityError('该路径已登记，请编辑已有知识来源', 409)
+                        raise IdentityError('该路径已登记，请编辑已有知识库', 409)
                 if identity is None:
                     identity = uuid4().hex
                     connection.execute(
-                        'INSERT INTO source (id,owner,name,kind,storage,path,updated,additional,revision) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)',
+                        'INSERT INTO source (id,owner,name,kind,storage,path,updated,additional,groups,revision) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)',
                         (identity, actor, *values),
                     )
                 else:
-                    find(connection, actor, identity)
+                    old = find(connection, actor, identity)
+                    old_paths = {entry['path']: (entry['kind'], entry['storage']) for entry in path_entries(old)}
+                    checked = json.loads(old['checked'])
+                    retained = {
+                        entry.path: checked[entry.path] for entry in entries
+                        if entry.path in checked and old_paths.get(entry.path) == (entry.kind, entry.storage)
+                    }
                     result = connection.execute(
-                        """UPDATE source SET name=?,kind=?,storage=?,path=?,updated=?,additional=?,
+                        """UPDATE source SET name=?,kind=?,storage=?,path=?,updated=?,additional=?,groups=?,checked=?,
                         revision=revision+1 WHERE owner=? AND id=? AND revision=?""",
-                        (*values, actor, identity, draft.revision),
+                        (*values, json.dumps(retained, ensure_ascii=False), actor, identity, draft.revision),
                     )
                     if not result.rowcount:
                         raise IdentityError('来源已修改，请刷新后重试', 409)
@@ -176,11 +252,11 @@ def knowledge_source_router(root, portal, require):
             raise IdentityError('该路径已登记，请编辑已有知识来源', 409) from exc
 
     @router.post('', status_code=201)
-    def create(request: Request, draft: SourceDraft):
+    def create(request: Request, draft: SourceDraft | GroupedSourceDraft):
         return save(owner(request), draft)
 
     @router.put('/{identity}')
-    def update(identity: str, request: Request, draft: SourceDraft):
+    def update(identity: str, request: Request, draft: SourceDraft | GroupedSourceDraft):
         return save(owner(request), draft, identity)
 
     @router.post('/{identity}/access')
@@ -188,18 +264,21 @@ def knowledge_source_router(root, portal, require):
         actor = owner(request)
         with db() as connection:
             row = find(connection, actor, identity)
-        entries = [row, *json.loads(row['additional'])]
-        failures = [
-            {'path': entry['path'], 'message': message}
-            for entry in entries
-            if (message := probe(entry))
-        ]
-        return {'revision': row['revision'], 'accessible': not failures,
-                'message': f'{len(failures)} 条路径不可访问' if failures else '全部路径可读取',
-                'failures': failures}
+        checked = {}
+        for entry in path_entries(row):
+            message = probe(entry)
+            checked[entry['path']] = {'accessible': message is None, 'message': message}
+        with db() as connection:
+            updated = connection.execute(
+                'UPDATE source SET checked=? WHERE owner=? AND id=? AND revision=?',
+                (json.dumps(checked, ensure_ascii=False), actor, identity, row['revision']),
+            )
+            if not updated.rowcount:
+                raise IdentityError('知识库已修改，请重新执行访问验证', 409)
+            return access_result(find(connection, actor, identity))
 
     def source_paths(row):
-        return {row['path'], *(entry['path'] for entry in json.loads(row['additional']))}
+        return {entry['path'] for entry in path_entries(row)}
 
     def probe(row):
         path = Path(row['path'])
@@ -240,6 +319,9 @@ def knowledge_source_router(root, portal, require):
             ).fetchall()
             for row in rows:
                 workspace, _ = portal._read(row)
+                if identity in workspace.knowledgeSourceIds:
+                    items.append({'id': workspace.id, 'name': workspace.name, 'path': source['path']})
+                    continue
                 for value in workspace.knowledgeDirectories or [workspace.knowledge]:
                     if value and os.path.normpath(value) in paths:
                         items.append({'id': workspace.id, 'name': workspace.name, 'path': value})

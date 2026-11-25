@@ -82,6 +82,7 @@ export type SidebarWorkspace = {
   id: string;
   name: string;
   count?: number;
+  shortName?: string;
   isDefault?: boolean;
 };
 export default function ProductSidebar({
@@ -259,16 +260,16 @@ export default function ProductSidebar({
             >
               <button
                 className="ps-nav-item"
-                aria-label="工作区"
+                aria-label="工作空间"
                 aria-current={activePage === "workspaces" ? "page" : undefined}
                 onClick={() => navigate("workspaces")}
               >
                 <SidebarIcon name="workspaces" />
-                <span>工作区</span>
+                <span>工作空间</span>
               </button>
               <button
                 className={`ps-workspace-toggle ${expanded ? "expanded" : ""}`}
-                aria-label={expanded ? "收起工作区列表" : "展开工作区列表"}
+                aria-label={expanded ? "收起工作空间列表" : "展开工作空间列表"}
                 aria-expanded={expanded}
                 aria-controls="ps-workspace-list"
                 onClick={() => setExpanded(!expanded)}
@@ -291,7 +292,7 @@ export default function ProductSidebar({
                 >
                   <span className="ps-status-dot" />
                   <span className="ps-workspace-name">
-                    {w.id}{" "}
+                    {w.shortName ?? w.id}{" "}
                     {w.count !== undefined && (
                       <span className="ps-workspace-count">({w.count})</span>
                     )}
@@ -303,15 +304,15 @@ export default function ProductSidebar({
               {newWorkspace && (
                 <button
                   className="ps-new-workspace"
-                  aria-label="新增工作区"
+                  aria-label="新增工作空间"
                   disabled={!canCreate}
                   onClick={newWorkspace}
                 >
-                  ＋ 新建工作区
+                  ＋ 新建工作空间
                 </button>
               )}
               {!workspaces.length && (
-                <p className="ps-workspace-empty">还没有工作区</p>
+                <p className="ps-workspace-empty">还没有工作空间</p>
               )}
             </div>
           </section>

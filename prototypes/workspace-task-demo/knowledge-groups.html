@@ -1,0 +1,419 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>知识库管理 · 分组原型</title>
+<style>
+:root {
+  color-scheme: light;
+  --ink: #273932;
+  --muted: #647468;
+  --line: #dce5d7;
+  --green: #34715b;
+  --tint: #edf4e8;
+  --paper: #fff;
+  font: 14px/1.55 "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+}
+* { box-sizing: border-box; }
+body { margin: 0; color: var(--ink); background: #fafbf8; }
+body:has(dialog[open]) { overflow: hidden; }
+main { max-width: 1160px; margin: auto; padding: 34px clamp(16px, 4vw, 48px); }
+h1, h2, p, ul { margin: 0; }
+h1 { font-size: 30px; margin-block: 4px 6px; }
+.kicker { color: #668370; font-size: 11px; font-weight: 700; letter-spacing: .15em; }
+.muted, small { color: var(--muted); }
+.heading, .row, .toolbar { display: flex; align-items: center; gap: 12px; }
+.heading { justify-content: space-between; }
+button, input, select { font: inherit; color: inherit; }
+button { cursor: pointer; background: var(--paper); border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; }
+button:hover:not(:disabled) { background: var(--tint); }
+button:disabled { cursor: default; opacity: .5; }
+:focus-visible { outline: 2px solid #6b9a81; outline-offset: 2px; }
+.primary, .primary:hover:not(:disabled) { color: white; background: var(--green); border-color: var(--green); white-space: nowrap; }
+.primary:hover:not(:disabled) { background: #285e4b; }
+.danger, .error { color: #944638; }
+.toolbar { margin: 24px 0 14px; }
+.toolbar input { min-width: 0; flex: 1; }
+input, select { border: 1px solid var(--line); border-radius: 8px; padding: 9px 11px; background: var(--paper); }
+.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; align-items: stretch; }
+.card { min-width: 0; display: flex; flex-direction: column; gap: 10px; background: white; border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px 9px; }
+.card:hover { border-color: #b9cdbb; }
+.card h2 { min-width: 0; margin-right: auto; font-size: 15px; line-height: 1.45; }
+.ellipsis { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.icon-tile { flex: none; width: 36px; height: 36px; border-radius: 9px; display: grid; place-items: center; background: var(--tint); color: #557b60; }
+.icon-folder { display: block; width: 17px; height: 12px; border: 1.5px solid currentColor; border-radius: 2px; position: relative; }
+.icon-folder::before { content: ""; position: absolute; width: 7px; height: 3px; border: 1.5px solid currentColor; border-bottom: 0; border-radius: 2px 2px 0 0; left: -1.5px; bottom: 100%; }
+.icon-group { transform: translate(-2px, 1px); }
+.icon-group::after {
+  content: ""; position: absolute; inset: -5px -5px 4px 4px;
+  border-top: 1.5px solid currentColor; border-right: 1.5px solid currentColor;
+  border-radius: 0 3px 0 0;
+}
+.group-toggle { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; font-weight: 600; }
+.group-toggle input { accent-color: var(--green); }
+.group-fields { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; margin: 8px 0; min-width: 0; }
+.group-fields > .row { justify-content: space-between; margin-bottom: 6px; }
+.group-fields .group-fields { background: #fafcf8; }
+.group-fields .muted { font-size: 12px; }
+.group-preview { display: flex; align-items: center; gap: 7px; min-width: 0; }
+.group-preview .badge { flex: none; }
+.group-preview span:last-child { min-width: 0; }
+.filters { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.filters button { white-space: nowrap; }
+.filters button[aria-pressed="true"] { background: var(--tint); color: var(--green); border-color: #a8c4ae; }
+.filters small { margin-left: 4px; }
+.source-entry { padding: 10px; border: 1px solid var(--line); border-radius: 8px; margin-block: 8px; }
+.source-entry .field { margin-bottom: 6px; }
+.source-entry .row { justify-content: space-between; }
+.row .source-status { margin-left: auto; }
+@media (max-width: 730px) {
+  .toolbar { flex-wrap: wrap; }
+  .toolbar input { flex-basis: 100%; }
+}
+.badge { display: inline-block; flex: none; padding: 2px 7px; border-radius: 6px; font-size: 11px; white-space: nowrap; }
+.badge { background: #edf4e8; color: #426b51; }
+.badge.error { background: #f9efea; color: #944638; }
+.badge.pending { background: #f2f5ee; color: #53674f; }
+.card p { font-size: 12px; color: var(--muted); }
+.card-footer { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: auto; padding-top: 6px; border-top: 1px solid #e8eee3; }
+.text-button { border: 0; background: transparent; padding: 5px 2px; color: var(--green); font-size: 12px; }
+.card-footer .text-button:last-child { margin-left: auto; }
+.status-note:empty { display: none; }
+.status-note { margin-bottom: 10px; color: var(--green); }
+.empty { padding: 12px; color: var(--muted); }
+.grid > .empty { grid-column: 1 / -1; }
+dialog { width: min(640px, calc(100vw - 24px)); max-height: 86dvh; padding: 0; overflow: auto; border: 1px solid var(--line); border-radius: 14px; color: var(--ink); background: white; overscroll-behavior: contain; }
+dialog::backdrop { background: #293a3266; }
+dialog > header, dialog form > header { padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; gap: 10px; border-bottom: 1px solid #e8eee3; background: white; position: sticky; top: 0; z-index: 1; }
+dialog h2 { overflow-wrap: anywhere; font-size: 17px; }
+.close { border: 0; background: transparent; padding: 3px 8px; font-size: 20px; line-height: 1; }
+.dialog-body { padding: 14px 20px; }
+.dialog-footer { display: flex; justify-content: flex-end; gap: 8px; padding: 10px 20px; border-top: 1px solid #e8eee3; background: white; position: sticky; bottom: 0; }
+.field { display: grid; gap: 4px; margin-bottom: 12px; }
+.path-row { display: flex; gap: 6px; margin-block: 6px; }
+.path-row input { flex: 1; min-width: 0; }
+.list { list-style: none; padding: 0; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.list li { padding: 10px 12px; display: flex; align-items: center; gap: 10px; }
+.list li + li { border-top: 1px solid #e8eee3; }
+.list-label { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.list-label small { display: block; }
+.list-actions { display: flex; gap: 5px; flex: none; }
+#edit-error { margin-top: 6px; }
+#detail-summary:empty, #edit-error:empty { display: none; }
+#detail-summary { margin-bottom: 8px; }
+@media (max-width: 660px) { .grid { grid-template-columns: 1fr; } }
+@media (max-width: 440px) { .heading, .toolbar { align-items: stretch; flex-direction: column; } .heading button { align-self: flex-start; } }
+</style>
+<main>
+  <header class="heading">
+    <div><small class="kicker">KNOWLEDGE SETTINGS</small><h1>知识库管理</h1><p class="muted">集中组织和管理知识，为用户提供快速便捷的知识引用。</p></div>
+    <button id="add" class="primary">＋ 添加知识库</button>
+  </header>
+  <div class="toolbar">
+    <input id="search" type="search" aria-label="搜索知识库" placeholder="搜索名称或路径…">
+    <div id="filters" class="filters" role="group" aria-label="访问状态"></div>
+  </div>
+  <p id="notice" class="status-note" role="status"></p>
+  <div id="library" class="grid"></div>
+</main>
+
+<dialog id="details" aria-labelledby="details-title">
+  <header><h2 id="details-title"></h2><button class="close" aria-label="关闭" data-close="details">×</button></header>
+  <div class="dialog-body">
+    <p id="detail-summary" class="muted"></p>
+    <div id="detail-list"></div>
+  </div>
+  <footer class="dialog-footer"><button data-close="details">关闭</button></footer>
+</dialog>
+
+<dialog id="editor" aria-labelledby="editor-title">
+  <form id="knowledge-form">
+    <header><h2 id="editor-title"></h2><button type="button" class="close" aria-label="关闭" data-close="editor">×</button></header>
+    <div class="dialog-body">
+      <label class="field">知识库名称<input name="name" placeholder="例如 测试用例" required maxlength="80" autofocus></label>
+      <label class="group-toggle"><input type="checkbox" id="use-groups"> 分组</label>
+      <section id="independent-fields" aria-label="资料路径">
+        <div id="root-paths"></div>
+        <button type="button" class="text-button" id="add-root-path">＋ 添加文件或文件夹</button>
+      </section>
+      <section id="grouped-fields" aria-label="知识分组" hidden>
+        <small>可添加多个分组，每个分组可再添加一层子分组。</small>
+        <div id="root-groups"></div>
+        <button type="button" class="text-button" id="add-root-group">＋ 添加分组</button>
+      </section>
+      <p id="edit-error" class="error" role="alert"></p>
+    </div>
+    <footer class="dialog-footer"><button type="button" data-close="editor">取消</button><button class="primary">保存知识</button></footer>
+  </form>
+</dialog>
+
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const esc = value => String(value).replace(/[&<>"']/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[ch]);
+
+const node = (name, paths = [], accessible = null, workspaces = [], children = []) => ({
+  name, paths, accessible, workspaces, children,
+});
+const unavailable = {
+  ...node("住院测试用例", ["/knowledge/CIS/住院"], false, ["CIS 验收"]),
+  simulatedAvailability: false,
+};
+const libraries = [
+  {id:"k1", grouped:false, ...node("医学知识", ["/knowledge/医学知识"], true, ["医学研究"])},
+  {id:"k2", grouped:true, ...node("测试用例", [], null, [], [
+    node("CIS 测试用例", [], null, [], [
+      node("门诊测试用例", ["/knowledge/CIS/门诊/收费.xlsx","/knowledge/CIS/门诊/退费.xlsx"], null, ["CIS 验收","测试交付"]),
+      unavailable,
+    ]),
+    node("HIS 测试用例", ["/knowledge/HIS/测试用例"], true, ["HIS 质量验证","测试交付"]),
+  ])},
+  {id:"k3", grouped:false, ...node("测试规范", ["/knowledge/测试规范/交付规范.md","/knowledge/测试规范/模板"], true, ["测试交付"])},
+  {id:"k4", grouped:true, ...node("需求与原型", [], null, [], [
+    node("HIS 收费原型", ["/knowledge/HIS/需求/收费原型"], null, ["HIS 质量验证"]),
+  ])},
+];
+const libraryById = id => libraries.find(item => item.id === id);
+const matching = (value, query) => value.toLowerCase().includes(query);
+const icon = grouped => `<span class="icon-tile" aria-hidden="true"><i class="icon-folder${grouped ? " icon-group" : ""}"></i></span>`;
+const button = (action, id, text) => `<button type="button" class="text-button" data-action="${action}" data-id="${id}">${text}</button>`;
+const allNodes = item => [item, ...item.children.flatMap(allNodes)];
+const members = item => allNodes(item).filter(source => source.paths.length);
+const workspaces = items => [...new Set(items.flatMap(item => item.workspaces))];
+let nextId = libraries.length + 1;
+let editing, detailsView, filter = "";
+const checking = new Set();
+const checkFeedback = new Map();
+
+function access(items) {
+  const failed = items.filter(item => item.accessible === false).length;
+  const pending = items.filter(item => item.accessible === null).length;
+  const passed = items.length - failed - pending;
+  const counts = [
+    passed && passed + " 条可访问", failed && failed + " 条不可访问", pending && pending + " 条待验证",
+  ].filter(Boolean).join(" · ");
+  if (!items.length) return {style:"pending", label:"空分组", bucket:"", counts};
+  if (failed) {
+    const label = pending ? "有访问异常" : passed ? "部分不可访问" : "不可访问";
+    return {style:"error", label, bucket:"不可访问", counts};
+  }
+  if (pending) return {style:"pending", label:"待验证", bucket:"待验证", counts};
+  return {style:"", label:"可访问", bucket:"可访问", counts};
+}
+function card(item) {
+  const grouped = item.grouped;
+  const contents = members(item);
+  const status = access(contents);
+  const names = workspaces(contents);
+  const preview = grouped ? item.children.map(child => child.name).join("、") : item.paths[0];
+  return `<article class="card">
+    <header class="row">${icon(grouped)}<h2 class="ellipsis" title="${esc(item.name)}">${esc(item.name)}</h2><span class="badge ${status.style}">${checking.has(item.id) ? "验证中…" : status.label}</span></header>
+    <p class="group-preview">
+      ${grouped ? `<span class="badge pending">${item.children.length} 个分组</span>` : ""}
+      <span class="ellipsis" title="${esc(preview)}">${esc(preview)}</span>
+    </p>
+    <p class="ellipsis" title="${esc(grouped ? status.counts : "")}">${grouped ? status.counts || "暂无知识" : item.paths.length+" 条资料路径"}</p>
+    <p class="ellipsis" title="${esc(names.join("、"))}">引用工作空间：${esc(names.join("、") || "暂无引用")}</p>
+    ${checkFeedback.has(item.id) ? `<p role="status">${esc(checkFeedback.get(item.id))}</p>` : ""}
+    <footer class="card-footer">${button("view",item.id,"查看资料")}${button("refs",item.id,"查看引用")}${button("edit",item.id,"编辑知识库")}${button("check",item.id,checking.has(item.id) ? "验证中…" : "访问验证")}</footer>
+  </article>`;
+}
+function render() {
+  const query = $("search").value.trim().toLowerCase();
+  const items = libraries;
+  const matches = items.filter(item => {
+    return allNodes(item).flatMap(source => [source.name, ...source.paths])
+      .some(value => matching(value,query));
+  });
+  $("filters").innerHTML = ["","可访问","不可访问","待验证"].map(status => {
+    const count = items.filter(item => !status || access(members(item)).bucket === status).length;
+    return `<button type="button" data-action="filter" data-id="${status}" aria-pressed="${filter === status}">${status || "全部"} <small>${count}</small></button>`;
+  }).join("");
+  const visible = matches.filter(item => !filter || access(members(item)).bucket === filter);
+  $("library").innerHTML = visible.length ? visible.map(card).join("")
+    : '<p class="empty">没有符合条件的知识。</p>';
+  if ($("details").open) renderDetails();
+}
+function list(rows, empty) {
+  return rows.length ? `<ul class="list">${rows.join("")}</ul>` : `<p class="empty">${empty}</p>`;
+}
+function listRow(name, subtitle, actions = "", grouped = false) {
+  return `<li>${icon(grouped)}<div class="list-label"><strong>${esc(name)}</strong>${subtitle ? `<small>${esc(subtitle)}</small>` : ""}</div>${actions ? `<div class="list-actions">${actions}</div>` : ""}</li>`;
+}
+function showDetails(item, mode = "view") {
+  detailsView = {id:item.id, mode};
+  renderDetails();
+  if (!$("details").open) $("details").showModal();
+}
+function renderDetails() {
+  const item = libraryById(detailsView.id);
+  if (!item) { $("details").close(); return; }
+  const {mode} = detailsView;
+  const grouped = item.grouped;
+  const contents = members(item);
+  $("details-title").textContent = item.name + (mode === "refs" ? " · 工作空间引用" : " · 全部资料");
+  let rows;
+  let empty;
+  if (mode === "refs") {
+    $("detail-summary").textContent = grouped ? "以下工作空间通过组内知识条目建立引用。" : "";
+    rows = workspaces(contents).map(name => listRow(name, grouped ? contents.filter(source => source.workspaces.includes(name)).map(source => source.name).join("、") : "已引用此知识"));
+    empty = "暂无工作空间引用此知识。";
+  } else if (grouped) {
+    $("detail-summary").textContent = access(contents).counts;
+    rows = contents.map(child => {
+      const paths = child.paths.map(path => `<small>${esc(path)}</small>`).join("");
+      const status = access([child]);
+      return `<li>${icon(false)}<div class="list-label"><strong>${esc(child.name)}</strong>${paths}</div><span class="badge ${status.style} source-status">${status.label}</span></li>`;
+    });
+    empty = "此分组暂无资料。";
+  } else {
+    $("detail-summary").textContent = access([item]).label;
+    rows = item.paths.map(path => listRow(path.split(/[/\\]/).filter(Boolean).at(-1) || path,path));
+    empty = "暂无资料路径。";
+  }
+  $("detail-list").innerHTML = list(rows,empty);
+}
+
+const form = $("knowledge-form");
+const useGroups = $("use-groups");
+
+function addPath(container, value = "") {
+  const row = document.createElement("div");
+  row.className = "path-row";
+  row.innerHTML = '<input name="path" aria-label="资料路径" placeholder="输入文件或文件夹的绝对路径"><button type="button" aria-label="移除路径">×</button>';
+  row.querySelector("input").value = value;
+  row.querySelector("button").onclick = () => {
+    if (container.children.length > 1) row.remove();
+    else row.querySelector("input").value = "";
+  };
+  container.append(row);
+}
+function addGroup(container, depth, original) {
+  const field = document.createElement("section");
+  field.className = "group-fields";
+  field.setAttribute("aria-label", depth === 1 ? "分组" : "子分组");
+  field.innerHTML = `
+    <div class="row"><strong>${depth === 1 ? "分组" : "子分组"}</strong><button type="button" class="text-button remove-group">移除</button></div>
+    <label class="field">分组名称<input name="group-name" maxlength="80" placeholder="例如 ${depth === 1 ? "CIS 测试用例" : "门诊"}"></label>
+    <div class="group-paths"></div>
+    <button type="button" class="text-button add-path">＋ 添加文件或文件夹</button>
+    ${depth === 1 ? '<div class="subgroups"></div><button type="button" class="text-button add-subgroup">＋ 添加子分组</button>' : ""}
+  `;
+  field.original = original;
+  field.querySelector("input").value = original?.name ?? "";
+  const paths = field.querySelector(".group-paths");
+  (original?.paths.length ? original.paths : [""]).forEach(path => addPath(paths,path));
+  field.querySelector(".add-path").onclick = () => addPath(paths);
+  field.querySelector(".remove-group").onclick = () => field.remove();
+  if (depth === 1) {
+    const subgroups = field.querySelector(".subgroups");
+    (original?.children ?? []).forEach(child => addGroup(subgroups,2,child));
+    field.querySelector(".add-subgroup").onclick = () => addGroup(subgroups,2).querySelector("input").focus();
+  }
+  container.append(field);
+  return field;
+}
+function syncEditor() {
+  $("independent-fields").hidden = useGroups.checked;
+  $("grouped-fields").hidden = !useGroups.checked;
+  if (useGroups.checked && !$("root-groups").children.length) addGroup($("root-groups"),1);
+}
+function edit(item) {
+  editing = item;
+  form.reset();
+  $("edit-error").textContent = "";
+  $("editor-title").textContent = item ? "编辑知识库" : "添加知识库";
+  form.elements.name.value = item?.name ?? "";
+  useGroups.checked = item?.grouped ?? false;
+  $("root-paths").replaceChildren();
+  $("root-groups").replaceChildren();
+  (item?.paths.length ? item.paths : [""]).forEach(path => addPath($("root-paths"),path));
+  (item?.children ?? []).forEach(child => addGroup($("root-groups"),1,child));
+  syncEditor();
+  $("editor").showModal();
+}
+useGroups.onchange = syncEditor;
+$("add-root-path").onclick = () => addPath($("root-paths"));
+$("add-root-group").onclick = () => addGroup($("root-groups"),1).querySelector("input").focus();
+
+function readPaths(container) {
+  const paths = [...container.querySelectorAll("input")].map(input => input.value.trim()).filter(Boolean);
+  if (paths.some(path => !/^(\/|[a-z]:[/\\]|\\\\)/i.test(path)) || new Set(paths).size !== paths.length) {
+    throw new Error("请填写有效的绝对路径，同一分组内的路径不能重复。");
+  }
+  return paths;
+}
+function readGroups(container) {
+  return [...container.children].map(field => {
+    const name = field.querySelector('[name="group-name"]').value.trim();
+    if (!name) throw new Error("请填写每个分组的名称。");
+    const paths = readPaths(field.querySelector(".group-paths"));
+    const subgroups = field.querySelector(".subgroups");
+    const children = subgroups ? readGroups(subgroups) : [];
+    if (!paths.length && !children.length) throw new Error(`请为「${name}」添加资料或子分组。`);
+    return updatedNode(name,paths,children,field.original);
+  });
+}
+function updatedNode(name, paths, children, original) {
+  const samePaths = original && JSON.stringify(original.paths) === JSON.stringify(paths);
+  return {
+    ...node(name, paths, samePaths ? original.accessible : null, original?.workspaces ?? [], children),
+    simulatedAvailability: samePaths ? original.simulatedAvailability : undefined,
+  };
+}
+form.onsubmit = event => {
+  event.preventDefault();
+  const name = form.elements.name.value.trim();
+  try {
+    if (!name) throw new Error("请填写知识库名称。");
+    const grouped = useGroups.checked;
+    const paths = grouped ? [] : readPaths($("root-paths"));
+    const children = grouped ? readGroups($("root-groups")) : [];
+    if (grouped && !children.length) throw new Error("请至少添加一个分组。");
+    if (!grouped && !paths.length) throw new Error("请至少添加一个文件或文件夹。");
+    const draft = updatedNode(name,paths,children,editing);
+    const id = editing?.id ?? "k" + nextId++;
+    if (editing) Object.assign(editing,{...draft,grouped});
+    else libraries.push({id,...draft,grouped});
+    checkFeedback.delete(id);
+    $("editor").close();
+    $("notice").textContent = "知识库已保存。";
+    render();
+  } catch (error) {
+    $("edit-error").textContent = error.message;
+  }
+};
+
+$("add").onclick = () => edit();
+$("search").oninput = render;
+document.addEventListener("click", event => {
+  const control = event.target.closest("button");
+  if (!control) return;
+  const {close,action,id} = control.dataset;
+  if (close) $(close).close();
+  if (!action) return;
+  if (action === "filter") {
+    filter = id;
+    render();
+    [...$("filters").children].find(button => button.dataset.id === filter)?.focus();
+    return;
+  }
+  const item = libraryById(id);
+  if (action === "view" || action === "refs") showDetails(item,action);
+  if (action === "edit") edit(item);
+  if (action === "check" && !checking.has(id)) {
+    checking.add(id);
+    checkFeedback.delete(id);
+    render();
+    setTimeout(() => {
+      const targets = members(item);
+      targets.forEach(source => { source.accessible = source.simulatedAvailability ?? true; });
+      checking.delete(id);
+      checkFeedback.set(id,"模拟验证完成 · " + access(targets).counts);
+      render();
+    }, 450);
+  }
+});
+render();
+</script>
+</html>

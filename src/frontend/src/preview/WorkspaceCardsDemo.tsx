@@ -24,8 +24,6 @@ const initialWorkspaces: CardWorkspace[] = [
     name: "医院挂号、收费与医保业务协同工作区",
     description:
       "围绕挂号、收费、医保结算和跨产品数据一致性，统一管理业务验证、需求资料与项目协作。",
-    products: ["HIS · 医院信息系统", "CIS · 临床信息系统"],
-    projects: ["市一院 · 智慧医院建设"],
     directories: [
       "/knowledge/hospital/requirements",
       "/knowledge/hospital/product-guides",
@@ -48,8 +46,6 @@ const initialWorkspaces: CardWorkspace[] = [
     id: "CIS",
     name: "临床业务工作区",
     description: "连接门诊与住院诊疗流程，持续推进医嘱、病历与临床业务验证。",
-    products: ["CIS · 临床信息系统"],
-    projects: ["市二院 · 门诊升级", "市三院 · 住院改造"],
     directories: [
       "/knowledge/clinical/requirements",
       "/knowledge/clinical/guides",
@@ -66,8 +62,6 @@ const initialWorkspaces: CardWorkspace[] = [
     id: "LIS",
     name: "检验业务工作区",
     description: "管理检验申请、标本流转和报告复核的业务资料与验证工作。",
-    products: ["LIS · 检验信息系统"],
-    projects: ["市一院 · 智慧医院建设"],
     directories: ["/knowledge/laboratory"],
     isDefault: false,
     enabled: true,
@@ -78,8 +72,6 @@ const initialWorkspaces: CardWorkspace[] = [
     id: "EDIS",
     name: "急诊业务工作区",
     description: "围绕急诊分诊与绿色通道开展业务验证，当前阶段的任务均已关闭。",
-    products: ["EDIS · 急诊信息系统"],
-    projects: [],
     directories: ["/knowledge/emergency"],
     isDefault: false,
     enabled: false,

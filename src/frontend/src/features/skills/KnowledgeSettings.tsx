@@ -1,31 +1,72 @@
-import { useEffect, useRef, useState } from "react";
-import { FileText, Folder, FolderOpen, LoaderCircle, Plus, Search, X } from "lucide-react";
+import { useEffect, useState } from "react";
+import { FileText, Folder, Folders, Plus, Search } from "lucide-react";
 import { request } from "../../api";
+import { formatModifiedTime } from "../formatModifiedTime";
 import { Dialog } from "../../components";
+import KnowledgeEditor, { type KnowledgeDraft, type KnowledgeGroup, type SourcePath } from "./KnowledgeEditor";
 import "../../preview/model-settings.css";
 import "./knowledge-settings.css";
 
-type SourcePath = {
-  kind: "file" | "directory";
-  storage: "local" | "shared";
-  path: string;
-};
 type Source = SourcePath & {
   id: string;
   name: string;
   revision: number;
+  updated: string;
   additional: SourcePath[];
+  groups: KnowledgeGroup[];
+  access: Access;
 };
-type Draft = { name: string; paths: SourcePath[]; revision?: number };
 type Access = {
   revision: number;
-  accessible: boolean;
+  accessible: boolean | null;
   message: string;
   checkedAt?: string;
   failures: { path: string; message: string }[];
+  results: { path: string; accessible: boolean }[];
 };
-const emptyPath: SourcePath = { kind: "directory", storage: "local", path: "" };
-const pathsFor = (source: Source) => [source, ...source.additional];
+const pathsFor = (source: Source) => [
+  { kind: source.kind, storage: source.storage, path: source.path },
+  ...source.additional,
+];
+
+function sectionsFor(source: Source) {
+  return source.groups.flatMap((group) => [
+    ...(group.paths.length ? [{ name: group.name, paths: group.paths }] : []),
+    ...group.children.map((child) => ({ name: `${group.name} / ${child.name}`, paths: child.paths })),
+  ]);
+}
+
+function pathStatus(paths: SourcePath[], access: Access) {
+  const results = new Map(access.results.map(({ path, accessible }) => [path, accessible]));
+  if (paths.some(({ path }) => results.get(path) === false)) return "不可访问";
+  return paths.every(({ path }) => results.get(path) === true) ? "可访问" : "待验证";
+}
+
+function statusFor(source: Source) {
+  if (!source.groups.length) {
+    return { label: pathStatus(pathsFor(source), source.access), summary: "" };
+  }
+  const states = sectionsFor(source).map(({ paths }) => pathStatus(paths, source.access));
+  const ready = states.filter((state) => state === "可访问").length;
+  const failed = states.filter((state) => state === "不可访问").length;
+  const pending = states.length - ready - failed;
+  const label = failed
+    ? pending ? "有访问异常" : ready ? "部分不可访问" : "不可访问"
+    : pending ? "待验证" : "可访问";
+  const summary = [
+    ready ? `${ready} 条可访问` : "",
+    failed ? `${failed} 条不可访问` : "",
+    pending ? `${pending} 条待验证` : "",
+  ].filter(Boolean).join(" · ");
+  return { label, summary };
+}
+
+function belongsToFilter(source: Source, filter: string) {
+  if (!filter) return true;
+  const { label } = statusFor(source);
+  return filter === "不可访问" ? ["不可访问", "部分不可访问", "有访问异常"].includes(label) : label === filter;
+}
+
 type Reference = { id: string; name: string; path: string };
 const errorText = (error: unknown) =>
   error instanceof Error ? error.message : "操作失败，请重试。";
@@ -75,179 +116,88 @@ function WorkspaceReferences({ id, revision }: { id: string; revision: number })
 
 export default function KnowledgeSettings() {
   const [items, setItems] = useState<Source[]>([]);
-  const [access, setAccess] = useState<Record<string, Access>>({});
   const [checking, setChecking] = useState<Record<string, boolean>>({});
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("");
   const [loading, setLoading] = useState(true);
   const [issue, setIssue] = useState("");
   const [feedback, setFeedback] = useState("");
-  const [editor, setEditor] = useState<{ id?: string; draft: Draft }>();
-  const [editorError, setEditorError] = useState("");
-  const [browseIndex, setBrowseIndex] = useState<number>();
-  const [saving, setSaving] = useState(false);
-  const [viewing, setViewing] = useState<Source>();
+  const [editor, setEditor] = useState<Source | "new">();
+  const [viewingId, setViewingId] = useState<string>();
+  const viewing = items.find(({ id }) => id === viewingId);
   const [accessErrors, setAccessErrors] = useState<Record<string, string>>({});
   const [references, setReferences] = useState<{
+    id: string;
     name: string;
     items?: Reference[];
     error?: string;
   }>();
-  const checks = useRef(new Map<string, symbol>());
-  const manuallyChecked = useRef(new Map<string, number>());
-  const [manualChecking, setManualChecking] = useState<Record<string, boolean>>({});
-
-  async function verify(source: Source, manual = false) {
-    if (!manual && manuallyChecked.current.get(source.id) === source.revision) return;
-    if (manual) {
-      manuallyChecked.current.set(source.id, source.revision);
-      setManualChecking((old) => ({ ...old, [source.id]: true }));
-    }
-    const token = Symbol();
-    checks.current.set(source.id, token);
+  async function verify(source: Source) {
     setAccessErrors((old) => ({ ...old, [source.id]: "" }));
     setChecking((old) => ({ ...old, [source.id]: true }));
     try {
-      const result = await request<Access>(
-        `/knowledge-sources/${source.id}/access`,
-        { method: "POST" },
-      );
-      if (checks.current.get(source.id) !== token) return;
-      setAccess((old) => ({ ...old, [source.id]: { ...result, checkedAt: manual ? new Date().toLocaleTimeString("zh-CN") : undefined } }));
+      const result = await request<Access>(`/knowledge-sources/${source.id}/access`, { method: "POST" });
+      const checkedAt = new Date().toISOString();
+      setItems((old) => old.map((item) =>
+        item.id === source.id && item.revision === result.revision
+          ? { ...item, access: { ...result, checkedAt } }
+          : item,
+      ));
     } catch (error) {
-      if (checks.current.get(source.id) === token && manual)
-        setAccessErrors((old) => ({ ...old, [source.id]: errorText(error) }));
+      setAccessErrors((old) => ({ ...old, [source.id]: errorText(error) }));
     } finally {
-      if (manual) setManualChecking((old) => ({ ...old, [source.id]: false }));
-      if (checks.current.get(source.id) === token) {
-        checks.current.delete(source.id);
-        setChecking((old) => ({ ...old, [source.id]: false }));
-      }
+      setChecking((old) => ({ ...old, [source.id]: false }));
     }
   }
 
   useEffect(() => {
-    let active = true;
-    void request<{ items: Source[] }>("/knowledge-sources")
-      .then(async (result) => {
-        if (!active) return;
-        setItems(result.items);
-        setLoading(false);
-        // Avoid probing every shared mount concurrently.
-        for (const source of result.items) {
-          if (!active) break;
-          await verify(source);
-        }
-      })
+    const controller = new AbortController();
+    void request<{ items: Source[] }>("/knowledge-sources", { signal: controller.signal })
+      .then(({ items }) => { setItems(items); setLoading(false); })
       .catch((error) => {
-        if (active) {
-          setIssue(errorText(error));
-          setLoading(false);
-        }
+        if (!controller.signal.aborted) { setIssue(errorText(error)); setLoading(false); }
       });
-    const pending = checks.current;
-    return () => {
-      active = false;
-      pending.clear();
-    };
+    return () => controller.abort();
   }, []);
 
-  const resultFor = (source: Source) =>
-    access[source.id]?.revision === source.revision
-      ? access[source.id]
-      : undefined;
-  const statusFor = (source: Source) => {
-    const result = resultFor(source);
-    return result ? (result.accessible ? "可访问" : "不可访问") : "待检查";
-  };
-  const shown = items.filter(
-    (source) =>
-      (!filter || statusFor(source) === filter) &&
-      [source.name, ...pathsFor(source).map((entry) => entry.path)].join(" ")
-        .toLowerCase()
-        .includes(query.trim().toLowerCase()),
+  const shown = items.filter((source) =>
+    belongsToFilter(source, filter) &&
+    [source.name, ...sectionsFor(source).map(({ name }) => name), ...pathsFor(source).map((entry) => entry.path)]
+      .join(" ").toLowerCase().includes(query.trim().toLowerCase()),
   );
-  async function save() {
-    if (!editor || saving || browseIndex !== undefined) return;
-    const { name, revision, paths: [first, ...additional] } = editor.draft;
-    setSaving(true);
-    setEditorError("");
-    try {
-      const value = await request<Source>(
-        "/knowledge-sources" + (editor.id ? "/" + editor.id : ""),
-        {
-          method: editor.id ? "PUT" : "POST",
-          body: JSON.stringify({ name, revision, ...first, additional }),
-        },
-      );
-      setItems((old) => [
-        value,
-        ...old.filter((source) => source.id !== value.id),
-      ]);
-      setEditor(undefined);
-      setBrowseIndex(undefined);
-      setFeedback("知识已保存。");
-      void verify(value);
-    } catch (error) {
-      setEditorError(errorText(error));
-    } finally {
-      setSaving(false);
-    }
+
+  async function save(draft: KnowledgeDraft) {
+    const id = editor && editor !== "new" ? editor.id : undefined;
+    const { name, revision, groups, paths: [first, ...additional] } = draft;
+    const value = await request<Source>("/knowledge-sources" + (id ? "/" + id : ""), {
+      method: id ? "PUT" : "POST",
+      body: JSON.stringify(groups.length ? { name, revision, groups } : { name, revision, ...first, additional }),
+    });
+    setItems((old) => [value, ...old.filter((source) => source.id !== value.id)]);
+    setAccessErrors((old) => ({ ...old, [value.id]: "" }));
+    setEditor(undefined);
+    setFeedback("知识库已保存。");
   }
 
   function openReferences(source: Source) {
-    setReferences({ name: source.name });
+    setReferences({ id: source.id, name: source.name });
     void request<{ items: Reference[] }>(
       `/knowledge-sources/${source.id}/references`,
     )
       .then((result) =>
         setReferences((old) =>
-          old?.name === source.name
-            ? { name: source.name, items: result.items }
+          old?.id === source.id
+            ? { ...old, items: result.items }
             : old,
         ),
       )
       .catch((error) =>
         setReferences((old) =>
-          old?.name === source.name
-            ? { name: source.name, error: errorText(error) }
+          old?.id === source.id
+            ? { ...old, error: errorText(error) }
             : old,
         ),
       );
-  }
-
-  function patch(value: Partial<Draft>) {
-    setEditor((old) =>
-      old ? { ...old, draft: { ...old.draft, ...value } } : old,
-    );
-  }
-
-  function patchPath(index: number, value: Partial<SourcePath>) {
-    if (!editor) return;
-    patch({ paths: editor.draft.paths.map((entry, i) => i === index ? { ...entry, ...value } : entry) });
-  }
-
-  async function browse(index: number, kind: SourcePath["kind"]) {
-    setBrowseIndex(index);
-    setEditorError("");
-    try {
-      const { path } = await request<{ path: string | null }>(
-        "/knowledge-sources/pick-path",
-        { method: "POST", body: JSON.stringify({ kind }) },
-        310_000,
-      );
-      if (path) patchPath(index, { path });
-    } catch (error) {
-      setEditorError(errorText(error));
-    } finally {
-      setBrowseIndex(undefined);
-    }
-  }
-
-  function closeEditor() {
-    if (saving || browseIndex !== undefined) return;
-    setEditor(undefined);
-    setBrowseIndex(undefined);
   }
 
   return (
@@ -261,13 +211,10 @@ export default function KnowledgeSettings() {
           </div>
           <button
             className="ad-primary homepage-heading-action"
-            onClick={() => {
-              setEditorError("");
-              setEditor({ draft: { name: "", paths: [emptyPath] } });
-            }}
+            onClick={() => setEditor("new")}
           >
             <Plus size={16} />
-            添加知识
+            添加知识库
           </button>
         </header>
         {issue && (
@@ -291,7 +238,7 @@ export default function KnowledgeSettings() {
             />
           </label>
           <div className="sc-source-filter" aria-label="访问状态">
-            {["", "可访问", "不可访问", "待检查"].map((status) => (
+            {["", "可访问", "不可访问", "待验证"].map((status) => (
               <button
                 key={status}
                 className={filter === status ? "active" : ""}
@@ -302,7 +249,7 @@ export default function KnowledgeSettings() {
                 <span>
                   {
                     items.filter(
-                      (source) => !status || statusFor(source) === status,
+                      (source) => belongsToFilter(source, status),
                     ).length
                   }
                 </span>
@@ -313,66 +260,62 @@ export default function KnowledgeSettings() {
         {loading ? (
           <p role="status">正在读取知识库…</p>
         ) : (
-          <div className="sc-grid">
+          <div className="sc-grid ks-grid">
             {shown.map((source) => {
-              const Icon = source.kind === "file" ? FileText : Folder;
-              const status = statusFor(source);
+              const grouped = source.groups.length > 0;
+              const Icon = grouped ? Folders : Folder;
+              const paths = pathsFor(source);
+              const { label: status, summary } = statusFor(source);
+              const preview = grouped ? source.groups.map(({ name }) => name).join("、") : source.path;
               return (
                 <article className="sc-card ks-card" key={source.id}>
                   <header className="sc-card-head ks-card-heading">
-                    <span className="sc-skill-icon">
+                    <span className={`sc-skill-icon${grouped ? " ks-group-icon" : ""}`}>
                       <Icon size={20} />
                     </span>
                     <div className="sc-card-title"><h2>{source.name}</h2></div>
-                    <span role="status" className={status === "不可访问" ? "ks-status ks-error" : "ks-status"}>
+                    <span role="status" className={belongsToFilter(source, "不可访问") ? "ks-status ks-error" : "ks-status"}>
                       {checking[source.id] ? "验证中…" : accessErrors[source.id] ? "验证失败" : status}
                     </span>
                   </header>
-                  <p className="ks-card-preview" title={source.path}>{source.path}</p>
-                  <div className="sc-card-tags">
-                    <span>{source.additional.length ? `${pathsFor(source).length} 个文件或文件夹` : source.kind === "file" ? "文件" : "文件夹"}</span>
-                    <span>
-                      {pathsFor(source).some((entry) => entry.storage !== source.storage) ? "本机与共享存储" : source.storage === "local" ? "本机存储" : "共享存储"}
-                    </span>
+                  <div className="ks-card-preview-line">
+                    {grouped && <span className="ks-group-count">{source.groups.length} 个分组</span>}
+                    <p className="ks-card-preview" title={preview}>{preview}</p>
                   </div>
-                  <WorkspaceReferences id={source.id} revision={source.revision} />
-                  <div className="ks-access-result" role="status">
-                    {checking[source.id]
-                      ? "正在验证资料路径…"
-                      : accessErrors[source.id] || (
-                        resultFor(source)?.checkedAt
-                          ? `访问验证完成 · ${resultFor(source)?.message} · ${resultFor(source)?.checkedAt}`
-                          : status === "不可访问" ? resultFor(source)?.message : ""
-                      )}
+                  <div className="sc-card-tags">
+                    <span>{paths.length > 1 ? `${paths.length} 个文件或文件夹` : source.kind === "file" ? "1 个文件" : "1 个文件夹"}</span>
+                    <span>{paths.some((entry) => entry.storage !== source.storage)
+                      ? "本机与共享存储"
+                      : source.storage === "local" ? "本机存储" : "共享存储"}</span>
+                  </div>
+                  <div className="sc-card-metrics ks-card-metrics">
+                    <WorkspaceReferences id={source.id} revision={source.revision} />
+                    <time className="sc-modified-time" dateTime={source.updated} title="最后修改时间">
+                      最后修改：{formatModifiedTime(source.updated)}
+                    </time>
+                  </div>
+                  <div className="sc-card-metrics ks-card-metrics ks-access-result" role="status">
+                    {(checking[source.id] || accessErrors[source.id] || source.access.checkedAt || summary || status === "不可访问") && (
+                      <span>{checking[source.id]
+                        ? "正在验证资料路径…"
+                        : accessErrors[source.id] || (
+                          source.access.checkedAt
+                            ? `访问验证完成 · ${summary || source.access.message}`
+                            : summary ? `访问验证 · ${summary}` : source.access.message
+                        )}</span>
+                    )}
+                    {source.access.checkedAt && !checking[source.id] && (
+                      <time className="sc-modified-time" dateTime={source.access.checkedAt} title="最近一次验证完成时间">
+                        验证时间：{formatModifiedTime(source.access.checkedAt)}
+                      </time>
+                    )}
                   </div>
                   <footer>
-                    <button onClick={() => setViewing(source)}>查看全部资料</button>
-                    <button onClick={() => openReferences(source)}>
-                      查看引用
-                    </button>
-                    <button
-                      onClick={() => {
-                        setEditorError("");
-                        setEditor({
-                          id: source.id,
-                          draft: {
-                            name: source.name,
-                            revision: source.revision,
-                            paths: pathsFor(source).map(({ kind, storage, path }) => ({ kind, storage, path })),
-                          },
-                        });
-                      }}
-                    >
-                      编辑
-                    </button>
-                    <button
-                      disabled={manualChecking[source.id]}
-                      onClick={() => {
-                        setIssue("");
-                        void verify(source, true);
-                      }}
-                    >
-                      {manualChecking[source.id] ? "验证中…" : "访问验证"}
+                    <button onClick={() => setViewingId(source.id)}>查看资料</button>
+                    <button onClick={() => openReferences(source)}>查看引用</button>
+                    <button disabled={checking[source.id]} onClick={() => setEditor(source)}>编辑知识库</button>
+                    <button disabled={checking[source.id]} onClick={() => void verify(source)}>
+                      {checking[source.id] ? "验证中…" : "访问验证"}
                     </button>
                   </footer>
                 </article>
@@ -389,101 +332,31 @@ export default function KnowledgeSettings() {
         )}
       </div>
       {editor && (
-        <Dialog
-          title={editor.id ? "编辑知识" : "添加知识"}
-          className="mr-dialog"
-          close={() => {
-            if (!saving) closeEditor();
+        <KnowledgeEditor key={editor === "new" ? "new" : editor.id}
+          id={editor === "new" ? undefined : editor.id}
+          initial={editor === "new" ? undefined : {
+            name: editor.name,
+            revision: editor.revision,
+            paths: editor.groups.length ? [] : pathsFor(editor),
+            groups: editor.groups,
           }}
-        >
-          <form
-            id="knowledge-source-form"
-            className="sc-form mr-dialog-body ks-editor-form"
-            onSubmit={(event) => {
-              event.preventDefault();
-              void save();
-            }}
-          >
-            <label>
-              <span className="mr-field-label">名称 <span className="mr-required" aria-hidden="true">*</span></span>
-              <input
-                required
-                maxLength={80}
-                value={editor.draft.name}
-                onChange={(event) => patch({ name: event.target.value })}
-              />
-            </label>
-            {editor.draft.paths.map((entry, index) => (
-              <fieldset className="ks-entry" key={index} disabled={saving || browseIndex !== undefined}>
-                <legend>资料 {index + 1}</legend>
-                <div className="ks-entry-controls">
-                  <label>
-                    <span className="mr-field-label">资料类型</span>
-                    <select value={entry.kind} onChange={(event) => patchPath(index, { kind: event.target.value as SourcePath["kind"] })}>
-                      <option value="directory">文件夹</option>
-                      <option value="file">文件</option>
-                    </select>
-                  </label>
-                  <label>
-                    <span className="mr-field-label">存储位置</span>
-                    <select value={entry.storage} onChange={(event) => patchPath(index, { storage: event.target.value as SourcePath["storage"] })}>
-                      <option value="local">本机存储</option>
-                      <option value="shared">共享存储</option>
-                    </select>
-                  </label>
-                </div>
-                <div className="ks-path-actions">
-                  <button type="button" aria-label={entry.kind === "file" ? "选择文件" : "选择文件夹"}
-                    title={entry.kind === "file" ? "选择文件" : "选择文件夹"}
-                    onClick={() => void browse(index, entry.kind)}>
-                    {browseIndex === index ? <LoaderCircle size={17} /> : entry.kind === "file" ? <FileText size={17} /> : <FolderOpen size={17} />}
-                  </button>
-                  <input required maxLength={2000} aria-label={`访问路径 ${index + 1}`}
-                    placeholder={entry.kind === "file" ? "输入文件路径，例如 /knowledge/spec.md" : "输入目录路径，例如 /knowledge/product-docs"}
-                    value={entry.path} onChange={(event) => patchPath(index, { path: event.target.value })} />
-                  {editor.draft.paths.length > 1 && (
-                    <button type="button" aria-label={`移除资料 ${index + 1}`}
-                      onClick={() => patch({ paths: editor.draft.paths.filter((_, i) => i !== index) })}>
-                      <X size={16} />
-                    </button>
-                  )}
-                </div>
-                {entry.storage === "shared" && <small>可浏览已挂载的共享目录，或填写系统可访问的共享路径。</small>}
-              </fieldset>
-            ))}
-            <div>
-              <button type="button" className="sc-secondary" disabled={saving || browseIndex !== undefined || editor.draft.paths.length >= 100}
-                onClick={() => patch({ paths: [...editor.draft.paths, emptyPath] })}>
-                <Plus size={14} /> 添加文件或文件夹
-              </button>
-            </div>
-            {editorError && (
-              <div role="alert" className="sc-warning">
-                {editorError}
-              </div>
-            )}
-          </form>
-          <footer className="mr-footer">
-            <button
-              type="button"
-              disabled={saving || browseIndex !== undefined}
-              onClick={closeEditor}
-            >
-              取消
-            </button>
-            <button type="submit" form="knowledge-source-form" className="ad-primary" disabled={saving || browseIndex !== undefined}>
-              {saving ? "保存中…" : "保存"}
-            </button>
-          </footer>
-        </Dialog>
+          onClose={() => setEditor(undefined)} onSave={save} />
       )}
       {viewing && (
-        <Dialog title={viewing.name + " · 全部资料"} className="mr-dialog" close={() => setViewing(undefined)}>
-          <div className="mr-dialog-body">
-            <KnowledgePaths paths={pathsFor(viewing)} failures={resultFor(viewing)?.failures} />
+        <Dialog title={viewing.name + " · 全部资料"} className="mr-dialog" close={() => setViewingId(undefined)}>
+          <div className="mr-dialog-body ks-detail-groups">
+            {viewing.groups.length ? sectionsFor(viewing).map(({ name, paths }) => (
+              <section key={paths[0].path}>
+                <div className="ks-detail-heading">
+                  <strong>{name}</strong>
+                  <small>{pathStatus(paths, viewing.access)}</small>
+                </div>
+                <KnowledgePaths paths={paths} failures={viewing.access.failures} />
+              </section>
+            )) : <KnowledgePaths paths={pathsFor(viewing)} failures={viewing.access.failures} />}
           </div>
           <footer className="mr-footer">
-            <button onClick={() => setViewing(undefined)}>关闭</button>
+            <button onClick={() => setViewingId(undefined)}>关闭</button>
           </footer>
         </Dialog>
       )}

@@ -14,8 +14,6 @@ export type WorkspaceCardData = {
   id: string;
   name: string;
   description: string;
-  products: string[];
-  projects: string[];
   directories: string[];
   isDefault: boolean;
   enabled: boolean;
@@ -74,43 +72,15 @@ export function WorkspaceCard({
         </span>
       </header>
       <p className="wcd-description" title={w.description}>
-        {w.description || "暂未添加工作区描述"}
+        {w.description || "暂未添加工作空间描述"}
       </p>
       <div className="wcd-default-line">
         <span className={`wcd-default ${w.isDefault ? "selected" : ""}`}>
           <Star size={13} aria-hidden="true" />
-          {w.isDefault ? "默认工作区" : "非默认工作区"}
+          {w.isDefault ? "默认工作空间" : "非默认工作空间"}
         </span>
       </div>
       <div className="wcd-details">
-        <div className="wcd-detail-row">
-          <span className="wcd-detail-label">覆盖产品</span>
-          <div className="wcd-tags">
-            {w.products.length ? (
-              w.products.map((p) => (
-                <span key={p} title={p}>
-                  {p}
-                </span>
-              ))
-            ) : (
-              <span className="wcd-empty">暂未添加</span>
-            )}
-          </div>
-        </div>
-        <div className="wcd-detail-row">
-          <span className="wcd-detail-label">覆盖项目</span>
-          <div className="wcd-tags">
-            {w.projects.length ? (
-              w.projects.map((p) => (
-                <span key={p} title={p}>
-                  {p}
-                </span>
-              ))
-            ) : (
-              <span className="wcd-empty">暂未添加</span>
-            )}
-          </div>
-        </div>
         <div className="wcd-detail-row wcd-knowledge">
           <span className="wcd-detail-label">知识来源</span>
           <div>
@@ -140,7 +110,7 @@ export function WorkspaceCard({
       </div>
       <div className="wcd-task-summary">
         <div>
-          <span>未完成任务</span>
+          <span>未关闭任务</span>
           <strong>{w.pending.length}</strong>
         </div>
         <div>
@@ -168,7 +138,7 @@ export function WorkspaceCard({
       <footer className="wcd-card-actions">
         <button
           disabled={locked || !canManage || busy}
-          title={locked ? "请先关闭工作区中的全部任务" : "编辑工作区"}
+          title={locked ? "请先关闭工作空间中的全部任务" : "编辑工作空间"}
           aria-label={editLabel}
           onClick={edit}
         >
@@ -179,10 +149,10 @@ export function WorkspaceCard({
           disabled={!canManage || busy || (w.enabled && locked)}
           title={
             w.enabled && locked
-              ? "请先关闭工作区中的全部任务"
+              ? "请先关闭工作空间中的全部任务"
               : w.enabled
-                ? "停用工作区"
-                : "启用工作区"
+                ? "停用工作空间"
+                : "启用工作空间"
           }
           onClick={toggle}
         >

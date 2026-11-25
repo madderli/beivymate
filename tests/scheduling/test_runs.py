@@ -38,11 +38,11 @@ def client(app):
         assert c.post('/api/v1/account/initialize', json={'username':'tester','name':'测试员','password':'Secure-Password-123!','setupToken':'setup'}).status_code == 201
         login = c.post('/api/v1/session', json={'username':'tester','password':'Secure-Password-123!'}).json()
         c.headers['x-csrf-token'] = login['csrfToken']
-        c.post('/api/v1/workspaces', json={'id':'product','name':'产品'})
+        assert c.post('/api/v1/workspaces', json={'shortName': 'PROD', 'name': '产品'}).status_code == 201
         yield c
 
 def task(c, key='task'):
-    response = c.post('/api/v1/tasks', data={'title':'支付需求', 'workspace':'product', 'workflow':'m6_test_analysis',
+    response = c.post('/api/v1/tasks', data={'title':'支付需求', 'workspace':c.get('/api/v1/workbench').json()['defaultWorkspace'], 'workflow':'m6_test_analysis',
         'description':'支付成功更新订单', 'version':'1'}, headers={'idempotency-key':key})
     assert response.status_code == 201, response.text
     return next(t for t in c.get('/api/v1/workbench').json()['tasks'] if t['id'] == response.json()['id'])
@@ -130,10 +130,10 @@ def test_owner_boundary_and_workspace_queue(client, app):
     t = task(client); run = prepare(client, t)
     command(client, run, 'start')
     ws = client.get('/api/v1/workbench').json()['workspaces'][0]
-    assert client.patch('/api/v1/workspaces/product',json={'expectedRevision':ws['revision'],'paused':True}).status_code == 409
+    assert client.patch(f"/api/v1/workspaces/{ws['id']}",json={'expectedRevision':ws['revision'],'paused':True}).status_code == 409
     # Existing paused data still prevents dispatch, even though new pauses are guarded.
     with app.state.portal.db() as db:
-        db.execute("UPDATE entity SET status='paused' WHERE id='product'")
+        db.execute("UPDATE entity SET status='paused' WHERE id=?", (ws["id"],))
     assert not app.state.runs.tick()
     from beivymate.identity.service import IdentityError
     with pytest.raises(IdentityError):
@@ -190,7 +190,7 @@ def test_directory_precedence_conflicts_and_frozen_root(client, app, tmp_path):
     assert client.put('/api/v1/preferences/output',json={**prefs,'outputDirectory':personal}).status_code == 200
     assert client.put('/api/v1/preferences/output',json={**prefs,'outputDirectory':personal}).status_code == 409
     ws = client.get('/api/v1/workbench').json()['workspaces'][0]
-    client.patch('/api/v1/workspaces/product',json={'expectedRevision':ws['revision'],'outputDirectory':str(tmp_path/'workspace')})
+    client.patch(f"/api/v1/workspaces/{ws['id']}",json={'expectedRevision':ws['revision'],'outputDirectory':str(tmp_path/'workspace')})
     t = task(client)
     client.patch('/api/v1/tasks/'+t['id'],json={'expectedRevision':t['revision'],'outputDirectory':str(tmp_path/'task')})
     t = client.get('/api/v1/workbench').json()['tasks'][0]

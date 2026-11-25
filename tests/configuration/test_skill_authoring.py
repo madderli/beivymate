@@ -152,8 +152,8 @@ def test_legacy_state_endpoint_cannot_bypass_current_model_check(api):
 
 def test_unclosed_task_locks_new_package_even_after_run_completed(api):
     c,app,owner=api;model(c);s=save(c)
-    assert c.post('/api/v1/workspaces',json={'id':'WS','name':'工作区','knowledge':'资料','project':'项目'}).status_code==201
-    task=c.post('/api/v1/tasks',data={'title':'任务','workspace':'WS','workflow':'uat','description':'需求','version':'1','environment':'uat','locale':'zh-CN','relatedWorkspaces':'[]'},files=[('attachments',('需求.md','业务资料'.encode(),'text/markdown'))],headers={'idempotency-key':'skill-lock-test'})
+    workspace = c.post('/api/v1/workspaces', json={'shortName': 'WS', 'name': '工作空间'}).json()['id']
+    task=c.post('/api/v1/tasks',data={'title':'任务','workspace':workspace,'workflow':'uat','description':'需求','version':'1','environment':'uat','locale':'zh-CN','relatedWorkspaces':'[]'},files=[('attachments',('需求.md','业务资料'.encode(),'text/markdown'))],headers={'idempotency-key':'skill-lock-test'})
     assert task.status_code==201,task.text
     tid=task.json()['id']
     with app.state.portal.db() as db:

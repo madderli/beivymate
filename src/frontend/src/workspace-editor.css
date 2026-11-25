@@ -169,14 +169,14 @@
   max-height: calc(100dvh - 126px);
 }
 .wsd-form-scroll {
-  padding: 0 30px 24px;
+  padding: 0 30px 14px;
   overflow-y: auto;
   scrollbar-width: thin;
 }
 .wsd-intro {
   font-size: 12px;
   color: #8b9684;
-  margin: 14px 0 22px;
+  margin: 10px 0 12px;
 }
 .wsd-fields {
   border: 0;
@@ -185,7 +185,7 @@
   min-width: 0;
 }
 .wsd-section {
-  margin-bottom: 24px;
+  margin-bottom: 14px;
 }
 .wsd-section h3 {
   font-size: 13px;
@@ -193,7 +193,7 @@
   display: flex;
   align-items: center;
   gap: 9px;
-  margin: 0 0 14px;
+  margin: 0 0 8px;
 }
 .wsd-section h3 > span {
   background: #edf3e8;
@@ -206,20 +206,20 @@
   place-items: center;
 }
 .wsd-section-description {
-  margin: -5px 0 12px;
+  margin: 8px 0;
   color: #909a88;
   font-size: 11px;
 }
 .wsd-basics {
   display: grid;
-  grid-template-columns: 1fr 1.8fr;
+  grid-template-columns: minmax(120px, 144px) minmax(0, 1fr) auto;
   gap: 16px;
 }
 .wsd-dialog label {
   font-size: 12px;
   color: #52664f;
   display: block;
-  margin: 0 0 13px;
+  margin: 0 0 8px;
 }
 
 .wsd-dialog input:not([type="checkbox"]),
@@ -371,24 +371,21 @@
 }
 .wsd-dialog .wsd-default {
   display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 16px;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
   background: #f4f7ef;
   border: 1px solid #e5ebdd;
-  border-radius: 10px;
-  margin: 4px 0 0;
-}
-.wsd-default > input {
-  margin-top: 3px !important;
+  border-radius: 8px;
+  margin: 27px 0 8px;
+  box-sizing: border-box;
+  height: 40px;
+  align-self: start;
+  white-space: nowrap;
 }
 .wsd-default strong {
   font-size: 12px;
   font-weight: 500;
-}
-.wsd-default small {
-  margin-top: 3px;
-  font-size: 11px;
 }
 .wsd-form-footer {
   flex-shrink: 0;
@@ -538,3 +535,107 @@
   }
 }
 
+
+html:has(.wsd-dialog[open]) {
+  overflow: hidden;
+}
+.wsd-dialog,
+.wsd-form-scroll {
+  overscroll-behavior: contain;
+}
+.wsd-knowledge-picker {
+  border: 1px solid #dfe6d8;
+  border-radius: 8px;
+  padding: 7px 10px;
+}
+.wsd-knowledge-picker summary {
+  cursor: pointer;
+}
+.wsd-knowledge-picker summary small {
+  margin-left: 6px;
+}
+.wsd-knowledge-options {
+  max-height: 150px;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+.wsd-knowledge-options label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0;
+}
+.wsd-selected-knowledge {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  list-style: none;
+  padding: 0;
+  margin: 6px 0 0;
+}
+.wsd-selected-knowledge li {
+  padding: 2px 8px;
+  border-radius: 5px;
+  background: #edf3e8;
+  overflow-wrap: anywhere;
+}
+
+.wsd-basics > label:not(.wsd-default),
+.wsd-short-name-heading {
+  line-height: 20px;
+}
+.wsd-basics input:not([type="checkbox"]) {
+  box-sizing: border-box;
+  height: 40px;
+}
+.wsd-short-name-heading {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.wsd-short-name-heading label {
+  margin: 0;
+}
+.wsd-short-name-help {
+  position: relative;
+}
+.wsd-short-name-help summary {
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  color: #65815f;
+}
+.wsd-short-name-help summary::-webkit-details-marker {
+  display: none;
+}
+.wsd-short-name-help p {
+  position: absolute;
+  z-index: 2;
+  top: 100%;
+  left: -95px;
+  width: 200px;
+  margin: 6px 0 0;
+  padding: 8px 10px;
+  border: 1px solid #dfe6d8;
+  border-radius: 8px;
+  background: white;
+  font-size: 12px;
+}
+.wsd-section h4 {
+  margin: 10px 0 5px;
+  font-size: 12px;
+}
+.wsd-knowledge-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(160px, 100%), 1fr));
+  gap: 4px 12px;
+}
+.wsd-knowledge-options label {
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+@media (max-width: 600px) {
+  .wsd-dialog .wsd-default {
+    margin-top: 0;
+  }
+}

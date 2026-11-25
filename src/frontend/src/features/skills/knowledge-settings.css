@@ -1,6 +1,7 @@
 .knowledge-settings .ks-card {
+  --ks-tag-font-size: 11px;
   min-width: 0;
-  gap: 10px;
+  gap: 7px;
   padding-bottom: 8px;
 }
 .ks-card-heading {
@@ -26,8 +27,23 @@
   overflow-wrap: anywhere;
   font-size: 13px;
 }
+.knowledge-settings .ks-card > :is(.ks-card-preview-line, .sc-card-tags, .ks-card-metrics) {
+  margin-inline: 0;
+  padding-inline: 0;
+}
+.knowledge-settings .ks-card > .ks-card-preview-line {
+  margin-block: 8px;
+}
+.knowledge-settings .ks-card > :is(.sc-card-tags, .ks-card-metrics) {
+  min-height: 20px;
+  align-items: center;
+}
 .ks-card .sc-card-tags {
-  margin: 0;
+  margin-block: 0;
+}
+.ks-card .sc-card-tags > span {
+  font-size: var(--ks-tag-font-size);
+  line-height: 1.5;
 }
 .ks-card footer {
   margin-top: auto;
@@ -57,7 +73,7 @@
   gap: 8px;
   min-width: 0;
   margin: 0;
-  padding: 10px 12px;
+  padding: 6px 9px 8px;
   border: 1px solid #e2e8dc;
   border-radius: 8px;
 }
@@ -97,8 +113,46 @@
 }
 .ks-entry-controls {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
+  grid-template-columns: minmax(0, 105px) minmax(0, 114px) minmax(0, 1fr);
+  align-items: end;
+  gap: 6px;
+}
+.ks-entry-controls > label,
+.ks-path-field {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+.ks-entry-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.mr-dialog .ks-entry-controls select,
+.mr-dialog .ks-path-actions,
+.mr-dialog .ks-group-heading input,
+.mr-dialog .ks-group-heading .ks-entry-buttons button {
+  box-sizing: border-box;
+  min-height: 0;
+  height: 40px;
+  padding-block: 0;
+}
+.mr-dialog .ks-path-actions input {
+  box-sizing: border-box;
+  min-height: 0;
+  height: 100%;
+  padding-block: 0;
+}
+.mr-dialog .ks-entry-controls select {
+  line-height: normal;
+}
+@media (max-width: 540px) {
+  .ks-entry-controls {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .ks-path-field {
+    grid-column: 1 / -1;
+  }
 }
 
 .ks-card .ks-card-preview {
@@ -106,8 +160,11 @@
   color: #65766a;
   font-size: 13px;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow-wrap: anywhere;
+  line-height: 1.45;
 }
 .ks-path-list {
   list-style: none;
@@ -150,6 +207,7 @@
   overflow-wrap: anywhere;
 }
 .ks-access-result {
+  font-size: var(--ks-tag-font-size, 12px);
   display: flex;
   align-items: center;
   gap: 6px;
@@ -176,4 +234,96 @@
   padding: 12px;
   color: #65766a;
   font-size: 13px;
+}
+
+.ks-card-heading .ks-group-icon {
+  color: #366e68;
+  background: #e6f0ed;
+}
+.ks-card-preview-line,
+.ks-detail-heading,
+.ks-group-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.knowledge-settings .ks-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-auto-rows: 1fr;
+}
+@media (max-width: 640px) {
+  .knowledge-settings .ks-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.ks-group-count {
+  flex: none;
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: var(--ks-tag-font-size);
+  line-height: 1.5;
+  color: #52706a;
+  background: #eaf2ef;
+}
+.ks-detail-groups,
+.ks-editor-fields,
+.ks-group {
+  display: grid;
+  gap: 7px;
+}
+.ks-editor-fields,
+.ks-group {
+  min-width: 0;
+  margin: 0;
+}
+.ks-editor-fields {
+  padding: 0;
+  border: 0;
+}
+.ks-group {
+  padding: 6px 9px 9px;
+  border: 1px solid #dce4d5;
+  border-radius: 8px;
+}
+.ks-group legend {
+  color: #526a55;
+  padding: 0 4px;
+}
+.ks-group .ks-group {
+  background: #f8faf7;
+}
+.ks-group-heading {
+  align-items: end;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.ks-group-heading label {
+  flex: 1 1 145px;
+  min-width: 0;
+}
+.mr-dialog .ks-group-heading .ks-entry-buttons button {
+  white-space: nowrap;
+}
+.mr-dialog .ks-remove-group {
+  width: 40px;
+  justify-content: center;
+  padding-inline: 0;
+}
+.mr-dialog .ks-editor-fields .ks-group-toggle {
+  flex-direction: row;
+  align-items: center;
+}
+.ks-detail-heading {
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.knowledge-settings .ks-card-metrics {
+  margin-top: 0;
+  flex-wrap: wrap;
+  row-gap: 4px;
+}
+.ks-card-metrics .ks-reference-names {
+  min-width: 0;
 }

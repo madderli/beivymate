@@ -87,9 +87,13 @@ export type Task = {
   history: string[];
   revision: string;
   attachments?: Attachment[];
+  closedAt?: string | null;
   allowedActions: string[];
 };
 export type Workspace = {
+  shortName?: string;
+  knowledgeSourceIds?: string[];
+  knowledgeSources?: { id: string; name: string }[];
   description?: string;
   products?: string[];
   projects?: string[];

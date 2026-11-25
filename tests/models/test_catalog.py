@@ -156,8 +156,8 @@ def test_http_chat_preferences_actual_reply_idempotency_and_independence(api,mon
 
 def test_model_and_credential_protection_until_task_closed(api):
     c,app,owner=api
-    c.post('/api/v1/workspaces',json={'id':'space','name':'工作区'})
-    response=c.post('/api/v1/tasks',data={'title':'任务','workspace':'space','workflow':'uat','description':'需求','version':'1'},headers={'idempotency-key':'task'})
+    workspace = c.post('/api/v1/workspaces', json={'shortName': 'WS', 'name': '工作空间'}).json()['id']
+    response=c.post('/api/v1/tasks',data={'title':'任务','workspace':workspace,'workflow':'uat','description':'需求','version':'1'},headers={'idempotency-key':'task'})
     assert response.status_code==201,response.text
     taskid=response.json()['id']
     # Frozen run dependencies are recorded by the same model selection path used in prepare.

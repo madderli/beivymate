@@ -78,8 +78,8 @@ def test_task_lock_covers_completed_but_not_closed(api):
     c,app,owner=api;prepare(c)
     item=c.post('/api/v1/workflow-center',json={'definition':definition()}).json()
     identity=item['id']
-    assert c.post('/api/v1/workspaces',json={'id':'WS','name':'工作区','knowledge':'资料','project':'项目'}).status_code==201
-    response=c.post('/api/v1/tasks',data={'title':'引用任务','workspace':'WS','workflow':'uat','description':'需求','version':'1','environment':'uat','locale':'zh-CN','relatedWorkspaces':'[]'},files=[('attachments',('需求.md','资料'.encode(),'text/markdown'))],headers={'idempotency-key':'workflow-lock'})
+    workspace = c.post('/api/v1/workspaces', json={'shortName': 'WS', 'name': '工作空间'}).json()['id']
+    response=c.post('/api/v1/tasks',data={'title':'引用任务','workspace':workspace,'workflow':'uat','description':'需求','version':'1','environment':'uat','locale':'zh-CN','relatedWorkspaces':'[]'},files=[('attachments',('需求.md','资料'.encode(),'text/markdown'))],headers={'idempotency-key':'workflow-lock'})
     assert response.status_code==201,response.text
     tid=response.json()['id']
     with app.state.portal.db() as db:

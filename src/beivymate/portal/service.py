@@ -142,7 +142,7 @@ class PortalService:
             if not new:
                 if raw is not None:
                     if sha(raw) != change['expected']:
-                        raise IdentityError('工作区标识变更时原文件已被修改，请核对后重试。', 409)
+                        raise IdentityError('工作空间标识变更时原文件已被修改，请核对后重试。', 409)
                     path.unlink()
                 db.execute('DELETE FROM pending_file WHERE id=?', (change['id'],))
                 continue
@@ -338,7 +338,8 @@ class PortalService:
         data = draft.model_dump()
         data.update(revision=revision, configPath=str(self._path(row)), owner={'id': row['owner'], 'name': row['owner'], 'kind': 'human'})
         if row['kind'] == 'workspace':
-            data.update(paused=row['status'] == 'paused', color='purple')
+            data.update(paused=row['status'] == 'paused', color='purple', shortName=draft.shortName or draft.id,
+                        knowledgeSources=self.workspace_knowledge(row['owner'], draft.knowledgeSourceIds))
         else:
             flow = next((f for f in flows if f['id'] == draft.workflow), None)
             data['closedAt'] = (db.execute('SELECT closed_at FROM task_lifecycle WHERE task=?', (row['id'],)).fetchone() or [None])[0]
@@ -362,83 +363,100 @@ class PortalService:
             """, (task, owner, owner)).fetchone()
             return row[0] if row else None
 
+    def workspace_knowledge(self, owner, ids=None):
+        database = self.root / 'knowledge-sources.sqlite3'
+        if not database.exists():
+            return []
+        from contextlib import closing
+        with closing(sqlite3.connect(database)) as connection:
+            rows = connection.execute(
+                'SELECT id, name FROM source WHERE owner=? ORDER BY name, id', (owner,)
+            )
+            return [{'id': identity, 'name': name} for identity, name in rows
+                    if ids is None or identity in ids]
+
     def board(self, owner):
         flows = self.workflows()
         with self.db() as db:
             rows = db.execute('SELECT * FROM entity WHERE owner=? AND deleted=0 ORDER BY rowid', (owner,)).fetchall()
             preference = db.execute('SELECT workspace FROM workspace_preference WHERE owner=?', (owner,)).fetchone()
-            default = preference['workspace'] if preference else next((r['id'] for r in rows if r['kind'] == 'workspace'), '')
+            enabled = [r['id'] for r in rows if r['kind'] == 'workspace' and r['status'] == 'active']
+            default = preference['workspace'] if preference and preference['workspace'] in enabled else next(iter(enabled), '')
             return {'defaultWorkspace': default, 'workspaces': [self._view(db, r, flows) for r in rows if r['kind'] == 'workspace'],
                     'tasks': [self._view(db, r, flows) for r in rows if r['kind'] == 'task'], 'workflows': flows, 'models': []}
 
     def workspace(self, owner, body, id=None):
         body = dict(body)
-        default_requested = 'isDefault' in body
-        configuration_change = bool(set(body) - {'expectedRevision', 'paused'})
         expected = body.pop('expectedRevision', None)
         paused = body.pop('paused', None)
         make_default = body.pop('isDefault', False)
-        if not isinstance(make_default, bool):
-            raise IdentityError('默认工作区设置无效。', 422)
-        for plural, legacy in [('products', 'product'), ('projects', 'project'), ('knowledgeDirectories', 'knowledge')]:
-            if plural in body and isinstance(body[plural], list):
-                body[legacy] = body[plural][0] if body[plural] else ''
-            elif legacy in body and isinstance(body[legacy], str):
-                body[plural] = [body[legacy]] if body[legacy].strip() else []
+        successor = body.pop('replacementDefault', None)
+        if {'products', 'projects', 'product', 'project'} & body.keys():
+            raise IdentityError('产品与项目由任务配置。', 422)
+        if not isinstance(make_default, bool) or (paused is not None and not isinstance(paused, bool)):
+            raise IdentityError('工作空间状态无效。', 422)
         if isinstance(body.get('description'), str):
             body['subtitle'] = body['description'].splitlines()[0][:2000] if body['description'] else ''
+        if 'knowledgeDirectories' in body and isinstance(body['knowledgeDirectories'], list):
+            body['knowledge'] = next(iter(body['knowledgeDirectories']), '')
+            if any(not isinstance(path, str) or not Path(path.strip()).is_absolute() for path in body['knowledgeDirectories']):
+                raise IdentityError('请填写文件或文件夹的绝对路径。', 422)
         with self.db() as db:
+            rows = db.execute("SELECT * FROM entity WHERE owner=? AND kind='workspace' AND deleted=0 ORDER BY rowid", (owner,)).fetchall()
+            enabled = [row['id'] for row in rows if row['status'] == 'active']
+            pref = db.execute('SELECT workspace FROM workspace_preference WHERE owner=?', (owner,)).fetchone()
+            default = pref['workspace'] if pref and pref['workspace'] in enabled else next(iter(enabled), None)
             if id:
                 row = self._row(db, owner, id, 'workspace')
                 old, revision = self._read(row)
                 if expected != revision:
-                    raise IdentityError('工作区已被修改。请保留当前草稿，重新加载后核对再保存。', 409)
-                tasks = db.execute("SELECT * FROM entity WHERE owner=? AND workspace=? AND kind='task' AND deleted=0", (owner, id)).fetchall()
-                if configuration_change or paused is True:
-                    views = [self._view(db, task, self.workflows()) for task in tasks]
-                    if hasattr(self, 'runs'):
-                        views = self.runs.project_board(owner, {'tasks': views})['tasks']
-                    if any(task['status'] != 'completed' for task in views):
-                        raise IdentityError('工作区还有未完成任务，关闭全部任务后才能编辑或停用。', 409)
+                    raise IdentityError('工作空间已被修改，请重新加载后核对再保存。', 409)
+                if ('id' in body and body['id'] != id) or ('shortName' in body and body['shortName'] != (old.shortName or id)):
+                    raise IdentityError('工作空间简称保存后不可修改。', 422)
+                body.pop('shortName', None)
+                if body or paused is True or make_default:
+                    pending = db.execute("""
+                        SELECT 1 FROM entity t LEFT JOIN task_lifecycle l ON l.task=t.id
+                        WHERE t.owner=? AND t.workspace=? AND t.kind='task' AND t.deleted=0
+                        AND l.closed_at IS NULL LIMIT 1
+                    """, (owner, id)).fetchone()
+                    if pending:
+                        raise IdentityError('工作空间还有未关闭任务，关闭后才能编辑或停用。', 409)
                 value = WorkspaceDraft.model_validate({**old.model_dump(), **body})
-                if paused is not None and not isinstance(paused, bool):
-                    raise IdentityError('暂停状态无效。', 422)
-                if value.id != id:
-                    if value.id.upper().startswith('TASK-'):
-                        raise IdentityError('TASK- 前缀保留给任务编号。', 422)
-                    if db.execute('SELECT 1 FROM entity WHERE lower(id)=lower(?)', (value.id,)).fetchone():
-                        raise IdentityError('工作区标识已存在。', 409)
-                    # Journal the rename and task configuration updates in one transaction.
-                    self._write(db, {'id': value.id, 'kind': 'workspace'}, value, create=True)
-                    db.execute('INSERT INTO pending_file VALUES (?, ?, ?, ?)', (id, 'workspace', revision.split(':', 1)[1], b''))
-                    for task in tasks:
-                        draft, task_revision = self._read(task)
-                        self._write(db, task, draft.model_copy(update={'workspace': value.id}), expected=task_revision.split(':', 1)[1])
-                    db.execute("UPDATE entity SET workspace=?,version=version+1 WHERE workspace=? AND owner=? AND kind='task'", (value.id, id, owner))
-                    db.execute('UPDATE workspace_preference SET workspace=? WHERE owner=? AND workspace=?', (value.id, owner, id))
-                    db.execute('UPDATE activity SET entity=? WHERE entity=? AND actor=?', (value.id, id, owner))
-                else:
-                    self._write(db, row, value, expected=revision.split(':', 1)[1])
-                db.execute('UPDATE entity SET id=?,status=?,version=version+1 WHERE id=?',
-                           (value.id, 'paused' if paused else 'active' if paused is not None else row['status'], id))
-                self._event(db, value.id, owner, '工作区配置或调度状态已更新')
+                state = row['status'] if paused is None else 'paused' if paused else 'active'
+                if paused and default == id:
+                    choices = set(enabled) - {id}
+                    if choices and (not isinstance(successor, str) or successor not in choices):
+                        raise IdentityError('请选择一个已启用的工作空间接替默认项。', 422)
+                    default = successor if choices else None
+                self._write(db, row, value, expected=revision.split(':', 1)[1])
+                db.execute('UPDATE entity SET status=?,version=version+1 WHERE id=?', (state, id))
             else:
-                value = WorkspaceDraft.model_validate(body)
-                if value.id.upper().startswith('TASK-'):
-                    raise IdentityError('TASK- 前缀保留给任务编号，请使用其他工作区标识。', 422)
-                if db.execute('SELECT 1 FROM entity WHERE lower(id)=lower(?)', (value.id,)).fetchone():
-                    raise IdentityError('工作区标识已存在。', 409)
-                row = {'id': value.id, 'kind': 'workspace'}
-                self._write(db, row, value, create=True)
-                db.execute("INSERT INTO entity(id,kind,owner,status) VALUES (?, 'workspace', ?, 'active')", (value.id, owner))
-                self._event(db, value.id, owner, '创建工作区')
-            if default_requested and not make_default:
-                replacement = db.execute("SELECT id FROM entity WHERE owner=? AND kind='workspace' AND deleted=0 AND id<>? ORDER BY rowid LIMIT 1", (owner, value.id)).fetchone()
-                if replacement:
-                    db.execute('UPDATE workspace_preference SET workspace=? WHERE owner=? AND workspace=?', (replacement['id'], owner, value.id))
-            if make_default or not db.execute('SELECT 1 FROM workspace_preference WHERE owner=?', (owner,)).fetchone():
-                db.execute('INSERT INTO workspace_preference(owner,workspace) VALUES (?,?) ON CONFLICT(owner) DO UPDATE SET workspace=excluded.workspace', (owner, value.id))
-        return {'id': value.id}
+                short = body.get('shortName')
+                if not isinstance(short, str) or not re.fullmatch(r'[A-Z0-9]{1,4}', short) or not re.search(r'[A-Z]', short):
+                    raise IdentityError('简称须为 1～4 位大写字母或数字，至少含一个字母。', 422)
+                for row in rows:
+                    old, _ = self._read(row)
+                    if (old.shortName or old.id).upper() == short:
+                        raise IdentityError('工作空间简称已存在。', 409)
+                id = uuid.uuid4().hex
+                value = WorkspaceDraft.model_validate({**body, 'id': id})
+                state = 'active'
+                self._write(db, {'id': id, 'kind': 'workspace'}, value, create=True)
+                db.execute("INSERT INTO entity(id,kind,owner,status) VALUES (?, 'workspace', ?, 'active')", (id, owner))
+            ids = value.knowledgeSourceIds
+            if len(set(ids)) != len(ids) or len(self.workspace_knowledge(owner, ids)) != len(ids):
+                raise IdentityError('知识来源不存在或重复，请重新选择。', 422)
+            if make_default and state != 'active':
+                raise IdentityError('只有已启用的工作空间可以设为默认。', 422)
+            if state == 'active' and (make_default or default is None):
+                default = id
+            if default:
+                db.execute('INSERT INTO workspace_preference(owner,workspace) VALUES (?,?) ON CONFLICT(owner) DO UPDATE SET workspace=excluded.workspace', (owner, default))
+            else:
+                db.execute('DELETE FROM workspace_preference WHERE owner=?', (owner,))
+            self._event(db, id, owner, '工作空间配置或启用状态已更新')
+        return {'id': id}
 
     def create_task(self, owner, body, files, key):
         if not key or len(key) > 160:
@@ -458,10 +476,10 @@ class PortalService:
                 return json.loads(previous['result'])
         related = body.get('relatedWorkspaces', [])
         if not isinstance(related, list) or any(not isinstance(x, str) for x in related):
-            raise IdentityError('关联工作区格式不正确。', 422)
+            raise IdentityError('关联工作空间格式不正确。', 422)
         spaces = [body.get('workspace'), *related]
         if len(spaces) != len(set(spaces)) or len(spaces) > 20:
-            raise IdentityError('关联工作区重复或超过 20 个。', 422)
+            raise IdentityError('关联工作空间重复或超过 20 个。', 422)
         flow_ids = {f['id'] for f in self.workflows()}
         if body.get('workflow') not in flow_ids:
             raise IdentityError('请选择有效工作流。', 422)
@@ -479,7 +497,7 @@ class PortalService:
                 for index, space in enumerate(spaces):
                     ws = self._row(db, owner, space, 'workspace')
                     if ws['status'] == 'paused':
-                        raise IdentityError('工作区已暂停，请恢复后创建任务。', 409)
+                        raise IdentityError('工作空间已暂停，请恢复后创建任务。', 409)
                     self._read(ws)
                     id = group + ('-M' if index == 0 else f'-R{index:02d}')
                     fields = {k: v for k, v in body.items() if k != 'relatedWorkspaces'}
@@ -512,7 +530,7 @@ class PortalService:
                 raise IdentityError('当前任务状态不允许修改配置。', 409)
             value = TaskDraft.model_validate({**draft.model_dump(), **fields})
             if value.id != id or value.workspace != row['workspace']:
-                raise IdentityError('任务标识及所属工作区不能修改。', 422)
+                raise IdentityError('任务标识及所属工作空间不能修改。', 422)
             if value.workflow not in flows:
                 raise IdentityError('请选择有效工作流。', 422)
             if not value.description and not db.execute('SELECT 1 FROM attachment WHERE group_id=?', (row['group_id'],)).fetchone():
@@ -559,7 +577,7 @@ class PortalService:
                 if verb == 'resume':
                     ws = self._row(db, owner, row['workspace'], 'workspace')
                     if ws['status'] == 'paused':
-                        raise IdentityError('请先恢复工作区。', 409)
+                        raise IdentityError('请先恢复工作空间。', 409)
                 if (verb == 'pause' and row['status'] != 'pending') or (verb == 'resume' and row['status'] != 'paused'):
                     raise IdentityError('任务状态不允许此操作。', 409)
                 db.execute('UPDATE entity SET status=?, version=version+1 WHERE id=?', ('paused' if verb == 'pause' else 'pending', id))

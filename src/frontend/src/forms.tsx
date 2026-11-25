@@ -1,6 +1,6 @@
 import { WorkspaceEditor, type WorkspaceDraft } from "./WorkspaceEditor";
-import { useRef, useState } from "react";
-import { api } from "./api";
+import { useEffect, useRef, useState } from "react";
+import { api, request } from "./api";
 import { Dialog } from "./components";
 import { AttachmentInput } from "./attachments";
 import { statusLabels, type Board, type Workspace, type Task } from "./model";
@@ -71,7 +71,7 @@ export function TaskForm({
           </label>
           <div className="form-grid">
             <label>
-              主工作区
+              主工作空间
               <select
                 name="workspace"
                 required
@@ -85,7 +85,7 @@ export function TaskForm({
               >
                 {board.workspaces.map((w) => (
                   <option key={w.id} value={w.id}>
-                    {w.id} · {w.name}
+                    {w.shortName ?? w.id} · {w.name}
                   </option>
                 ))}
               </select>
@@ -123,7 +123,7 @@ export function TaskForm({
                       )
                     }
                   />
-                  {w.id} · {w.name}
+                  {w.shortName ?? w.id} · {w.name}
                 </label>
               ))}
           </fieldset>
@@ -208,7 +208,7 @@ export function TaskForm({
             <input
               name="outputDirectory"
               defaultValue={draft?.outputDirectory}
-              placeholder="可选，留空继承工作区或个人设置"
+              placeholder="可选，留空继承工作空间或个人设置"
             />
           </label>
           <label>
@@ -263,17 +263,27 @@ export function WorkspaceForm({
   close: () => void;
   saved: () => Promise<void>;
 }) {
+  const [knowledge, setKnowledge] = useState<{ id: string; name: string }[]>([]);
+  const [knowledgeError, setKnowledgeError] = useState("");
+  useEffect(() => {
+    const controller = new AbortController();
+    void request<{ items: typeof knowledge }>("/workspaces/knowledge-sources", { signal: controller.signal })
+      .then(({ items }) => setKnowledge(items))
+      .catch((error) => {
+        if (!controller.signal.aborted) setKnowledgeError(error.message);
+      });
+    return () => controller.abort();
+  }, []);
   const draft = (w: Workspace): WorkspaceDraft => ({
     key: w.id,
-    id: w.id,
+    id: w.shortName ?? w.id,
+    knowledgeSourceIds: w.knowledgeSourceIds ?? [],
     name: w.name,
     description: w.description ?? w.subtitle,
-    products: w.products ?? (w.product ? [w.product] : []),
-    projects: w.projects ?? (w.project ? [w.project] : []),
     directories: w.knowledgeDirectories ?? (w.knowledge ? [w.knowledge] : []),
     isDefault: w.id === workspace?.id && isDefault,
     pending: tasks
-      .filter((t) => t.workspace === w.id && t.status !== "completed")
+      .filter((t) => t.workspace === w.id && !t.closedAt)
       .map((t) => ({ name: t.title, status: statusLabels[t.status] })),
   });
   return (
@@ -281,17 +291,26 @@ export function WorkspaceForm({
       initial={workspace ? draft(workspace) : undefined}
       existing={workspaces.map(draft)}
       defaultChecked={isDefault}
+      pickPath={async (kind) => {
+        const result = await request<{ path: string | null }>("/workspaces/pick-knowledge-path", {
+          method: "POST",
+          body: JSON.stringify({ kind }),
+        }, 310_000);
+        return result.path;
+      }}
+      knowledge={knowledge}
+      knowledgeError={knowledgeError}
+      canSetDefault={!workspace?.paused}
       close={close}
       save={async (value) => {
         await api.saveWorkspace(
           {
-            id: value.id,
+            shortName: value.id,
             name: value.name,
             description: value.description,
-            products: value.products,
-            projects: value.projects,
+            knowledgeSourceIds: value.knowledgeSourceIds ?? [],
             knowledgeDirectories: value.directories,
-            isDefault: value.isDefault,
+            ...(value.isDefault && !isDefault ? { isDefault: true } : {}),
             expectedRevision: workspace?.revision,
           },
           workspace?.id,

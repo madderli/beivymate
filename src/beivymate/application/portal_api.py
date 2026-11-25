@@ -7,6 +7,7 @@ from starlette.datastructures import UploadFile
 from pydantic import ValidationError
 from beivymate.identity.service import IdentityError
 from beivymate.portal.service import MAX_FILE
+from beivymate.application.knowledge_sources import PathSelection, pick_local_path
 
 
 def portal_router(service, require):
@@ -33,6 +34,16 @@ def portal_router(service, require):
     def workbench(request: Request):
         user = require(request, 'workbench.read')['user']['id']
         return call(lambda: service.runs.project_board(user, service.board(user)))
+
+    @router.get('/workspaces/knowledge-sources')
+    def workspace_knowledge_sources(request: Request):
+        user = require(request, 'workspace.write')['user']['id']
+        return call(lambda: {'items': service.workspace_knowledge(user)})
+
+    @router.post('/workspaces/pick-knowledge-path')
+    def pick_workspace_path(request: Request, selection: PathSelection):
+        require(request, 'workspace.write')
+        return {'path': pick_local_path(selection.kind)}
 
     @router.post('/workspaces', status_code=201)
     async def create_workspace(request: Request):

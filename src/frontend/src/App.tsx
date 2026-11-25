@@ -410,7 +410,7 @@ export default function App() {
                     <p>
                       {board.workspaces.length
                         ? "目前没有未完成任务。可以创建一个新任务，选择工作流，开始下一项工作。"
-                        : "欢迎使用 OmniAlba。先创建产品或项目工作区，再创建任务，让助手协助你完成工作。"}
+                        : "欢迎使用 OmniAlba。先创建产品或项目工作空间，再创建任务，让助手协助你完成工作。"}
                     </p>
                   </>
                 )}
@@ -419,7 +419,7 @@ export default function App() {
                     className="secondary"
                     onClick={() => go("workspaces")}
                   >
-                    {board.workspaces.length ? "管理工作区" : "创建工作区"}
+                    {board.workspaces.length ? "管理工作空间" : "创建工作空间"}
                   </button>
                   <button
                     className="primary"
@@ -572,7 +572,7 @@ export default function App() {
 
   const nav = [
     ["home", "我的工作", LayoutDashboard],
-    ["workspaces", "工作区管理", FolderKanban],
+    ["workspaces", "工作空间管理", FolderKanban],
   ] as const;
   return (
     <div
@@ -632,7 +632,7 @@ export default function App() {
           ))}
         </nav>
         <div className="sidebar-workspaces">
-          <div className="nav-caption">工作区</div>
+          <div className="nav-caption">工作空间</div>
           <div className="workspace-scroll">
             {board.workspaces.map((w) => (
               <button key={w.id} onClick={() => go("workspace", w.id)}>
@@ -642,7 +642,7 @@ export default function App() {
             ))}
             {!board.workspaces.length && (
               <p className="muted sidebar-empty">
-                {authorized ? "还没有工作区" : "连接后显示工作区"}
+                {authorized ? "还没有工作空间" : "连接后显示工作空间"}
               </p>
             )}
           </div>
@@ -889,7 +889,7 @@ export default function App() {
           {route.page === "workspaces" && (
             <>
               <PageHead
-                title="工作区管理"
+                title="工作空间管理"
                 text="产品范围与业务知识独立管理。"
                 action={
                   <button
@@ -899,7 +899,7 @@ export default function App() {
                       setModal("workspace");
                     }}
                   >
-                    新增工作区
+                    新增工作空间
                   </button>
                 }
               />
@@ -920,8 +920,8 @@ export default function App() {
               {!board.workspaces.length && (
                 <div className="panel empty">
                   {authorized
-                    ? "尚未创建工作区。"
-                    : "后端连接后显示产品工作区。"}
+                    ? "尚未创建工作空间。"
+                    : "后端连接后显示产品工作空间。"}
                 </div>
               )}
             </>
@@ -965,7 +965,7 @@ export default function App() {
                   )}
                   <p>
                     {workspace.paused
-                      ? "工作区调度已暂停"
+                      ? "工作空间调度已暂停"
                       : "按任务配置选择业务知识"}
                   </p>
                 </div>
@@ -984,7 +984,7 @@ export default function App() {
                     )
                   }
                 >
-                  {workspace.paused ? "恢复工作区" : "暂停工作区"}
+                  {workspace.paused ? "恢复工作空间" : "暂停工作空间"}
                 </button>
               </div>
               <div className="task-list">
@@ -1466,9 +1466,9 @@ export default function App() {
         </Dialog>
       )}
       {modal === "workspace" && !can("workspace.write") && (
-        <Dialog title="新增工作区" close={() => setModal(null)}>
+        <Dialog title="新增工作空间" close={() => setModal(null)}>
           <div className="dialog-body">
-            <p>当前连接或账户权限不允许管理工作区，请检查连接后重试。</p>
+            <p>当前连接或账户权限不允许管理工作空间，请检查连接后重试。</p>
             <button className="primary" onClick={() => setModal(null)}>
               知道了
             </button>
